@@ -1,0 +1,8 @@
+# Hi everyone!
+# Currently I'm working on the Single Photon SUSY analysis, so most of the
+# code will be related to this analysis.
+
+# The nTuplizer for SUSY Photon analysis will be used. See
+# https://twiki.cern.ch/twiki/bin/viewauth/CMS/SWGuideSusyNtuplesRA3
+# for more infos. Once you have the nTuples, make TTrees out of them
+# using my TreeWriter
