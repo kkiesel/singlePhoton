@@ -3,35 +3,10 @@
 #include "TFile.h"
 #include "TTree.h"
 #include "TString.h"
-#include "TLorentzVector.h"
 
 #include "SusyEvent.h"
+#include "TreeObjects.h"
 
-
-namespace tree {
-// In this namespace classes for the trees are defined.
-
-class Particle {
-	public:
-		float pt, eta, phi;
-};
-
-class Photon : public Particle {
-	public:
-		float r9, sigmaIetaIeta, hadTowOverEm, pixelseed;
-		float chargedIso, neutralIso, photonIso;
-};
-
-class Jet : public Particle{
-	public:
-		float pt, eta;
-};
-
-bool EtGreater(const tree::Particle p1, const tree::Particle p2) {
-  return p1.pt > p2.pt;
-}
-
-} // end namespace definition
 
 class TreeWriter {
 	public :
@@ -60,6 +35,7 @@ class TreeWriter {
 		float met;
 		int nVertex;
 		float weight;
+		float leadingPhotonPt;
 };
 
 
@@ -106,6 +82,7 @@ void TreeWriter::Loop() {
 	tree->Branch("met", &met, "met/F");
 	tree->Branch("nVertex", &nVertex, "nVertex/I");
 	tree->Branch("weigth", &weight, "weight/F");
+	tree->Branch("photonPt", &leadingPhotonPt, "photonPt/F");
 
 
 	for (long jentry=0; jentry < processNEvents; jentry++) {
@@ -140,6 +117,7 @@ void TreeWriter::Loop() {
 		if( photon.size() == 0 )
 			continue;
 		std::sort( photon.begin(), photon.end(), tree::EtGreater);
+		//leadingPhotonPt = photon.at(0)->pt;
 
 
 		// jets
@@ -191,10 +169,10 @@ void TreeWriter::Loop() {
 	outFile->Write();
 	outFile->Close();
 }
-/*
+
 int main(int argc, char** argv) {
 	TreeWriter *tw = new TreeWriter("qcd-1000-nTuple-test.root", "myQCDTree.root");
 	tw->SetProcessNEvents(10);
 	tw->Loop();
 }
-*/
+
