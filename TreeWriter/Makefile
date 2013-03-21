@@ -6,7 +6,7 @@ INCS = -I$(shell root-config --incdir) -I.
 OBJ = treeWriter.o TreeObjects.o SusyEvent.o EventDict.so TreeDict.so
 
 treeWriter: $(OBJ)
-	g++ $+ -o $@ $(LIBS) && ./$@
+	g++ $+ -o $@ $(LIBS)
 
 %.so: %.cxx
 	g++ $(INCS) -c -shared -fPIC -o $@ $<
