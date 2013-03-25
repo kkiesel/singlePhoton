@@ -12,5 +12,6 @@ make
 ./treeWriter
 # an output tree should have been produced
 cd ../plotTree
+./simplePlot -h
 ./simplePlot -f ../TreeWriter/myoutputTree.root -d met -c "photon.eta < 1 && nVertex > 3" # or something likewise
 
