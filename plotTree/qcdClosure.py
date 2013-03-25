@@ -5,15 +5,23 @@ import ROOT
 import argparse
 import ConfigParser
 import os.path
+
+# to use user defined help message, sys.arv has to be sent to python and not
+# to TApplication
+ROOT.PyConfig.IgnoreCommandLineOptions = True
+
+# use tdr style defined in own macro
 import Styles
 Styles.tdrStyle()
 
+# this is the configuration file for plots including label, etc.
 axisConf = ConfigParser.SafeConfigParser()
 axisConf.read("axis.cfg")
 
+# global variables:
 integratedLuminosity = 19.3 #fb
 
-def readTree( filename, treename = "photonTree" ):
+def readTree( filename, treename = "susyTree" ):
 	"""
 	filename: name of file containing the tree
 	treename: name of the tree
@@ -132,15 +140,22 @@ def fillWeights( tree, jetCut, photonCut ):
 	nBins = 50
 	xMin = 80
 	xMax = 300
-	h_photonPt = createHistoFromTree( tree, "photon.pt", photonCut, nBins, xMin, xMax )
-	h_jetPt = createHistoFromTree( tree, "photon.pt", jetCut, nBins, xMin, xMax )
+	h_photonPt = createHistoFromTree( tree, "photon[0].pt", photonCut, nBins, xMin, xMax )
+	h_jetPt = createHistoFromTree( tree, "photon[0].pt", jetCut, nBins, xMin, xMax )
 
 	# h_jetPt is now histogram with w^{-1} = h_jetPt / h_photonPt
 	h_jetPt.Divide( h_photonPt )
+	import array
+	weight = array.array( "f", [0] )
+	tree.Branch( "weight2", weight, "weight2/F" )
 
-	for event in range( tree.GetNEntries() ):
-		tree.GetEntry( event )
-		tree.weight *= h_jetPt.GetBinContent( h_jetPt.FindBin( event.photon.pt ) )
+	for event in tree:
+		pt = tree.photon.at(0).pt
+		#print "p_T = %i GeV"%pt
+		weight = h_jetPt.GetBinContent( h_jetPt.FindBin( pt ) )
+		print weight
+		#print tree.weight2
+		#tree.Fill()
 
 
 
@@ -182,26 +197,29 @@ def plot( tree, plot, cut, save=False ):
 	topInfo.Draw()
 
 	if save:
-		canvas.SaveAs("%.pdf"%variable)
+		canvas.SaveAs("%s.pdf"%plot)
 	else:
 		raw_input()
 
 
 if __name__ == "__main__":
-	arguments = argparse.ArgumentParser()
-	arguments.add_argument("-f", "--file", default="myTree.root", help="ROOT file containing tree")
-	arguments.add_argument("-c", "--cut", default="", help="Cut string")
-	arguments.add_argument("-d", "--distribution", default =['met'], nargs="+",
-			help="Distribution which shall be plotted.")
-	arguments.add_argument("--save", action="store_true", help="Save canvas as pdf.")
+	# include knowledge about objects saved in the tree
+	ROOT.gSystem.Load("../treeWriter/libTreeObjects.so")
 
+	arguments = argparse.ArgumentParser( description="Calculate weighting "
+			+"factors for QCD background estimation." )
+	arguments.add_argument("-f", "--file", default="../treeWriter/myTree.root",
+			help="ROOT file containing a TTree produced by 'treeWriter'.")
+	arguments.add_argument("-c", "--cut", default="", help="TCut string.")
+	arguments.add_argument("-d", "--distribution", default =['met'], nargs="+",
+			help="Distributions to plot.")
+	arguments.add_argument("--save", action="store_true", help="Save canvas as pdf.")
 	opts = arguments.parse_args()
 
 	tree = readTree( opts.file )
 
 	# see https://twiki.cern.ch/twiki/bin/viewauth/CMS/CutBasedPhotonID2012
 	# for more information on 2012 Photon ID
-	# TODO: Conversion safe electron veto
 	# TODO: Single tower H/E
 	# TODO: correct isolation with ρ
 	photonCut2012ID = "photon.sigmaIetaIeta<0.012 \
