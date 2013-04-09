@@ -1,5 +1,6 @@
 #include<iostream>
 #include<math.h>
+#include<string>
 
 #include "TSystem.h"
 
@@ -19,6 +20,20 @@ TreeWriter::TreeWriter(TString inputName, TString outputName, int loggingVerbosi
 	event = new susy::Event;
 	inputTree->SetBranchAddress("susyEvent", &event);
 
+	if (outputName == "") {
+		// Here the output filename is generated automaticly
+		try{
+			string fName = (string) inputName;
+			// Search for 'susyEvents_', and get the unique characters afterwards.
+			// eg /path/susyEvents_123_Myl.root -> susyTree_123_Mly.root
+			outputName = "susyTree_" + fName.substr(fName.find("susyEvents_")+11,-1);
+		} catch (int e ) {
+			outputName = "susyTree.root";
+		}
+	}
+
+	if (loggingVerbosity_>0)
+		std::cout << "Open file " << outputName << " for writing." << std::endl;
 	// open the output file
 	outFile = new TFile( outputName, "recreate" );
 	tree = new TTree("susyTree","Tree for single photon analysis");

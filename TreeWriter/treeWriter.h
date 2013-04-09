@@ -11,7 +11,7 @@
 
 class TreeWriter {
 	public :
-		TreeWriter(TString inputName, TString outputName, int loggingVerbosity_ );
+		TreeWriter(TString inputName, TString outputName, int loggingVerbosity_);
 		virtual ~TreeWriter();
 		virtual void Loop();
 
