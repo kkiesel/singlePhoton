@@ -11,14 +11,14 @@
 
 class TreeWriter {
 	public :
-		TreeWriter(TString inputName, TString outputName );
+		TreeWriter(TString inputName, TString outputName, int loggingVerbosity_ );
 		virtual ~TreeWriter();
 		virtual void Loop();
 
 		void SetProcessNEvents(int nEvents) { processNEvents = nEvents; }
 		void SetReportEvents(int nEvents) { reportEvery = nEvents; }
 		void SetLoggingVerbosity(int logVerb) { loggingVerbosity = logVerb; }
-		void DontSkimEvents(){ skim = false; }
+		void SkimEvents(bool skim_){ skim = skim_; }
 
 		TChain *inputTree;
 		susy::Event *event;

@@ -7,12 +7,15 @@
 
 using namespace std;
 
-TreeWriter::TreeWriter(TString inputName, TString outputName) {
+TreeWriter::TreeWriter(TString inputName, TString outputName, int loggingVerbosity_ ) {
 	// read the input file
-	//TFile *inputFile = TFile::Open( inputName, "read" );
 	inputTree = new TChain("susyTree");
+	if (loggingVerbosity_ > 0)
+		std::cout << "Add files to chain" << std::endl;
 	inputTree->Add( inputName );
 
+	if (loggingVerbosity_ > 0)
+		std::cout << "Set Branch Address of susy::Event" << std::endl;
 	event = new susy::Event;
 	inputTree->SetBranchAddress("susyEvent", &event);
 
@@ -23,7 +26,7 @@ TreeWriter::TreeWriter(TString inputName, TString outputName) {
 	// set default parameter
 	processNEvents = -1;
 	reportEvery = 1000;
-	loggingVerbosity = 0;
+	loggingVerbosity = loggingVerbosity_;
 	skim = true;
 
 }
@@ -88,9 +91,9 @@ float TreeWriter::getPtFromMatchedJet( susy::Photon myPhoton, susy::Event myEven
 	}
 
 	// testing
-	if( nearJets.size() > 1 )
+	if( nearJets.size() > 1 && loggingVerbosity > 0 )
 		std::cout << "There are several jets matching to this photon. "
-					<< "Please check if the upper assumtion is reasonable" << std::endl;
+					<< "Please check if jet-matching is correct." << std::endl;
 	return pt;
 }
 
@@ -130,7 +133,7 @@ void TreeWriter::Loop() {
 
 		// photons
 		if( loggingVerbosity > 1 )
-			std::cout << std::endl << "Process photons" << std::endl;
+			std::cout << "Process photons" << std::endl;
 		std::map<TString, std::vector<susy::Photon> >::iterator phoMap = event->photons.find("photons");
 		for(std::vector<susy::Photon>::iterator it = phoMap->second.begin();
 				it != phoMap->second.end() && phoMap != event->photons.end(); it++ ) {
@@ -153,7 +156,7 @@ void TreeWriter::Loop() {
 			photon.push_back( *thisphoton );
 			ht += thisphoton->pt;
 			if( loggingVerbosity > 2 )
-				std::cout << " photonpt = " << thisphoton->pt << std::endl;
+				std::cout << " p_T, gamma = " << thisphoton->pt << std::endl;
 		}
 
 		if( photon.size() == 0 && skim )
