@@ -1,51 +1,18 @@
 #include<iostream>
 #include<math.h>
 
-#include "TFile.h"
-#include "TTree.h"
-#include "TString.h"
+#include "TSystem.h"
 
-#include "SusyEvent.h"
-#include "TreeObjects.h"
+#include "treeWriter.h"
 
-
-class TreeWriter {
-	public :
-		TreeWriter(TString inputName, TString outputName );
-		virtual ~TreeWriter();
-		virtual void Loop();
-
-		void SetProcessNEvents(int nEvents) { processNEvents = nEvents; }
-		void SetReportEvents(int nEvents) { reportEvery = nEvents; }
-
-		TFile *inputFile;
-		TTree *inputTree;
-		susy::Event *event;
-
-		TFile *outFile;
-		TTree *tree;
-
-		float getPtFromMatchedJet( susy::Photon, susy::Event );
-		float deltaR( TLorentzVector, TLorentzVector );
-
-	private:
-		int processNEvents; // number of events to be processed
-		int reportEvery;
-		int loggingVerbosity;
-
-		// variables which will be stored in the tree
-		std::vector<tree::Photon> photon;
-		std::vector<tree::Jet> jet;
-		float met;
-		int nVertex;
-		int nElectron;
-		float weight;
-};
+using namespace std;
 
 TreeWriter::TreeWriter(TString inputName, TString outputName) {
 	// read the input file
-	inputFile = new TFile( inputName, "read" );
-	inputTree = (TTree*) inputFile->Get("susyTree");
+	//TFile *inputFile = TFile::Open( inputName, "read" );
+	inputTree = new TChain("susyTree");
+	inputTree->Add( inputName );
+
 	event = new susy::Event;
 	inputTree->SetBranchAddress("susyEvent", &event);
 
@@ -57,6 +24,7 @@ TreeWriter::TreeWriter(TString inputName, TString outputName) {
 	processNEvents = -1;
 	reportEvery = 1000;
 	loggingVerbosity = 0;
+	skim = true;
 
 }
 
@@ -69,21 +37,21 @@ float TreeWriter::deltaR( TLorentzVector v1, TLorentzVector v2 ) {
 	return sqrt(pow(v1.Eta() - v2.Eta(), 2) + pow(v1.Phi() - v2.Phi(), 2) );
 }
 
-float TreeWriter::getPtFromMatchedJet( susy::Photon photon, susy::Event event ) {
+float TreeWriter::getPtFromMatchedJet( susy::Photon myPhoton, susy::Event myEvent ) {
 	/**
 	 * \brief Takes jet p_T as photon p_T
 	 *
 	 * At first all jets with DeltaR < 0.3 (isolation cone) are searched.
 	 * If several jets are found, take the one with the minimal pt difference
-	 * compared to the photon. If no such jets are found, return 0
+	 * compared to the photon. If no such jets are found, keep the photon_pt
 	 * TODO: remove photon matched jet from jet-selection?
 	 */
 	std::vector<susy::PFJet> nearJets;
 	nearJets.clear();
 
-	std::map<TString,susy::PFJetCollection>::iterator pfJets_it = event.pfJets.find("ak5");
-	if(pfJets_it == event.pfJets.end()){
-		if(event.pfJets.size() > 0) std::cout << "JetCollection is not available!!!" << std::endl;
+	std::map<TString,susy::PFJetCollection>::iterator pfJets_it = myEvent.pfJets.find("ak5");
+	if(pfJets_it == myEvent.pfJets.end()){
+		if(myEvent.pfJets.size() > 0) std::cout << "JetCollection is not available!!!" << std::endl;
 	} else {
 		susy::PFJetCollection& jetColl = pfJets_it->second;
 		for(std::vector<susy::PFJet>::iterator it = jetColl.begin();
@@ -95,22 +63,24 @@ float TreeWriter::getPtFromMatchedJet( susy::Photon photon, susy::Event event ) 
 			}
 			float scale = s_it->second;
 			TLorentzVector corrP4 = scale * it->momentum;
-			float deltaR_ = deltaR(photon.momentum, corrP4 );
+			float deltaR_ = deltaR(myPhoton.momentum, corrP4 );
 			if (deltaR_ > 0.3) continue;
+			if( loggingVerbosity > 0 )
+				std::cout << "gamma pt jet matching factor = " << it->momentum.Et() / myPhoton.momentum.Et() << std::endl;
 			nearJets.push_back( *it );
 		}// for jet
 	}// if, else
 
 	if ( nearJets.size() == 0 ) {
-		std::cout << "No jet with ΔR < .3 found, set p_T to 0" << std::endl;
-		return 0;
+		//std::cout << "No jet with deltaR < .3 found, do not change photon_pt" << std::endl;
+		return myPhoton.momentum.Et();
 	}
 
 	float pt = 0;
 	float minPtDifferenz = 1E20; // should be very high
 	for( std::vector<susy::PFJet>::iterator it = nearJets.begin(), jetEnd = nearJets.end();
 			it != jetEnd; it++ ) {
-		float ptDiff = fabs(photon.momentum.Et() - it->momentum.Et());
+		float ptDiff = fabs(myPhoton.momentum.Et() - it->momentum.Et());
 		if (  ptDiff < minPtDifferenz ) {
 			minPtDifferenz = ptDiff;
 			pt = it->momentum.Et();
@@ -126,8 +96,6 @@ float TreeWriter::getPtFromMatchedJet( susy::Photon photon, susy::Event event ) 
 
 
 void TreeWriter::Loop() {
-	// only for testing
-	bool skim = true;
 
 	// here the event loop is implemented and the tree is filled
 	if (inputTree == 0) return;
@@ -146,8 +114,8 @@ void TreeWriter::Loop() {
 	tree->Branch("photon", &photon);
 	tree->Branch("jet", &jet);
 	tree->Branch("met", &met, "met/F");
+	tree->Branch("ht", &ht, "ht/F");
 	tree->Branch("nVertex", &nVertex, "nVertex/I");
-	tree->Branch("weigth", &weight, "weight/F");
 	tree->Branch("nElectron", &nElectron, "nElectron/I");
 
 
@@ -158,8 +126,11 @@ void TreeWriter::Loop() {
 
 		photon.clear();
 		jet.clear();
+		ht = 0;
 
 		// photons
+		if( loggingVerbosity > 1 )
+			std::cout << std::endl << "Process photons" << std::endl;
 		std::map<TString, std::vector<susy::Photon> >::iterator phoMap = event->photons.find("photons");
 		for(std::vector<susy::Photon>::iterator it = phoMap->second.begin();
 				it != phoMap->second.end() && phoMap != event->photons.end(); it++ ) {
@@ -180,10 +151,16 @@ void TreeWriter::Loop() {
 			thisphoton->hadTowOverEm = it->hadTowOverEm;
 			thisphoton->pixelseed = it->nPixelSeeds;
 			photon.push_back( *thisphoton );
+			ht += thisphoton->pt;
+			if( loggingVerbosity > 2 )
+				std::cout << " photonpt = " << thisphoton->pt << std::endl;
 		}
+
 		if( photon.size() == 0 && skim )
 			continue;
 		std::sort( photon.begin(), photon.end(), tree::EtGreater);
+		if( loggingVerbosity > 1 )
+			std::cout << "Found " << photon.size() << " photons" << std::endl;
 
 		// jets
 		std::map<TString,susy::PFJetCollection>::iterator pfJets_it = event->pfJets.find("ak5");
@@ -208,6 +185,7 @@ void TreeWriter::Loop() {
 				thisjet->eta = corrP4.Eta();
 				thisjet->phi = corrP4.Phi();
 				jet.push_back( *thisjet );
+				ht += thisjet->pt;
 			}// for jet
 		}// if, else
 		if( jet.size() < 2 && skim )
@@ -220,15 +198,15 @@ void TreeWriter::Loop() {
 		met = metobj->met();
 
 		// electrons
-		std::vector<susy::Electron> eVector = event->electrons["gsfElectrons"];
-		nElectron = eVector.size();
+		//std::vector<susy::Electron> eVector = event->electrons["gsfElectrons"];
+		//nElectron = eVector.size();
 
 		// vertices
 
 		nVertex = event->vertices.size();
-		weight = 1;
 
-		// bjets
+		if( ht < 450 && skim)
+			continue;
 
 		tree->Fill();
 	} // for jentry
@@ -239,11 +217,5 @@ void TreeWriter::Loop() {
 	outFile->cd();
 	outFile->Write();
 	outFile->Close();
-}
-
-int main(int argc, char** argv) {
-	TreeWriter *tw = new TreeWriter("../root-files/susyEvents_qcd_1000-inf_part.root", "myTree.root");
-	tw->SetProcessNEvents(-1);
-	tw->Loop();
 }
 
