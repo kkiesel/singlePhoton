@@ -51,9 +51,68 @@ TreeWriter::~TreeWriter() {
 	delete inputTree->GetCurrentFile();
 }
 
+// useful functions
 float TreeWriter::deltaR( TLorentzVector v1, TLorentzVector v2 ) {
 	return sqrt(pow(v1.Eta() - v2.Eta(), 2) + pow(v1.Phi() - v2.Phi(), 2) );
 }
+
+// correct iso, see https://twiki.cern.ch/twiki/bin/view/CMS/CutBasedPhotonID2012
+float chargedHadronIso_corrected(susy::Photon gamma, float rho) {
+  float eta = fabs(gamma.caloPosition.Eta());
+  float ea;
+
+  if(eta < 1.0) ea = 0.012;
+  else if(eta < 1.479) ea = 0.010;
+  else if(eta < 2.0) ea = 0.014;
+  else if(eta < 2.2) ea = 0.012;
+  else if(eta < 2.3) ea = 0.016;
+  else if(eta < 2.4) ea = 0.020;
+  else ea = 0.012;
+
+  float iso = gamma.chargedHadronIso;
+  iso = max(iso - rho*ea, (float)0.);
+
+  return iso;
+}
+
+float neutralHadronIso_corrected(susy::Photon gamma, float rho) {
+  float eta = fabs(gamma.caloPosition.Eta());
+  float ea;
+
+  if(eta < 1.0) ea = 0.030;
+  else if(eta < 1.479) ea = 0.057;
+  else if(eta < 2.0) ea = 0.039;
+  else if(eta < 2.2) ea = 0.015;
+  else if(eta < 2.3) ea = 0.024;
+  else if(eta < 2.4) ea = 0.039;
+  else ea = 0.072;
+
+  float iso = gamma.neutralHadronIso;
+  iso = max(iso - rho*ea, (float)0.);
+
+  return iso;
+}
+
+float photonIso_corrected(susy::Photon gamma, float rho) {
+  float eta = fabs(gamma.caloPosition.Eta());
+  float ea;
+
+  if(eta < 1.0) ea = 0.148;
+  else if(eta < 1.479) ea = 0.130;
+  else if(eta < 2.0) ea = 0.112;
+  else if(eta < 2.2) ea = 0.216;
+  else if(eta < 2.3) ea = 0.262;
+  else if(eta < 2.4) ea = 0.260;
+  else ea = 0.266;
+
+  float iso = gamma.photonIso;
+  iso = max(iso - rho*ea, (float)0.);
+
+  return iso;
+}
+
+
+
 
 float TreeWriter::getPtFromMatchedJet( susy::Photon myPhoton, susy::Event myEvent ) {
 	/**
@@ -159,10 +218,10 @@ void TreeWriter::Loop() {
 				continue;
 			thisphoton->eta = it->momentum.Eta();
 			thisphoton->phi = it->momentum.Phi();
-			thisphoton->chargedIso = it->chargedHadronIso;
-			thisphoton->neutralIso = it->neutralHadronIso;
-			thisphoton->photonIso = it->photonIso;
-			if ( it->r9 > 1 && skim ) // if == 1 ?
+			thisphoton->chargedIso = chargedHadronIso_corrected(*it, event->rho25);
+			thisphoton->neutralIso = neutralHadronIso_corrected(*it, event->rho25);
+			thisphoton->photonIso = photonIso_corrected(*it, event->rho25);
+			if ( it->r9 >= 1 && skim )
 				continue;
 			thisphoton->r9 = it->r9;
 			thisphoton->sigmaIetaIeta = it->sigmaIetaIeta;
@@ -199,6 +258,7 @@ void TreeWriter::Loop() {
 				TLorentzVector corrP4 = scale * it->momentum;
 
 				if(std::abs(corrP4.Eta()) > 3.0 && skim ) continue;
+				if(corrP4.Et() < 30 && skim ) continue;
 				thisjet->pt = corrP4.Et();
 				thisjet->eta = corrP4.Eta();
 				thisjet->phi = corrP4.Phi();
