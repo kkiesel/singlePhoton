@@ -4,6 +4,7 @@ INCS = -I$(shell root-config --incdir) -I.
 TARGETS = libSusyEvent.so libTreeObjects.so
 
 all: $(TARGETS)
+	make -C pileUpReweighting
 
 # see http://root.cern.ch/drupal/content/interacting-shared-libraries-rootcint
 lib%.so: %.h %_LinkDef.h
