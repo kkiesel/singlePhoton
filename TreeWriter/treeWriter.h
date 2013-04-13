@@ -5,6 +5,7 @@
 #include "TTree.h"
 #include "TChain.h"
 #include "TString.h"
+#include "TH1F.h"
 
 #include "SusyEvent.h"
 #include "TreeObjects.h"
@@ -19,6 +20,7 @@ class TreeWriter {
 		void SetReportEvents(int nEvents) { reportEvery = nEvents; }
 		void SetLoggingVerbosity(int logVerb) { loggingVerbosity = logVerb; }
 		void SkimEvents(bool skim_){ skim = skim_; }
+		void PileUpWeightFile( string pileupFileName );
 
 		TChain *inputTree;
 		susy::Event *event;
@@ -35,12 +37,21 @@ class TreeWriter {
 		int loggingVerbosity;
 		bool skim;
 
+		// important dataset information
+		TH1F* pileupHisto;
+
 		// variables which will be stored in the tree
 		std::vector<tree::Photon> photon;
 		std::vector<tree::Jet> jet;
+		std::vector<tree::Particle> electron;
+		std::vector<tree::Particle> muon;
+
 		float met;
+		float met_phi;
+		float type1met;
+		float type1met_phi;
 		float ht;
 		int nVertex;
-		int nElectron;
+		float pu_weight;
 };
 
