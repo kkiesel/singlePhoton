@@ -17,11 +17,10 @@ class Photon : public Particle {
 
 class Jet : public Particle{
 	public:
-		float pt, eta;
+		float bCSV;
 };
 
 bool EtGreater(const tree::Particle, const tree::Particle);
-
 
 
 } // end namespace definition
