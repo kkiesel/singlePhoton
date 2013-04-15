@@ -13,6 +13,7 @@ class Photon : public Particle {
 	public:
 		float r9, sigmaIetaIeta, hadTowOverEm, pixelseed;
 		float chargedIso, neutralIso, photonIso;
+		bool conversionSafeVeto;
 };
 
 class Jet : public Particle{

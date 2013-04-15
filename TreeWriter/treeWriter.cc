@@ -194,6 +194,9 @@ void TreeWriter::Loop() {
 	//tree->Branch("electron", &electron);
 	tree->Branch("muon", &muon);
 	tree->Branch("met", &met, "met/F");
+	tree->Branch("metPhi", &met_phi, "metPhi/F");
+	tree->Branch("type1met", &type1met, "type1met/F");
+	tree->Branch("type1metPhi", &type1met_phi, "type1metPhi/F");
 	tree->Branch("ht", &ht, "ht/F");
 	tree->Branch("nVertex", &nVertex, "nVertex/I");
 	tree->Branch("pu_weight", &pu_weight, "pu_weight/F");
@@ -244,6 +247,7 @@ void TreeWriter::Loop() {
 			thisphoton->sigmaIetaIeta = it->sigmaIetaIeta;
 			thisphoton->hadTowOverEm = it->hadTowOverEm;
 			thisphoton->pixelseed = it->nPixelSeeds;
+			thisphoton->conversionSafeVeto = it->passelectronveto;
 			photon.push_back( *thisphoton );
 			if( loggingVerbosity > 2 )
 				std::cout << " p_T, gamma = " << thisphoton->pt << std::endl;
