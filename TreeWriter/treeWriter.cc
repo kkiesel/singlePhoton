@@ -14,6 +14,16 @@ TreeWriter::TreeWriter( TString inputName, TString outputName, int loggingVerbos
 	if (loggingVerbosity_ > 0)
 		std::cout << "Add files to chain" << std::endl;
 	inputTree->Add( inputName );
+	Init( outputName, loggingVerbosity_ );
+}
+
+TreeWriter::TreeWriter( TChain* inputTree_, TString outputName, int loggingVerbosity_ ) {
+	inputTree = inputTree_;
+	Init( outputName, loggingVerbosity_ );
+}
+
+
+void TreeWriter::Init( TString outputName, int loggingVerbosity_ ) {
 
 	if (loggingVerbosity_ > 0)
 		std::cout << "Set Branch Address of susy::Event" << std::endl;
@@ -38,8 +48,6 @@ void TreeWriter::PileUpWeightFile( string pileupFileName ) {
 	TFile *puFile = new TFile( pileupFileName.c_str() );
 	pileupHisto = (TH1F*) puFile->Get("pileup");
 }
-
-
 
 TreeWriter::~TreeWriter() {
 	if (pileupHisto != 0 )
@@ -183,7 +191,7 @@ void TreeWriter::Loop() {
 
 	tree->Branch("photon", &photon);
 	tree->Branch("jet", &jet);
-	tree->Branch("electron", &electron);
+	//tree->Branch("electron", &electron);
 	tree->Branch("muon", &muon);
 	tree->Branch("met", &met, "met/F");
 	tree->Branch("ht", &ht, "ht/F");
@@ -232,8 +240,6 @@ void TreeWriter::Loop() {
 			thisphoton->chargedIso = chargedHadronIso_corrected(*it, event->rho25);
 			thisphoton->neutralIso = neutralHadronIso_corrected(*it, event->rho25);
 			thisphoton->photonIso = photonIso_corrected(*it, event->rho25);
-			if ( it->r9 >= 1 && skim )
-				continue;
 			thisphoton->r9 = it->r9;
 			thisphoton->sigmaIetaIeta = it->sigmaIetaIeta;
 			thisphoton->hadTowOverEm = it->hadTowOverEm;
@@ -303,8 +309,8 @@ void TreeWriter::Loop() {
 			std::cout << " type1met = " << type1met << std::endl;
 
 		// electrons
+		/*
 		tree::Particle* thiselectron = new tree::Particle();
-
 		map<TString, vector<susy::Electron> >::iterator eleMap = event->electrons.find("gsfElectrons");
 		if(eleMap == event->electrons.end() && loggingVerbosity > 0) {
 			cout << "gsfElectrons not found!" << endl;
@@ -322,6 +328,7 @@ void TreeWriter::Loop() {
 		}
 		if( loggingVerbosity > 1 )
 			std::cout << "Found " << electron.size() << " electrons" << std::endl;
+		*/
 
 		// this seems not to work yet, where is the bug?
 		/*
@@ -342,6 +349,8 @@ void TreeWriter::Loop() {
 		std::vector<susy::Muon> mVector = event->muons["muons"];
 		tree::Particle* thismuon = new tree::Particle();
 		for( std::vector<susy::Muon>::iterator it = mVector.begin(); it != mVector.end(); ++it) {
+			if( !( it->isPFMuon() && ( it->isGlobalMuon() || it->isTrackerMuon() ) ) )
+				continue; // see https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuideMuonId#Loose_Muon
 			thismuon->pt = it->momentum.Et();
 			if( thismuon->pt < 20 )
 				continue;

@@ -13,6 +13,8 @@
 class TreeWriter {
 	public :
 		TreeWriter(TString inputName, TString outputName, int loggingVerbosity_);
+		TreeWriter(TChain* inputName, TString outputName, int loggingVerbosity_);
+		void Init( TString outputName, int loggingVerbosity_ );
 		virtual ~TreeWriter();
 		virtual void Loop();
 
