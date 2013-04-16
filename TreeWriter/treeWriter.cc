@@ -365,8 +365,14 @@ void TreeWriter::Loop() {
 		} else {
 			for(vector<susy::Electron>::iterator it = eleMap->second.begin(); it < eleMap->second.end(); ++it) {
 				// for cuts see https://twiki.cern.ch/twiki/bin/viewauth/CMS/EgammaCutBasedIdentification
+				if( loggingVerbosity > 0)
+					std::cout << "TODO: piAtVtx is not calculated correctly" << std::endl;
+				//float pAtVtx = it->trackMomentums.find("AtVtxWithConstraint")->second.P();
+				float pAtVtx = it->ecalEnergy;
+				if( it->momentum.Pt() < 1  || it->momentum.Pt() > 1e6 || pAtVtx == 0 )
+					continue;
 				float iso = ( it->chargedHadronIso + max(it->neutralHadronIso+it->photonIso
-															-effectiveAreaElectron(it->momentum.Eta())*event->rho25, (Float_t)0. )
+															- effectiveAreaElectron(it->momentum.Eta())*event->rho25, (Float_t)0. )
 							) / it->momentum.Pt();
 				if ( it->isEE() ){
 					if ( fabs(it->deltaEtaSuperClusterTrackAtVtx) > 0.007
@@ -375,8 +381,7 @@ void TreeWriter::Loop() {
 							|| it->hcalOverEcalBc > 0.12
 							|| it->vertex.Perp() > 0.02
 							|| it->vertex.Z() > 0.2
-							|| fabs(1./(it->ecalEnergy) - 1./(it->trackMomentums["AtVtx"].P())) > 0.05
-							|| it->convFlags() // not official, but perhaps substitude?
+							|| fabs(1./it->ecalEnergy - 1./pAtVtx ) > 0.05
 							|| iso > 0.15 )
 						continue;
 					}
@@ -387,8 +392,7 @@ void TreeWriter::Loop() {
 							|| it->hcalOverEcalBc > 0.10
 							|| it->vertex.Perp() > 0.02
 							|| it->vertex.Z() > 0.2
-							|| fabs(1./(it->ecalEnergy) - 1./(it->trackMomentums["AtVtx"].P())) > 0.05
-							|| it->convFlags() // not official, but perhaps substitude?
+							|| fabs(1./it->ecalEnergy - 1./pAtVtx) > 0.05
 							|| iso > 0.15 )
 						continue;
 					}
@@ -396,7 +400,7 @@ void TreeWriter::Loop() {
 					continue;
 				// TODO: conversion rejection information not implemented yet, see twiki for more details
 
-				thiselectron->pt = it->momentum.Et();
+				thiselectron->pt = it->momentum.Pt();
 				if( thiselectron->pt < 20 )
 					continue;
 				if( loggingVerbosity > 2 )

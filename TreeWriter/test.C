@@ -19,11 +19,11 @@ void test(string filename="", string outputFilename=""){
 	gSystem->Load("libSusyEvent.so");
 	gSystem->Load("libTreeObjects.so");
 	gROOT->LoadMacro("treeWriter.cc++");
-	TreeWriter *tw = new TreeWriter( filename, outputFilename, 5 );
+	TreeWriter *tw = new TreeWriter( filename, outputFilename, 0 );
 
 	// settings
 	tw->PileUpWeightFile("pileUpReweighting/puWeights.root");
-	tw->SetProcessNEvents(1000);
+	tw->SetProcessNEvents(-1);
 	tw->SkimEvents(true);
 	tw->Loop();
 
