@@ -60,59 +60,74 @@ float TreeWriter::deltaR( TLorentzVector v1, TLorentzVector v2 ) {
 	return sqrt(pow(v1.Eta() - v2.Eta(), 2) + pow(v1.Phi() - v2.Phi(), 2) );
 }
 
+float effectiveAreaElectron( float eta ) {
+	// see https://twiki.cern.ch/twiki/bin/view/CMS/EgammaEARhoCorrection
+	// only for Delta R = 0.3 on 2012 Data
+	eta = fabs( eta );
+	float ea;
+	if( eta < 1.0 ) ea = 0.13;
+	else if( eta < 1.479 ) ea = 0.14;
+	else if( eta < 2.0 ) ea = 0.07;
+	else if( eta < 2.2 ) ea = 0.09;
+	else if( eta < 2.3 ) ea = 0.11;
+	else if( eta < 2.4 ) ea = 0.11;
+	else ea = 0.14;
+	return ea;
+}
+
 // correct iso, see https://twiki.cern.ch/twiki/bin/view/CMS/CutBasedPhotonID2012
 float chargedHadronIso_corrected(susy::Photon gamma, float rho) {
-  float eta = fabs(gamma.caloPosition.Eta());
-  float ea;
+	float eta = fabs(gamma.caloPosition.Eta());
+	float ea;
 
-  if(eta < 1.0) ea = 0.012;
-  else if(eta < 1.479) ea = 0.010;
-  else if(eta < 2.0) ea = 0.014;
-  else if(eta < 2.2) ea = 0.012;
-  else if(eta < 2.3) ea = 0.016;
-  else if(eta < 2.4) ea = 0.020;
-  else ea = 0.012;
+	if(eta < 1.0) ea = 0.012;
+	else if(eta < 1.479) ea = 0.010;
+	else if(eta < 2.0) ea = 0.014;
+	else if(eta < 2.2) ea = 0.012;
+	else if(eta < 2.3) ea = 0.016;
+	else if(eta < 2.4) ea = 0.020;
+	else ea = 0.012;
 
-  float iso = gamma.chargedHadronIso;
-  iso = max(iso - rho*ea, (float)0.);
+	float iso = gamma.chargedHadronIso;
+	iso = max(iso - rho*ea, (float)0.);
 
-  return iso;
+	return iso;
 }
 
 float neutralHadronIso_corrected(susy::Photon gamma, float rho) {
-  float eta = fabs(gamma.caloPosition.Eta());
-  float ea;
+	float eta = fabs(gamma.caloPosition.Eta());
+	float ea;
 
-  if(eta < 1.0) ea = 0.030;
-  else if(eta < 1.479) ea = 0.057;
-  else if(eta < 2.0) ea = 0.039;
-  else if(eta < 2.2) ea = 0.015;
-  else if(eta < 2.3) ea = 0.024;
-  else if(eta < 2.4) ea = 0.039;
-  else ea = 0.072;
+	if(eta < 1.0) ea = 0.030;
+	else if(eta < 1.479) ea = 0.057;
+	else if(eta < 2.0) ea = 0.039;
+	else if(eta < 2.2) ea = 0.015;
+	else if(eta < 2.3) ea = 0.024;
+	else if(eta < 2.4) ea = 0.039;
+	else ea = 0.072;
 
-  float iso = gamma.neutralHadronIso;
-  iso = max(iso - rho*ea, (float)0.);
+	float iso = gamma.neutralHadronIso;
+	iso = max(iso - rho*ea, (float)0.);
 
-  return iso;
+	return iso;
 }
 
 float photonIso_corrected(susy::Photon gamma, float rho) {
-  float eta = fabs(gamma.caloPosition.Eta());
-  float ea;
+	float eta = fabs(gamma.caloPosition.Eta());
+	float ea;
 
-  if(eta < 1.0) ea = 0.148;
-  else if(eta < 1.479) ea = 0.130;
-  else if(eta < 2.0) ea = 0.112;
-  else if(eta < 2.2) ea = 0.216;
-  else if(eta < 2.3) ea = 0.262;
-  else if(eta < 2.4) ea = 0.260;
-  else ea = 0.266;
+	if(eta < 1.0) ea = 0.148;
+	else if(eta < 1.479) ea = 0.130;
+	else if(eta < 2.0) ea = 0.112;
+	else if(eta < 2.2) ea = 0.216;
+	else if(eta < 2.3) ea = 0.262;
+	else if(eta < 2.4) ea = 0.260;
+	else ea = 0.266;
 
-  float iso = gamma.photonIso;
-  iso = max(iso - rho*ea, (float)0.);
+	float iso = gamma.photonIso;
+	iso = max(iso - rho*ea, (float)0.);
 
-  return iso;
+	return iso;
 }
 
 float TreeWriter::getPtFromMatchedJet( susy::Photon myPhoton, susy::Event myEvent ) {
@@ -150,7 +165,8 @@ float TreeWriter::getPtFromMatchedJet( susy::Photon myPhoton, susy::Event myEven
 	}// if, else
 
 	if ( nearJets.size() == 0 ) {
-		//std::cout << "No jet with deltaR < .3 found, do not change photon_pt" << std::endl;
+		if( loggingVerbosity > 1 )
+			std::cout << "No jet with deltaR < .3 found, do not change photon_pt" << std::endl;
 		return myPhoton.momentum.Et();
 	}
 
@@ -191,7 +207,7 @@ void TreeWriter::Loop() {
 
 	tree->Branch("photon", &photon);
 	tree->Branch("jet", &jet);
-	//tree->Branch("electron", &electron);
+	tree->Branch("electron", &electron);
 	tree->Branch("muon", &muon);
 	tree->Branch("met", &met, "met/F");
 	tree->Branch("metPhi", &met_phi, "metPhi/F");
@@ -233,16 +249,33 @@ void TreeWriter::Loop() {
 		std::map<TString, std::vector<susy::Photon> >::iterator phoMap = event->photons.find("photons");
 		for(std::vector<susy::Photon>::iterator it = phoMap->second.begin();
 				it != phoMap->second.end() && phoMap != event->photons.end(); ++it ) {
-			if( ! it->isEB() && skim )
+			if( !(it->isEB() || it->isEE()) && skim )
 				continue;
 			thisphoton->pt = getPtFromMatchedJet( *it, *event );
-			if( thisphoton->pt < 80 && skim )
-				continue;
-			thisphoton->eta = it->momentum.Eta();
-			thisphoton->phi = it->momentum.Phi();
+
 			thisphoton->chargedIso = chargedHadronIso_corrected(*it, event->rho25);
 			thisphoton->neutralIso = neutralHadronIso_corrected(*it, event->rho25);
 			thisphoton->photonIso = photonIso_corrected(*it, event->rho25);
+
+			bool loose_photon_barrel = thisphoton->pt>20
+				&& it->isEB()
+				&& it->passelectronveto
+				&& it->hadTowOverEm<0.05
+				&& it->sigmaIetaIeta<0.012
+				&& thisphoton->chargedIso<2.6
+				&& thisphoton->neutralIso<3.5+0.04*thisphoton->pt
+				&& thisphoton->photonIso<1.3+0.005*thisphoton->pt;
+			bool loose_photon_endcap = thisphoton->pt > 20
+				&& it->isEE()
+				&& it->passelectronveto
+				&& it->hadTowOverEm<0.05
+				&& it->sigmaIetaIeta<0.034
+				&& thisphoton->chargedIso<2.3
+				&& thisphoton->neutralIso<2.9+0.04*thisphoton->pt;
+			if(!(loose_photon_endcap || loose_photon_barrel || thisphoton->pt > 75 ) && skim )
+				continue;
+			thisphoton->eta = it->momentum.Eta();
+			thisphoton->phi = it->momentum.Phi();
 			thisphoton->r9 = it->r9;
 			thisphoton->sigmaIetaIeta = it->sigmaIetaIeta;
 			thisphoton->hadTowOverEm = it->hadTowOverEm;
@@ -283,6 +316,18 @@ void TreeWriter::Loop() {
 				thisjet->eta = corrP4.Eta();
 				thisjet->phi = corrP4.Phi();
 				thisjet->bCSV = it->bTagDiscriminators[susy::kCSV];
+				// jet composition
+				thisjet->chargedHadronEnergy = it->chargedHadronEnergy;
+				thisjet->neutralHadronEnergy = it->neutralHadronEnergy;
+				thisjet->photonEnergy = it->photonEnergy;
+				thisjet->electronEnergy = it->electronEnergy;
+				thisjet->muonEnergy = it->muonEnergy;
+				thisjet->HFHadronEnergy = it->HFHadronEnergy;
+				thisjet->HFEMEnergy = it->HFEMEnergy;
+				thisjet->chargedEmEnergy = it->chargedEmEnergy;
+				thisjet->chargedMuEnergy = it->chargedMuEnergy;
+				thisjet->neutralEmEnergy = it->neutralEmEnergy;
+
 				if( loggingVerbosity > 2 )
 					std::cout << " p_T, jet = " << thisjet->pt << std::endl;
 
@@ -313,13 +358,44 @@ void TreeWriter::Loop() {
 			std::cout << " type1met = " << type1met << std::endl;
 
 		// electrons
-		/*
 		tree::Particle* thiselectron = new tree::Particle();
 		map<TString, vector<susy::Electron> >::iterator eleMap = event->electrons.find("gsfElectrons");
 		if(eleMap == event->electrons.end() && loggingVerbosity > 0) {
 			cout << "gsfElectrons not found!" << endl;
 		} else {
 			for(vector<susy::Electron>::iterator it = eleMap->second.begin(); it < eleMap->second.end(); ++it) {
+				// for cuts see https://twiki.cern.ch/twiki/bin/viewauth/CMS/EgammaCutBasedIdentification
+				float iso = ( it->chargedHadronIso + max(it->neutralHadronIso+it->photonIso
+															-effectiveAreaElectron(it->momentum.Eta())*event->rho25, (Float_t)0. )
+							) / it->momentum.Pt();
+				if ( it->isEE() ){
+					if ( fabs(it->deltaEtaSuperClusterTrackAtVtx) > 0.007
+							|| fabs(it->deltaPhiSuperClusterTrackAtVtx) > 0.15
+							|| it->sigmaIetaIeta > 0.01
+							|| it->hcalOverEcalBc > 0.12
+							|| it->vertex.Perp() > 0.02
+							|| it->vertex.Z() > 0.2
+							|| fabs(1./(it->ecalEnergy) - 1./(it->trackMomentums["AtVtx"].P())) > 0.05
+							|| it->convFlags() // not official, but perhaps substitude?
+							|| iso > 0.15 )
+						continue;
+					}
+				else if( it->isEB() ) {
+					if ( fabs(it->deltaEtaSuperClusterTrackAtVtx) > 0.009
+							|| fabs(it->deltaPhiSuperClusterTrackAtVtx) > 0.10
+							|| it->sigmaIetaIeta > 0.03
+							|| it->hcalOverEcalBc > 0.10
+							|| it->vertex.Perp() > 0.02
+							|| it->vertex.Z() > 0.2
+							|| fabs(1./(it->ecalEnergy) - 1./(it->trackMomentums["AtVtx"].P())) > 0.05
+							|| it->convFlags() // not official, but perhaps substitude?
+							|| iso > 0.15 )
+						continue;
+					}
+				else // not in barrel nor in endcap
+					continue;
+				// TODO: conversion rejection information not implemented yet, see twiki for more details
+
 				thiselectron->pt = it->momentum.Et();
 				if( thiselectron->pt < 20 )
 					continue;
@@ -332,22 +408,6 @@ void TreeWriter::Loop() {
 		}
 		if( loggingVerbosity > 1 )
 			std::cout << "Found " << electron.size() << " electrons" << std::endl;
-		*/
-
-		// this seems not to work yet, where is the bug?
-		/*
-		std::vector<susy::Electron> eVector = event->electrons["gsfElectronsx"];
-		for( std::vector<susy::Electron>::iterator it = eVector.begin(); it != eVector.end(); ++it) {
-			thiselectron->pt = it->momentum.Et();
-			if( thiselectron->pt < 20 )
-				continue;
-			if( loggingVerbosity > 2 )
-				std::cout << " p_T, electron = " << it->momentum.Et() << std::endl;
-			thiselectron->eta = it->momentum.Eta();
-			thiselectron->phi = it->momentum.Phi();
-			electron.push_back( *thiselectron );
-		}
-		*/
 
 		// muons
 		std::vector<susy::Muon> mVector = event->muons["muons"];

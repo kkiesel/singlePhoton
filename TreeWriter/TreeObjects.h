@@ -19,6 +19,8 @@ class Photon : public Particle {
 class Jet : public Particle{
 	public:
 		float bCSV;
+		float chargedHadronEnergy,neutralHadronEnergy,photonEnergy,electronEnergy,muonEnergy,HFHadronEnergy,HFEMEnergy,chargedEmEnergy,chargedMuEnergy,neutralEmEnergy;
+
 };
 
 bool EtGreater(const tree::Particle, const tree::Particle);
