@@ -30,6 +30,10 @@ void TreeWriter::Init( TString outputName, int loggingVerbosity_ ) {
 	event = new susy::Event;
 	inputTree->SetBranchAddress("susyEvent", &event);
 
+	// Here the number of proceeded events will be stored. For plotting, simply use L*sigma/eventNumber
+	eventNumbers = new TH1F("eventNumbers", "Histogram containing number of generated Events", 1, 0, 1);
+	eventNumbers->GetXaxis()->SetBinLabel(1,"Number of generated Events");
+
 	// open the output file
 	if (loggingVerbosity_>0)
 		std::cout << "Open file " << outputName << " for writing." << std::endl;
@@ -130,6 +134,23 @@ float photonIso_corrected(susy::Photon gamma, float rho) {
 	return iso;
 }
 
+float d0correction( susy::Electron electron, susy::Event event ) {
+	TVector3 beamspot = event.vertices[0].position;
+	susy::Track track = event.tracks[electron.gsfTrackIndex];
+	float d0 = track.d0() - beamspot.X()*sin(track.phi()) + beamspot.Y()*cos(track.phi());
+	cout << "return " << d0 << endl;
+	return d0;
+}
+
+float dZcorrection( susy::Electron electron, susy::Event event ) {
+	TVector3 beamspot = event.vertices[0].position;
+	susy::Track track = event.tracks[electron.gsfTrackIndex];
+
+	if(track.momentum.Pt() == 0.) return 1.e6;
+	float dz = (track.vertex.Z() - beamspot.Z()) - ((track.vertex.X() - beamspot.X())*track.momentum.Px() + (track.vertex.Y() - beamspot.Y())*track.momentum.Py()) / track.momentum.Pt() * (track.momentum.Pz() / track.momentum.Pt());
+	return dz;
+}
+
 float TreeWriter::getPtFromMatchedJet( susy::Photon myPhoton, susy::Event myEvent ) {
 	/**
 	 * \brief Takes jet p_T as photon p_T
@@ -196,6 +217,8 @@ void TreeWriter::Loop() {
 
 	// get number of events to be proceeded
 	Long64_t nentries = inputTree->GetEntries();
+	// store them in histo
+	eventNumbers->Fill( "Number of generated Events", nentries );
 	if(processNEvents <= 0 || processNEvents > nentries) processNEvents = nentries;
 
 	if( loggingVerbosity > 0 )
@@ -310,7 +333,7 @@ void TreeWriter::Loop() {
 				float scale = s_it->second;
 				TLorentzVector corrP4 = scale * it->momentum;
 
-				if(std::abs(corrP4.Eta()) > 3.0 && skim ) continue;
+				if(std::fabs(corrP4.Eta()) > 3.0 && skim ) continue;
 				if(corrP4.Et() < 30 && skim ) continue;
 				thisjet->pt = corrP4.Et();
 				thisjet->eta = corrP4.Eta();
@@ -363,36 +386,37 @@ void TreeWriter::Loop() {
 		if(eleMap == event->electrons.end() && loggingVerbosity > 0) {
 			cout << "gsfElectrons not found!" << endl;
 		} else {
+			cout << "now begin electrons " << endl;
 			for(vector<susy::Electron>::iterator it = eleMap->second.begin(); it < eleMap->second.end(); ++it) {
-				// for cuts see https://twiki.cern.ch/twiki/bin/viewauth/CMS/EgammaCutBasedIdentification
-				if( loggingVerbosity > 0)
-					std::cout << "TODO: piAtVtx is not calculated correctly" << std::endl;
-				//float pAtVtx = it->trackMomentums.find("AtVtxWithConstraint")->second.P();
-				float pAtVtx = it->ecalEnergy;
-				if( it->momentum.Pt() < 1  || it->momentum.Pt() > 1e6 || pAtVtx == 0 )
-					continue;
+				// for cuts see https://twiki.cern.ch/twiki/bin/viewauth/CMS/EgammaCutBasedIdentification for veto electrons
+				if( it->momentum.Pt() < 1  || it->momentum.Pt() > 1e6 )
+					continue; // spike rejection
 				float iso = ( it->chargedHadronIso + max(it->neutralHadronIso+it->photonIso
 															- effectiveAreaElectron(it->momentum.Eta())*event->rho25, (Float_t)0. )
 							) / it->momentum.Pt();
-				if ( it->isEE() ){
+				cout << iso << endl;
+				cout << d0correction( *it, *event ) << endl;
+				float test = d0correction( *it, *event );
+				cout << test << endl;
+				float dZ = std::fabs( dZcorrection( *it, *event ) );
+				cout <<" find e" << endl;
+				float d0 = 0.;
+				if ( it->isEB() ){
 					if ( fabs(it->deltaEtaSuperClusterTrackAtVtx) > 0.007
-							|| fabs(it->deltaPhiSuperClusterTrackAtVtx) > 0.15
+							|| fabs(it->deltaPhiSuperClusterTrackAtVtx) > 0.8
 							|| it->sigmaIetaIeta > 0.01
-							|| it->hcalOverEcalBc > 0.12
-							|| it->vertex.Perp() > 0.02
-							|| it->vertex.Z() > 0.2
-							|| fabs(1./it->ecalEnergy - 1./pAtVtx ) > 0.05
+							|| it->hcalOverEcalBc > 0.15
+							|| d0 > 0.04
+							|| dZ > 0.2
 							|| iso > 0.15 )
 						continue;
 					}
-				else if( it->isEB() ) {
-					if ( fabs(it->deltaEtaSuperClusterTrackAtVtx) > 0.009
-							|| fabs(it->deltaPhiSuperClusterTrackAtVtx) > 0.10
+				else if( it->isEE() ) {
+					if ( fabs(it->deltaEtaSuperClusterTrackAtVtx) > 0.01
+							|| fabs(it->deltaPhiSuperClusterTrackAtVtx) > 0.7
 							|| it->sigmaIetaIeta > 0.03
-							|| it->hcalOverEcalBc > 0.10
-							|| it->vertex.Perp() > 0.02
-							|| it->vertex.Z() > 0.2
-							|| fabs(1./it->ecalEnergy - 1./pAtVtx) > 0.05
+							|| d0 > 0.04
+							|| dZ > 0.2
 							|| iso > 0.15 )
 						continue;
 					}
@@ -441,6 +465,7 @@ void TreeWriter::Loop() {
 
 
 	outFile->cd();
+	eventNumbers->Write();
 	tree->Write();
 	outFile->Write();
 	outFile->Close();

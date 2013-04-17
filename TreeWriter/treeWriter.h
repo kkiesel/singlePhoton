@@ -29,6 +29,7 @@ class TreeWriter {
 
 		TFile *outFile;
 		TTree *tree;
+		TH1F *eventNumbers;
 
 		float getPtFromMatchedJet( susy::Photon, susy::Event );
 		float deltaR( TLorentzVector, TLorentzVector );
