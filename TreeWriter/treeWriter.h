@@ -1,10 +1,11 @@
 #include<iostream>
 #include<math.h>
+#include<string>
 
+#include "TSystem.h"
 #include "TFile.h"
 #include "TTree.h"
 #include "TChain.h"
-#include "TString.h"
 #include "TH1F.h"
 
 #include "SusyEvent.h"
@@ -12,9 +13,9 @@
 
 class TreeWriter {
 	public :
-		TreeWriter(TString inputName, TString outputName, int loggingVerbosity_);
-		TreeWriter(TChain* inputName, TString outputName, int loggingVerbosity_);
-		void Init( TString outputName, int loggingVerbosity_ );
+		TreeWriter(std::string inputName, std::string outputName, int loggingVerbosity_);
+		TreeWriter(TChain* inputName, std::string outputName, int loggingVerbosity_);
+		void Init( std::string outputName, int loggingVerbosity_ );
 		virtual ~TreeWriter();
 		virtual void Loop();
 
@@ -22,7 +23,7 @@ class TreeWriter {
 		void SetReportEvents(int nEvents) { reportEvery = nEvents; }
 		void SetLoggingVerbosity(int logVerb) { loggingVerbosity = logVerb; }
 		void SkimEvents(bool skim_){ skim = skim_; }
-		void PileUpWeightFile( string pileupFileName );
+		void PileUpWeightFile( std::string pileupFileName );
 
 		TChain *inputTree;
 		susy::Event *event;
@@ -30,9 +31,6 @@ class TreeWriter {
 		TFile *outFile;
 		TTree *tree;
 		TH1F *eventNumbers;
-
-		float getPtFromMatchedJet( susy::Photon, susy::Event );
-		float deltaR( TLorentzVector, TLorentzVector );
 
 	private:
 		int processNEvents; // number of events to be processed

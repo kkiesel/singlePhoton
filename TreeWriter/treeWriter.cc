@@ -1,29 +1,23 @@
-#include<iostream>
-#include<math.h>
-#include<string>
-
-#include "TSystem.h"
-
 #include "treeWriter.h"
 
 using namespace std;
 
-TreeWriter::TreeWriter( TString inputName, TString outputName, int loggingVerbosity_ ) {
+TreeWriter::TreeWriter( std::string inputName, std::string outputName, int loggingVerbosity_ ) {
 	// read the input file
 	inputTree = new TChain("susyTree");
 	if (loggingVerbosity_ > 0)
 		std::cout << "Add files to chain" << std::endl;
-	inputTree->Add( inputName );
+	inputTree->Add( inputName.c_str() );
 	Init( outputName, loggingVerbosity_ );
 }
 
-TreeWriter::TreeWriter( TChain* inputTree_, TString outputName, int loggingVerbosity_ ) {
+TreeWriter::TreeWriter( TChain* inputTree_, std::string outputName, int loggingVerbosity_ ) {
 	inputTree = inputTree_;
 	Init( outputName, loggingVerbosity_ );
 }
 
 
-void TreeWriter::Init( TString outputName, int loggingVerbosity_ ) {
+void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
 
 	if (loggingVerbosity_ > 0)
 		std::cout << "Set Branch Address of susy::Event" << std::endl;
@@ -31,13 +25,13 @@ void TreeWriter::Init( TString outputName, int loggingVerbosity_ ) {
 	inputTree->SetBranchAddress("susyEvent", &event);
 
 	// Here the number of proceeded events will be stored. For plotting, simply use L*sigma/eventNumber
-	eventNumbers = new TH1F("eventNumbers", "Histogram containing number of generated Events", 1, 0, 1);
-	eventNumbers->GetXaxis()->SetBinLabel(1,"Number of generated Events");
+	eventNumbers = new TH1F("eventNumbers", "Histogram containing number of generated events", 1, 0, 1);
+	eventNumbers->GetXaxis()->SetBinLabel(1,"Number of generated events");
 
 	// open the output file
 	if (loggingVerbosity_>0)
 		std::cout << "Open file " << outputName << " for writing." << std::endl;
-	outFile = new TFile( outputName, "recreate" );
+	outFile = new TFile( outputName.c_str(), "recreate" );
 	tree = new TTree("susyTree","Tree for single photon analysis");
 
 	// set default parameter
@@ -57,10 +51,14 @@ TreeWriter::~TreeWriter() {
 	if (pileupHisto != 0 )
 		delete pileupHisto;
 	inputTree->GetCurrentFile()->Close();
+	delete inputTree;
+	delete event;
+	delete outFile;
+	delete tree;
 }
 
 // useful functions
-float TreeWriter::deltaR( TLorentzVector v1, TLorentzVector v2 ) {
+float deltaR( TLorentzVector v1, TLorentzVector v2 ) {
 	return sqrt(pow(v1.Eta() - v2.Eta(), 2) + pow(v1.Phi() - v2.Phi(), 2) );
 }
 
@@ -134,15 +132,14 @@ float photonIso_corrected(susy::Photon gamma, float rho) {
 	return iso;
 }
 
-float d0correction( susy::Electron electron, susy::Event event ) {
+float d0correction( const susy::Electron& electron, const susy::Event& event ) {
 	TVector3 beamspot = event.vertices[0].position;
 	susy::Track track = event.tracks[electron.gsfTrackIndex];
 	float d0 = track.d0() - beamspot.X()*sin(track.phi()) + beamspot.Y()*cos(track.phi());
-	cout << "return " << d0 << endl;
 	return d0;
 }
 
-float dZcorrection( susy::Electron electron, susy::Event event ) {
+float dZcorrection( const susy::Electron& electron, const susy::Event& event ) {
 	TVector3 beamspot = event.vertices[0].position;
 	susy::Track track = event.tracks[electron.gsfTrackIndex];
 
@@ -151,7 +148,7 @@ float dZcorrection( susy::Electron electron, susy::Event event ) {
 	return dz;
 }
 
-float TreeWriter::getPtFromMatchedJet( susy::Photon myPhoton, susy::Event myEvent ) {
+float getPtFromMatchedJet( susy::Photon myPhoton, susy::PFJetCollection jetColl, int loggingVerbosity = 0 ) {
 	/**
 	 * \brief Takes jet p_T as photon p_T
 	 *
@@ -163,27 +160,21 @@ float TreeWriter::getPtFromMatchedJet( susy::Photon myPhoton, susy::Event myEven
 	std::vector<susy::PFJet> nearJets;
 	nearJets.clear();
 
-	std::map<TString,susy::PFJetCollection>::iterator pfJets_it = myEvent.pfJets.find("ak5");
-	if(pfJets_it == myEvent.pfJets.end()){
-		if(myEvent.pfJets.size() > 0) std::cout << "JetCollection is not available!!!" << std::endl;
-	} else {
-		susy::PFJetCollection& jetColl = pfJets_it->second;
-		for(std::vector<susy::PFJet>::iterator it = jetColl.begin();
-				it != jetColl.end(); ++it) {
-			std::map<TString,Float_t>::iterator s_it = it->jecScaleFactors.find("L2L3");
-			if (s_it == it->jecScaleFactors.end()) {
-				std::cout << "JEC is not available for this jet!!!" << std::endl;
-				continue;
-			}
-			float scale = s_it->second;
-			TLorentzVector corrP4 = scale * it->momentum;
-			float deltaR_ = deltaR(myPhoton.momentum, corrP4 );
-			if (deltaR_ > 0.3) continue;
-			if( loggingVerbosity > 0 )
-				std::cout << "gamma pt jet matching factor = " << it->momentum.Et() / myPhoton.momentum.Et() << std::endl;
-			nearJets.push_back( *it );
-		}// for jet
-	}// if, else
+	for(std::vector<susy::PFJet>::iterator it = jetColl.begin();
+			it != jetColl.end(); ++it) {
+		std::map<TString,Float_t>::iterator s_it = it->jecScaleFactors.find("L2L3");
+		if (s_it == it->jecScaleFactors.end()) {
+			std::cout << "JEC is not available for this jet!!!" << std::endl;
+			continue;
+		}
+		float scale = s_it->second;
+		TLorentzVector corrP4 = scale * it->momentum;
+		float deltaR_ = deltaR(myPhoton.momentum, corrP4 );
+		if (deltaR_ > 0.3) continue;
+		if( loggingVerbosity > 2 )
+			std::cout << " pT_jet / pT_gamma = " << it->momentum.Et() / myPhoton.momentum.Et() << std::endl;
+		nearJets.push_back( *it );
+	}// for jet
 
 	if ( nearJets.size() == 0 ) {
 		if( loggingVerbosity > 1 )
@@ -225,9 +216,6 @@ void TreeWriter::Loop() {
 		std::cout << "Processing " << processNEvents << " ouf of "
 			<< nentries << " events. " << std::endl;
 
-	tree::Photon *thisphoton = new tree::Photon();
-	tree::Jet *thisjet = new tree::Jet();
-
 	tree->Branch("photon", &photon);
 	tree->Branch("jet", &jet);
 	tree->Branch("electron", &electron);
@@ -242,9 +230,8 @@ void TreeWriter::Loop() {
 
 
 	for (long jentry=0; jentry < processNEvents; ++jentry) {
-		if ( loggingVerbosity>0 && jentry%reportEvery==0 )
+		if ( loggingVerbosity>2 || jentry%reportEvery==0 )
 			std::cout << jentry << " / " << processNEvents << std :: endl;
-		inputTree->GetEntry(jentry);
 
 		photon.clear();
 		jet.clear();
@@ -265,48 +252,60 @@ void TreeWriter::Loop() {
 			pu_weight = pileupHisto->GetBinContent( pileupHisto->FindBin( trueNumInteractions ) );
 		}
 
+		// get ak5 jets
+		susy::PFJetCollection jetVector;
+		if(event->pfJets.count("ak5") == 0)
+			cout << "ERROR: Jet collection 'ak5' not found" << endl;
+		else
+			jetVector = event->pfJets.find("ak5")->second;
 
 		// photons
 		if( loggingVerbosity > 1 )
 			std::cout << "Process photons" << std::endl;
-		std::map<TString, std::vector<susy::Photon> >::iterator phoMap = event->photons.find("photons");
-		for(std::vector<susy::Photon>::iterator it = phoMap->second.begin();
-				it != phoMap->second.end() && phoMap != event->photons.end(); ++it ) {
+		susy::PhotonCollection photonVector;
+		if(event->photons.count("photons") == 0)
+			cout << "ERROR: Photon collection 'photons' not found" << endl;
+		else
+			photonVector = event->photons.find("photons")->second;
+
+		for(susy::PhotonCollection :: iterator it = photonVector.begin();
+				it != photonVector.end(); ++it ) {
 			if( !(it->isEB() || it->isEE()) && skim )
 				continue;
-			thisphoton->pt = getPtFromMatchedJet( *it, *event );
+			tree::Photon thisphoton;
+			thisphoton.pt = getPtFromMatchedJet( *it, jetVector, loggingVerbosity );
 
-			thisphoton->chargedIso = chargedHadronIso_corrected(*it, event->rho25);
-			thisphoton->neutralIso = neutralHadronIso_corrected(*it, event->rho25);
-			thisphoton->photonIso = photonIso_corrected(*it, event->rho25);
+			thisphoton.chargedIso = chargedHadronIso_corrected(*it, event->rho25);
+			thisphoton.neutralIso = neutralHadronIso_corrected(*it, event->rho25);
+			thisphoton.photonIso = photonIso_corrected(*it, event->rho25);
 
-			bool loose_photon_barrel = thisphoton->pt>20
+			bool loose_photon_barrel = thisphoton.pt>20
 				&& it->isEB()
 				&& it->passelectronveto
 				&& it->hadTowOverEm<0.05
 				&& it->sigmaIetaIeta<0.012
-				&& thisphoton->chargedIso<2.6
-				&& thisphoton->neutralIso<3.5+0.04*thisphoton->pt
-				&& thisphoton->photonIso<1.3+0.005*thisphoton->pt;
-			bool loose_photon_endcap = thisphoton->pt > 20
+				&& thisphoton.chargedIso<2.6
+				&& thisphoton.neutralIso<3.5+0.04*thisphoton.pt
+				&& thisphoton.photonIso<1.3+0.005*thisphoton.pt;
+			bool loose_photon_endcap = thisphoton.pt > 20
 				&& it->isEE()
 				&& it->passelectronveto
 				&& it->hadTowOverEm<0.05
 				&& it->sigmaIetaIeta<0.034
-				&& thisphoton->chargedIso<2.3
-				&& thisphoton->neutralIso<2.9+0.04*thisphoton->pt;
-			if(!(loose_photon_endcap || loose_photon_barrel || thisphoton->pt > 75 ) && skim )
+				&& thisphoton.chargedIso<2.3
+				&& thisphoton.neutralIso<2.9+0.04*thisphoton.pt;
+			if(!(loose_photon_endcap || loose_photon_barrel || thisphoton.pt > 75 ) && skim )
 				continue;
-			thisphoton->eta = it->momentum.Eta();
-			thisphoton->phi = it->momentum.Phi();
-			thisphoton->r9 = it->r9;
-			thisphoton->sigmaIetaIeta = it->sigmaIetaIeta;
-			thisphoton->hadTowOverEm = it->hadTowOverEm;
-			thisphoton->pixelseed = it->nPixelSeeds;
-			thisphoton->conversionSafeVeto = it->passelectronveto;
-			photon.push_back( *thisphoton );
+			thisphoton.eta = it->momentum.Eta();
+			thisphoton.phi = it->momentum.Phi();
+			thisphoton.r9 = it->r9;
+			thisphoton.sigmaIetaIeta = it->sigmaIetaIeta;
+			thisphoton.hadTowOverEm = it->hadTowOverEm;
+			thisphoton.pixelseed = it->nPixelSeeds;
+			thisphoton.conversionSafeVeto = it->passelectronveto;
+			photon.push_back( thisphoton );
 			if( loggingVerbosity > 2 )
-				std::cout << " p_T, gamma = " << thisphoton->pt << std::endl;
+				std::cout << " p_T, gamma = " << thisphoton.pt << std::endl;
 		}
 
 		if( photon.size() == 0 && skim )
@@ -325,37 +324,44 @@ void TreeWriter::Loop() {
 
 			for(std::vector<susy::PFJet>::iterator it = jetColl.begin();
 					it != jetColl.end(); ++it) {
-				std::map<TString,Float_t>::iterator s_it = it->jecScaleFactors.find("L2L3");
+				tree::Jet thisjet;
+				/*std::map<TString,Float_t>::iterator s_it = it->jecScaleFactors.find("L2L3");
 				if (s_it == it->jecScaleFactors.end()) {
 					std::cout << "JEC is not available for this jet!!!" << std::endl;
 					continue;
 				}
 				float scale = s_it->second;
+				*/
+				float scale = 1.;
+				if(it->jecScaleFactors.count("L2L3") == 0)
+					std::cout << "ERROR: JEC is not available for this jet" << std::endl;
+				else
+					scale = it->jecScaleFactors.find("L2L3")->second;
 				TLorentzVector corrP4 = scale * it->momentum;
 
-				if(std::fabs(corrP4.Eta()) > 3.0 && skim ) continue;
-				if(corrP4.Et() < 30 && skim ) continue;
-				thisjet->pt = corrP4.Et();
-				thisjet->eta = corrP4.Eta();
-				thisjet->phi = corrP4.Phi();
-				thisjet->bCSV = it->bTagDiscriminators[susy::kCSV];
+				if(std::abs(corrP4.Eta()) > 3.0 && skim ) continue;
+				if(corrP4.Pt() < 30 && skim ) continue;
+				thisjet.pt = corrP4.Pt();
+				thisjet.eta = corrP4.Eta();
+				thisjet.phi = corrP4.Phi();
+				thisjet.bCSV = it->bTagDiscriminators[susy::kCSV];
 				// jet composition
-				thisjet->chargedHadronEnergy = it->chargedHadronEnergy;
-				thisjet->neutralHadronEnergy = it->neutralHadronEnergy;
-				thisjet->photonEnergy = it->photonEnergy;
-				thisjet->electronEnergy = it->electronEnergy;
-				thisjet->muonEnergy = it->muonEnergy;
-				thisjet->HFHadronEnergy = it->HFHadronEnergy;
-				thisjet->HFEMEnergy = it->HFEMEnergy;
-				thisjet->chargedEmEnergy = it->chargedEmEnergy;
-				thisjet->chargedMuEnergy = it->chargedMuEnergy;
-				thisjet->neutralEmEnergy = it->neutralEmEnergy;
+				thisjet.chargedHadronEnergy = it->chargedHadronEnergy;
+				thisjet.neutralHadronEnergy = it->neutralHadronEnergy;
+				thisjet.photonEnergy = it->photonEnergy;
+				thisjet.electronEnergy = it->electronEnergy;
+				thisjet.muonEnergy = it->muonEnergy;
+				thisjet.HFHadronEnergy = it->HFHadronEnergy;
+				thisjet.HFEMEnergy = it->HFEMEnergy;
+				thisjet.chargedEmEnergy = it->chargedEmEnergy;
+				thisjet.chargedMuEnergy = it->chargedMuEnergy;
+				thisjet.neutralEmEnergy = it->neutralEmEnergy;
 
 				if( loggingVerbosity > 2 )
-					std::cout << " p_T, jet = " << thisjet->pt << std::endl;
+					std::cout << " p_T, jet = " << thisjet.pt << std::endl;
 
-				jet.push_back( *thisjet );
-				ht += thisjet->pt;
+				jet.push_back( thisjet );
+				ht += thisjet.pt;
 			}// for jet
 		}// if, else
 		if( jet.size() < 2 && skim )
@@ -381,74 +387,82 @@ void TreeWriter::Loop() {
 			std::cout << " type1met = " << type1met << std::endl;
 
 		// electrons
-		tree::Particle* thiselectron = new tree::Particle();
-		map<TString, vector<susy::Electron> >::iterator eleMap = event->electrons.find("gsfElectrons");
-		if(eleMap == event->electrons.end() && loggingVerbosity > 0) {
-			cout << "gsfElectrons not found!" << endl;
-		} else {
-			cout << "now begin electrons " << endl;
-			for(vector<susy::Electron>::iterator it = eleMap->second.begin(); it < eleMap->second.end(); ++it) {
-				// for cuts see https://twiki.cern.ch/twiki/bin/viewauth/CMS/EgammaCutBasedIdentification for veto electrons
-				if( it->momentum.Pt() < 1  || it->momentum.Pt() > 1e6 )
-					continue; // spike rejection
-				float iso = ( it->chargedHadronIso + max(it->neutralHadronIso+it->photonIso
-															- effectiveAreaElectron(it->momentum.Eta())*event->rho25, (Float_t)0. )
-							) / it->momentum.Pt();
-				cout << iso << endl;
-				cout << d0correction( *it, *event ) << endl;
-				float test = d0correction( *it, *event );
-				cout << test << endl;
-				float dZ = std::fabs( dZcorrection( *it, *event ) );
-				cout <<" find e" << endl;
-				float d0 = 0.;
-				if ( it->isEB() ){
-					if ( fabs(it->deltaEtaSuperClusterTrackAtVtx) > 0.007
-							|| fabs(it->deltaPhiSuperClusterTrackAtVtx) > 0.8
-							|| it->sigmaIetaIeta > 0.01
-							|| it->hcalOverEcalBc > 0.15
-							|| d0 > 0.04
-							|| dZ > 0.2
-							|| iso > 0.15 )
-						continue;
-					}
-				else if( it->isEE() ) {
-					if ( fabs(it->deltaEtaSuperClusterTrackAtVtx) > 0.01
-							|| fabs(it->deltaPhiSuperClusterTrackAtVtx) > 0.7
-							|| it->sigmaIetaIeta > 0.03
-							|| d0 > 0.04
-							|| dZ > 0.2
-							|| iso > 0.15 )
-						continue;
-					}
-				else // not in barrel nor in endcap
-					continue;
-				// TODO: conversion rejection information not implemented yet, see twiki for more details
+		std::vector<susy::Electron>* eVector;
+		if( event->electrons.count("gsfElectrons") == 0) {
+			cout << "EROR: no electron collection found" << endl;
+			continue;
+		} else
+			eVector = &event->electrons.find("gsfElectrons")->second;
 
-				thiselectron->pt = it->momentum.Pt();
-				if( thiselectron->pt < 20 )
+		for(vector<susy::Electron>::iterator it = eVector->begin(); it < eVector->end(); ++it) {
+			tree::Particle thiselectron;
+			if( loggingVerbosity > 2 )
+				cout << " electron pt = " << it->momentum.Pt() << endl;
+			// for cuts see https://twiki.cern.ch/twiki/bin/viewauth/CMS/EgammaCutBasedIdentification
+			// use veto electrons
+			if( it->momentum.Pt() < 20  || it->momentum.Pt() > 1e6 )
+				continue; // spike rejection
+			float iso = ( it->chargedHadronIso + max(it->neutralHadronIso+it->photonIso
+														- effectiveAreaElectron(it->momentum.Eta())*event->rho25, (Float_t)0. )
+						) / it->momentum.Pt();
+			cout << iso << endl;
+			float d0 = d0correction( *it, *event );
+			cout << d0 << endl;
+			float dZ = std::abs( dZcorrection( *it, *event ) );
+			cout << dZ << endl;
+			if ( it->isEB() ){
+				cout << "electron in barrel" << endl;
+				if ( fabs(it->deltaEtaSuperClusterTrackAtVtx) > 0.007
+						|| fabs(it->deltaPhiSuperClusterTrackAtVtx) > 0.8
+						|| it->sigmaIetaIeta > 0.01
+						|| it->hcalOverEcalBc > 0.15
+						|| d0 > 0.04
+						|| dZ > 0.2
+						|| iso > 0.15 ){
+					cout << " no real electron" << endl;
 					continue;
-				if( loggingVerbosity > 2 )
-					std::cout << " p_T, electron = " << it->momentum.Et() << std::endl;
-				thiselectron->eta = it->momentum.Eta();
-				thiselectron->phi = it->momentum.Phi();
-				electron.push_back( *thiselectron );
+				}
+				}
+			else if( it->isEE() ) {
+				cout << "electron in endcap" << endl;
+				if ( fabs(it->deltaEtaSuperClusterTrackAtVtx) > 0.01
+						|| fabs(it->deltaPhiSuperClusterTrackAtVtx) > 0.7
+						|| it->sigmaIetaIeta > 0.03
+						|| d0 > 0.04
+						|| dZ > 0.2
+						|| iso > 0.15 ){
+					cout << "no real electron" << endl;
+					continue;
+				}
+				}
+			else{ // not in barrel nor in endcap
+				cout << " electron in gap" << endl;
+				continue;
+			// TODO: conversion rejection information not implemented yet, see twiki for more details
 			}
+			thiselectron.pt = it->momentum.Pt();
+			if( loggingVerbosity > 2 )
+				std::cout << " p_T, electron = " << it->momentum.Et() << std::endl;
+			thiselectron.eta = it->momentum.Eta();
+			thiselectron.phi = it->momentum.Phi();
+			cout << " adde electron" << endl;
+			electron.push_back( thiselectron );
 		}
 		if( loggingVerbosity > 1 )
 			std::cout << "Found " << electron.size() << " electrons" << std::endl;
 
 		// muons
 		std::vector<susy::Muon> mVector = event->muons["muons"];
-		tree::Particle* thismuon = new tree::Particle();
+		tree::Particle thismuon;
 		for( std::vector<susy::Muon>::iterator it = mVector.begin(); it != mVector.end(); ++it) {
 			if( !( it->isPFMuon() && ( it->isGlobalMuon() || it->isTrackerMuon() ) ) )
 				continue; // see https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuideMuonId#Loose_Muon
-			thismuon->pt = it->momentum.Et();
-			if( thismuon->pt < 20 )
+			thismuon.pt = it->momentum.Et();
+			if( thismuon.pt < 20 )
 				continue;
-			thismuon->eta = it->momentum.Eta();
-			thismuon->phi = it->momentum.Phi();
-			muon.push_back( *thismuon );
+			thismuon.eta = it->momentum.Eta();
+			thismuon.phi = it->momentum.Phi();
+			muon.push_back( thismuon );
 		}
 		if( loggingVerbosity > 1 )
 			std::cout << "Found " << muon.size() << " muons" << std::endl;
@@ -459,6 +473,7 @@ void TreeWriter::Loop() {
 
 		if( ht < 450 && skim)
 			continue;
+
 
 		tree->Fill();
 	} // for jentry
