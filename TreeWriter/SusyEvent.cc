@@ -10,7 +10,7 @@
 */
 //
 // Original Author:  Dongwook Jang
-// $Id: SusyEvent.cc,v 1.25 2012/09/17 20:29:24 dmason Exp $
+// $Id: SusyEvent.cc,v 1.3 2013/04/09 07:28:02 kiesel Exp $
 //
 
 #include "SusyEvent.h"
@@ -443,7 +443,7 @@ void susy::Event::Init() {
     cosmicFlag                  = 0;
     rho                         = 0;
     rhoBarrel                   = 0;
-    rho25			= 0;
+    rho25                       = 0;
     metFilterBit                = 0;
     metFilterBit_2              = 0;
 
