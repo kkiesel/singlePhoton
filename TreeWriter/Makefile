@@ -18,6 +18,7 @@ $(EXE): $(OBJ) $(SHARED_LIB)
 
 
 # see http://root.cern.ch/drupal/content/interacting-shared-libraries-rootcint
+# the libaries will be copied to your cmssw lib directory
 lib%.so: %.h %_LinkDef.h
 	rootcint -f $(subst so,cxx,$@) -c $+
 	g++ -O2 -Wall  -shared -fPIC `root-config --ldflags` $(INCS) -o $@ $(subst lib,,$(subst so,cc,$@)) $(subst so,cxx,$@)

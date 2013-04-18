@@ -10,6 +10,7 @@
 #pragma link C++ class tree::Photon+;
 #pragma link C++ class tree::Jet+;
 #pragma link C++ class std::vector<tree::Photon>+;
+#pragma link C++ class std::vector<tree::Particle>+;
 #pragma link C++ class std::vector<tree::Jet>+;
 
 #endif

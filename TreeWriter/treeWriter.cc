@@ -16,7 +16,6 @@ TreeWriter::TreeWriter( TChain* inputTree_, std::string outputName, int loggingV
 	Init( outputName, loggingVerbosity_ );
 }
 
-
 void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
 
 	if (loggingVerbosity_ > 0)
@@ -209,7 +208,7 @@ void TreeWriter::Loop() {
 	// get number of events to be proceeded
 	Long64_t nentries = inputTree->GetEntries();
 	// store them in histo
-	eventNumbers->Fill( "Number of generated Events", nentries );
+	eventNumbers->Fill( "Number of generated events", nentries );
 	if(processNEvents <= 0 || processNEvents > nentries) processNEvents = nentries;
 
 	if( loggingVerbosity > 0 )
@@ -232,6 +231,8 @@ void TreeWriter::Loop() {
 	for (long jentry=0; jentry < processNEvents; ++jentry) {
 		if ( loggingVerbosity>2 || jentry%reportEvery==0 )
 			std::cout << jentry << " / " << processNEvents << std :: endl;
+		inputTree->LoadTree( jentry );
+		inputTree->GetEntry( jentry );
 
 		photon.clear();
 		jet.clear();
@@ -405,47 +406,35 @@ void TreeWriter::Loop() {
 			float iso = ( it->chargedHadronIso + max(it->neutralHadronIso+it->photonIso
 														- effectiveAreaElectron(it->momentum.Eta())*event->rho25, (Float_t)0. )
 						) / it->momentum.Pt();
-			cout << iso << endl;
 			float d0 = d0correction( *it, *event );
-			cout << d0 << endl;
 			float dZ = std::abs( dZcorrection( *it, *event ) );
-			cout << dZ << endl;
 			if ( it->isEB() ){
-				cout << "electron in barrel" << endl;
 				if ( fabs(it->deltaEtaSuperClusterTrackAtVtx) > 0.007
 						|| fabs(it->deltaPhiSuperClusterTrackAtVtx) > 0.8
 						|| it->sigmaIetaIeta > 0.01
 						|| it->hcalOverEcalBc > 0.15
 						|| d0 > 0.04
 						|| dZ > 0.2
-						|| iso > 0.15 ){
-					cout << " no real electron" << endl;
+						|| iso > 0.15 )
 					continue;
 				}
-				}
 			else if( it->isEE() ) {
-				cout << "electron in endcap" << endl;
 				if ( fabs(it->deltaEtaSuperClusterTrackAtVtx) > 0.01
 						|| fabs(it->deltaPhiSuperClusterTrackAtVtx) > 0.7
 						|| it->sigmaIetaIeta > 0.03
 						|| d0 > 0.04
 						|| dZ > 0.2
-						|| iso > 0.15 ){
-					cout << "no real electron" << endl;
+						|| iso > 0.15 )
 					continue;
 				}
-				}
-			else{ // not in barrel nor in endcap
-				cout << " electron in gap" << endl;
+			else // not in barrel nor in endcap
 				continue;
-			// TODO: conversion rejection information not implemented yet, see twiki for more details
-			}
+
 			thiselectron.pt = it->momentum.Pt();
 			if( loggingVerbosity > 2 )
 				std::cout << " p_T, electron = " << it->momentum.Et() << std::endl;
 			thiselectron.eta = it->momentum.Eta();
 			thiselectron.phi = it->momentum.Phi();
-			cout << " adde electron" << endl;
 			electron.push_back( thiselectron );
 		}
 		if( loggingVerbosity > 1 )
