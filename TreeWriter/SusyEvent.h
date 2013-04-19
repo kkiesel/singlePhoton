@@ -12,7 +12,7 @@
 */
 //
 // Original Author:  Dongwook Jang
-// $Id: SusyEvent.h,v 1.34 2013/02/21 21:08:31 askew Exp $
+// $Id: SusyEvent.h,v 1.3 2013/04/09 07:28:02 kiesel Exp $
 //
 
 #ifndef SusyEvent_h
@@ -184,7 +184,7 @@ namespace susy {
     Float_t  phiWidth;
     Float_t  etaWidth;
     TVector3 position;
-    std::vector<Int_t> basicClusterIndices;
+    std::vector<UShort_t> basicClusterIndices;
     
   };
 
@@ -648,7 +648,7 @@ namespace susy {
     UChar_t        neutralMultiplicity;
 
     // Should contain ntuple indices of tracks associated with this jet
-    std::vector<int> tracklist;
+    std::vector<UShort_t> tracklist;
 
     // Pileup Jet Id info
     std::vector<Float_t> puJetIdDiscriminants;
