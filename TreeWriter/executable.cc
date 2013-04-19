@@ -2,11 +2,19 @@
 
 int main( int argc, char** argv ) {
 
-	std::string filename = "../susyEvents.root";
-	//std::string filename = "dcache:dcap://dcache-cms-dcap.desy.de/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/WJets_V01/susyEvents_812_1_Fbi.root";
-	std::string outputFilename = "susyTree.root";
+	if( argc < 2 ) {
+		std::cout << "usage: ./execute outputFileName.root input1.root input2.root ..." << std::endl;
+		return 1;
+	}
+	std::string outputFileName = argv[1];
 
-	TreeWriter *tw = new TreeWriter( filename, outputFilename, 0 );
+	TChain *inputTree = new TChain("susyTree");
+	for( unsigned int i=2; i<argc; ++i)
+		inputTree->Add( argv[i] );
+
+	std::cout << "Write to output file \"" << outputFileName << "\"" << std::endl;
+
+	TreeWriter *tw = new TreeWriter( inputTree, outputFileName, 0 );
 
 	// settings
 	tw->PileUpWeightFile("pileUpReweighting/puWeights.root");
