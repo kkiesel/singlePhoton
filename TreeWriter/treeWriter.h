@@ -20,23 +20,27 @@ class TreeWriter {
 		virtual void Loop();
 
 		void SetProcessNEvents(int nEvents) { processNEvents = nEvents; }
-		void SetReportEvents(int nEvents) { reportEvery = nEvents; }
-		void SetLoggingVerbosity(int logVerb) { loggingVerbosity = logVerb; }
+		void SetReportEvents(unsigned int nEvents) { reportEvery = nEvents; }
+		void SetLoggingVerbosity(unsigned int logVerb) { loggingVerbosity = logVerb; }
 		void SkimEvents(bool skim_){ skim = skim_; }
 		void PileUpWeightFile( std::string pileupFileName );
 
-		TChain *inputTree;
-		susy::Event *event;
+		TChain* inputTree;
+		susy::Event* event;
 
-		TFile *outFile;
-		TTree *tree;
-		TH1F *eventNumbers;
+		TFile* outFile;
+		TTree* tree;
+		TH1F* eventNumbers;
 
 	private:
 		int processNEvents; // number of events to be processed
-		int reportEvery;
-		int loggingVerbosity;
-		bool skim;
+		unsigned int reportEvery;
+		bool skim; // true by default. eg. nJets, jet.pt, etc
+		unsigned int loggingVerbosity;
+		// 0: no output
+		// 1: only steps are shown
+		// 2: object multiplicity shown
+		// 3: detailed object info shown
 
 		// important dataset information
 		TH1F* pileupHisto;
