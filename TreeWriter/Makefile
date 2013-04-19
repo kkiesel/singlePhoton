@@ -14,11 +14,12 @@ all: $(SHARED_LIB) $(EXE)
 	g++ -o $@ $+ -c $(INCS)
 
 $(EXE): $(OBJ) $(SHARED_LIB)
-	g++ -o $@ $+ $(LIBS) && ./$@
+	g++ -o $@ $+ $(LIBS)
 
 
 # see http://root.cern.ch/drupal/content/interacting-shared-libraries-rootcint
-# the libaries will be copied to your cmssw lib directory
+# The libaries will be copied to your cmssw lib directory. If this is not possible,
+# please execute 'LD_LIBRARY_PATH=$LD_LIBRARY_PATH:`pwd`'
 lib%.so: %.h %_LinkDef.h
 	rootcint -f $(subst so,cxx,$@) -c $+
 	g++ -O2 -Wall  -shared -fPIC `root-config --ldflags` $(INCS) -o $@ $(subst lib,,$(subst so,cc,$@)) $(subst so,cxx,$@)
