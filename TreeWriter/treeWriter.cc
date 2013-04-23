@@ -408,7 +408,7 @@ void TreeWriter::Loop() {
 			if( it->momentum.Pt() < 20  || it->momentum.Pt() > 1e6 )
 				continue; // spike rejection
 			float iso = ( it->chargedHadronIso + max(it->neutralHadronIso+it->photonIso
-														- effectiveAreaElectron(it->momentum.Eta())*event->rho25, (Float_t)0. )
+														- effectiveAreaElectron(it->momentum.Eta())*event->rho25, (float)0. )
 						) / it->momentum.Pt();
 			float d0 = d0correction( *it, *event );
 			float dZ = std::abs( dZcorrection( *it, *event ) );
