@@ -347,7 +347,12 @@ void TreeWriter::Loop() {
 				scale = it->jecScaleFactors.find("L2L3")->second;
 			TLorentzVector corrP4 = scale * it->momentum;
 
-			if(std::abs(corrP4.Eta()) > 3.0 && skim ) continue;
+			// Calculate HT.
+			// The definiton differs from the saved jet, since trigger is described better
+			if( std::abs( corrP4.Eta() ) < 3 && corrP4.Pt > 40 )
+				ht += thisjet.pt;
+
+			if(std::abs(corrP4.Eta()) > 2.6 && skim ) continue;
 			if(corrP4.Pt() < 30 && skim ) continue;
 			thisjet.pt = corrP4.Pt();
 			thisjet.eta = corrP4.Eta();
@@ -369,7 +374,6 @@ void TreeWriter::Loop() {
 				std::cout << " p_T, jet = " << thisjet.pt << std::endl;
 
 			jet.push_back( thisjet );
-			ht += thisjet.pt;
 		}// for jet
 		if( jet.size() < 2 && skim )
 			continue;
