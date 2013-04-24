@@ -1,13 +1,15 @@
 #!/bin/bash
 # This script submitts all jobs to naf, which are defined in dataset
 
-datasets=( srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/QCD_250-500_V01/
- srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/QCD_500-1000_V01/
- srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/QCD_1000-inf_V01/
+datasets=(
+# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/QCD_250-500_V01/
+# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/QCD_500-1000_V01/
+# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/QCD_1000-inf_V01/
  srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/WJets_V01/
- srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/GVJets_V01/
- srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/TTJets_V01/ )
-#srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/GJets_V01/ )
+# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/GVJets_V01/
+ srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/TTJets_V01/
+#srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/GJets_V01/
+)
 # settings
 version="00"
 files_per_job=20
@@ -19,7 +21,9 @@ for dataset in "${datasets[@]}"; do
     # Since root can't handle -, it will be substituted to _
     job_name=$(echo $job_name|sed 's/-/_/g')
 
-    files=( $(srmls $dataset|grep root|awk '{print $2 }') )
+    files=( $(srmls -offset 0 -count 999 $dataset|grep root|awk '{print $2 }') )
+    # Ugly hack to get more than 1000 files (up to 2000).
+    files+=( $(srmls -offset 1000 -count 1999 $dataset|grep root|awk '{print $2 }') )
     number_of_jobs=$(expr ${#files[@]} / $files_per_job + 1 )
 
     # just for testing purpurse
