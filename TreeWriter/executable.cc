@@ -19,7 +19,7 @@ int main( int argc, char** argv ) {
 	// settings
 	tw->PileUpWeightFile("pileUpReweighting/puWeights.root");
 	tw->SetProcessNEvents(-1);
-	tw->SetReportEvents(1000);
+	tw->SetReportEvents(20000);
 	tw->SkimEvents(true);
 	tw->Loop();
 

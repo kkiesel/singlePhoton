@@ -11,7 +11,7 @@ all: $(SHARED_LIB) $(EXE)
 	@make -C pileUpReweighting --no-print-directory
 
 %.o:%.cc
-	g++ -o $@ $+ -c $(INCS)
+	g++ -o $@ $+ -c -O2 $(INCS)
 
 $(EXE): $(OBJ) $(SHARED_LIB)
 	g++ -o $@ $+ $(LIBS)
