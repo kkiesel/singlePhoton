@@ -481,7 +481,9 @@ void TreeWriter::Loop() {
 					genPhoton.push_back( thisGenParticle );
 					break;
 				case 11: // electron
-					genElectron.push_back( thisGenParticle );
+					// Demand a W boson as mother particle of electron
+					if( abs(event->genParticles[it->motherIndex].pdgId) == 24 )
+						genElectron.push_back( thisGenParticle );
 					break;
 			}
 		}
