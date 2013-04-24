@@ -50,6 +50,8 @@ class TreeWriter {
 		std::vector<tree::Jet> jet;
 		std::vector<tree::Particle> electron;
 		std::vector<tree::Particle> muon;
+		std::vector<tree::Particle> genElectron;
+		std::vector<tree::Particle> genPhoton;
 
 		float met;
 		float met_phi;

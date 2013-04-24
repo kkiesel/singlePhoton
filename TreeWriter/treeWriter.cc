@@ -253,7 +253,8 @@ void TreeWriter::Loop() {
 	tree->Branch("ht", &ht, "ht/F");
 	tree->Branch("nVertex", &nVertex, "nVertex/I");
 	tree->Branch("pu_weight", &pu_weight, "pu_weight/F");
-
+	tree->Branch("genElectron", &genElectron);
+	tree->Branch("genPhoton", &genPhoton);
 
 	for (unsigned long jentry=0; jentry < processNEvents; ++jentry) {
 		if ( loggingVerbosity>1 || jentry%reportEvery==0 )
@@ -265,6 +266,8 @@ void TreeWriter::Loop() {
 		jet.clear();
 		electron.clear();
 		muon.clear();
+		genElectron.clear();
+		genPhoton.clear();
 		ht = 0;
 
 		// weights
@@ -288,7 +291,7 @@ void TreeWriter::Loop() {
 
 		for(std::vector<susy::Photon>::iterator it = photonVector.begin();
 				it != photonVector.end(); ++it ) {
-			if( !(it->isEE() || it->isEB()) it->isEBEtaGap() && it->isEBPhiGap() && it->isEERingGap() && it->isEEDeeGap() && it->isEBEEGap() && skim )
+			if( !(it->isEE() || it->isEB()) && it->isEBEtaGap() && it->isEBPhiGap() && it->isEERingGap() && it->isEEDeeGap() && it->isEBEEGap() && skim )
 				continue;
 			tree::Photon thisphoton;
 			thisphoton.pt = getPtFromMatchedJet( *it, jetVector, loggingVerbosity );
@@ -350,7 +353,7 @@ void TreeWriter::Loop() {
 
 			// Calculate HT.
 			// The definiton differs from the saved jet, since trigger is described better
-			if( std::abs( corrP4.Eta() ) < 3 && corrP4.Pt > 40 )
+			if( std::abs( corrP4.Eta() ) < 3 && corrP4.Pt() > 40 )
 				ht += thisjet.pt;
 
 			if(std::abs(corrP4.Eta()) > 2.6 && skim ) continue;
@@ -382,6 +385,10 @@ void TreeWriter::Loop() {
 		if( loggingVerbosity > 1 )
 			std::cout << "Found " << jet.size() << " jets" << std::endl;
 
+		if( ht < 450 && skim)
+			continue;
+
+
 
 		// met
 		std::map<TString, susy::MET>::iterator met_it = event->metMap.find("pfMet");
@@ -408,8 +415,7 @@ void TreeWriter::Loop() {
 			// use veto electrons
 			if( it->momentum.Pt() < 20  || it->momentum.Pt() > 1e6 )
 				continue; // spike rejection
-			float iso = ( it->chargedHadronIso + max(it->neutralHadronIso+it->photonIso
-														- effectiveAreaElectron(it->momentum.Eta())*event->rho25, (float)0. )
+			float iso = ( it->chargedHadronIso + max(it->neutralHadronIso+it->photonIso - effectiveAreaElectron(it->momentum.Eta())*event->rho25, (float)0. )
 						) / it->momentum.Pt();
 			float d0 = d0correction( *it, *event );
 			float dZ = std::abs( dZcorrection( *it, *event ) );
@@ -464,9 +470,22 @@ void TreeWriter::Loop() {
 		// vertices
 		nVertex = event->vertices.size();
 
-		if( ht < 450 && skim)
-			continue;
-
+		tree::Particle thisGenParticle;
+		for( std::vector<susy::Particle>::iterator it = event->genParticles.begin(); it != event->genParticles.end(); ++it ) {
+			if( it->status == 3 ) { // hard interaction
+				switch( std::abs(it->pdgId) ) {
+					thisGenParticle.pt = it->momentum.Pt();
+					thisGenParticle.eta = it->momentum.Eta();
+					thisGenParticle.phi = it->momentum.Phi();
+					case 22: // photon
+						if( thisGenParticle.pt > 75 )
+							genPhoton.push_back( thisGenParticle );
+					case 11: // electron
+						if( thisGenParticle.pt > 20 ) // pt cut is lower to estimate fake rate in all pt bins
+							genElectron.push_back( thisGenParticle );
+				}
+			}
+		}
 
 		tree->Fill();
 	} // for jentry
