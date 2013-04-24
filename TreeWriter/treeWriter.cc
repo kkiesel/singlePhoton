@@ -471,20 +471,29 @@ void TreeWriter::Loop() {
 		nVertex = event->vertices.size();
 
 		tree::Particle thisGenParticle;
+		cout << "   new event " << endl;
 		for( std::vector<susy::Particle>::iterator it = event->genParticles.begin(); it != event->genParticles.end(); ++it ) {
 			if( it->status == 3 ) { // hard interaction
+				cout << "hard interaction mit status " << it->pdgId << endl;
 				switch( std::abs(it->pdgId) ) {
 					thisGenParticle.pt = it->momentum.Pt();
 					thisGenParticle.eta = it->momentum.Eta();
 					thisGenParticle.phi = it->momentum.Phi();
 					case 22: // photon
+						cout << "found photon with pt " << thisGenParticle.pt << endl;
 						if( thisGenParticle.pt > 75 )
 							genPhoton.push_back( thisGenParticle );
 					case 11: // electron
+						cout << "found electron with pt " << thisGenParticle.pt << endl;
 						if( thisGenParticle.pt > 20 ) // pt cut is lower to estimate fake rate in all pt bins
 							genElectron.push_back( thisGenParticle );
 				}
 			}
+			else if (it->status == 2)
+				cout <<"zwischending mit status " << it->pdgId << endl;
+			else if (it->status == 1)
+				cout <<"endzustand mit status " << it->pdgId << endl;
+
 		}
 
 		tree->Fill();
