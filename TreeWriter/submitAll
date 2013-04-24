@@ -11,7 +11,7 @@ datasets=(
 #srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/GJets_V01/
 )
 # settings
-version="00"
+version="01"
 files_per_job=20
 
 for dataset in "${datasets[@]}"; do
