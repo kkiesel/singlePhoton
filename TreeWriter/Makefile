@@ -23,7 +23,11 @@ $(EXE): $(OBJ) $(SHARED_LIB)
 lib%.so: %.h %_LinkDef.h
 	rootcint -f $(subst so,cxx,$@) -c $+
 	g++ -O2 -Wall  -shared -fPIC `root-config --ldflags` $(INCS) -o $@ $(subst lib,,$(subst so,cc,$@)) $(subst so,cxx,$@)
-	cp $@ $(CMSSW_BASE)/lib/$(SCRAM_ARCH)
+	@if [ -d $(CMSSW_BASE)/lib/$(SCRAM_ARCH) ]; then\
+		cp $@ $(CMSSW_BASE)/lib/$(SCRAM_ARCH);\
+	else\
+		echo "Please copy the library manually";\
+	fi
 
 clean:
 	@rm -f $(OBJ) $(SHARED_LIB)
