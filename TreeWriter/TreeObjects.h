@@ -11,20 +11,19 @@ class Particle {
 
 class Photon : public Particle {
 	public:
-		float r9, sigmaIetaIeta, hadTowOverEm, pixelseed;
+		float r9, sigmaIetaIeta, hadTowOverEm;
 		float chargedIso, neutralIso, photonIso;
 		bool conversionSafeVeto;
+		int pixelseed;
 };
 
 class Jet : public Particle{
 	public:
 		float bCSV;
 		float chargedHadronEnergy,neutralHadronEnergy,photonEnergy,electronEnergy,muonEnergy,HFHadronEnergy,HFEMEnergy,chargedEmEnergy,chargedMuEnergy,neutralEmEnergy;
-
 };
 
 bool EtGreater(const tree::Particle, const tree::Particle);
-
 
 } // end namespace definition
 
