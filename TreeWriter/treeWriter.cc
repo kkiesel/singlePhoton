@@ -70,10 +70,17 @@ std::vector<Type>* getVectorFromMap( map<TString, vector<Type> > myMap, TString 
 	return vec;
 }
 
+float deltaPhi( float phi1, float phi2) {
+	float result = phi1 - phi2;
+	while (result > M_PI) result -= 2*M_PI;
+	while (result <= -M_PI) result += 2*M_PI;
+	return result;
+}
+
 // useful functions
 float deltaR( const TLorentzVector& v1, const TLorentzVector& v2 ) {
 	// deltaR  = sqrt ( deltaEta^2 + deltaPhi^2 )
-	return sqrt(pow(v1.Eta() - v2.Eta(), 2) + pow(v1.Phi() - v2.Phi(), 2) );
+	return sqrt(pow(v1.Eta() - v2.Eta(), 2) + pow(deltaPhi(v1.Phi(),v2.Phi()), 2) );
 }
 
 float effectiveAreaElectron( float eta ) {
