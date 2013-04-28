@@ -298,31 +298,33 @@ void TreeWriter::Loop() {
 
 		for(std::vector<susy::Photon>::iterator it = photonVector.begin();
 				it != photonVector.end(); ++it ) {
-			if( !(it->isEE() || it->isEB()) && it->isEBEtaGap() && it->isEBPhiGap() && it->isEERingGap() && it->isEEDeeGap() && it->isEBEEGap() && skim )
+			if( !(it->isEE() || it->isEB()) && it->momentum.Pt()<20 && it->isEBEtaGap() && it->isEBPhiGap() && it->isEERingGap() && it->isEEDeeGap() && it->isEBEEGap() && skim )
 				continue;
 			tree::Photon thisphoton;
-			thisphoton.pt = getPtFromMatchedJet( *it, jetVector, loggingVerbosity );
 
 			thisphoton.chargedIso = chargedHadronIso_corrected(*it, event->rho25);
 			thisphoton.neutralIso = neutralHadronIso_corrected(*it, event->rho25);
 			thisphoton.photonIso = photonIso_corrected(*it, event->rho25);
 
-			bool loose_photon_barrel = thisphoton.pt>20
-				&& it->isEB()
+			bool loose_photon_barrel = it->isEB()
+				&& it->passelectronveto
 				&& it->hadTowOverEm<0.05
 				&& it->sigmaIetaIeta<0.012
 				&& thisphoton.chargedIso<2.6
 				&& thisphoton.neutralIso<3.5+0.04*thisphoton.pt
 				&& thisphoton.photonIso<1.3+0.005*thisphoton.pt;
-			bool loose_photon_endcap = thisphoton.pt > 20
-				&& it->isEE()
+
+			bool loose_photon_endcap = it->isEE()
+				&& it->passelectronveto
 				&& it->hadTowOverEm<0.05
 				&& it->sigmaIetaIeta<0.034
 				&& thisphoton.chargedIso<2.3
 				&& thisphoton.neutralIso<2.9+0.04*thisphoton.pt;
 
-			if(!(loose_photon_endcap || loose_photon_barrel || thisphoton.pt > 75 ) && skim )
+			thisphoton.ptJet = getPtFromMatchedJet( *it, jetVector, loggingVerbosity );
+			if(!(loose_photon_endcap || loose_photon_barrel || thisphoton.ptJet > 75 ) && skim )
 				continue;
+			thisphoton.pt = it->momentum.Pt();
 			thisphoton.eta = it->momentum.Eta();
 			thisphoton.phi = it->momentum.Phi();
 			thisphoton.r9 = it->r9;
