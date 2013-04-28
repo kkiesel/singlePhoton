@@ -11,6 +11,7 @@ class Particle {
 
 class Photon : public Particle {
 	public:
+		float ptJet;
 		float r9, sigmaIetaIeta, hadTowOverEm;
 		float chargedIso, neutralIso, photonIso;
 		bool conversionSafeVeto;
