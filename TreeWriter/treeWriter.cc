@@ -307,7 +307,6 @@ void TreeWriter::Loop() {
 			thisphoton.photonIso = photonIso_corrected(*it, event->rho25);
 
 			bool loose_photon_barrel = it->isEB()
-				&& it->passelectronveto
 				&& it->hadTowOverEm<0.05
 				&& it->sigmaIetaIeta<0.012
 				&& thisphoton.chargedIso<2.6
@@ -315,7 +314,6 @@ void TreeWriter::Loop() {
 				&& thisphoton.photonIso<1.3+0.005*thisphoton.pt;
 
 			bool loose_photon_endcap = it->isEE()
-				&& it->passelectronveto
 				&& it->hadTowOverEm<0.05
 				&& it->sigmaIetaIeta<0.034
 				&& thisphoton.chargedIso<2.3
