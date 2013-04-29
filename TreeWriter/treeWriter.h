@@ -59,6 +59,6 @@ class TreeWriter {
 		float type1met_phi;
 		float ht;
 		int nVertex;
-		float pu_weight;
+		double weight;
 };
 

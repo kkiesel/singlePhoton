@@ -259,7 +259,7 @@ void TreeWriter::Loop() {
 	tree->Branch("type1metPhi", &type1met_phi, "type1metPhi/F");
 	tree->Branch("ht", &ht, "ht/F");
 	tree->Branch("nVertex", &nVertex, "nVertex/I");
-	tree->Branch("pu_weight", &pu_weight, "pu_weight/F");
+	tree->Branch("weight", &weight, "weight/D");
 	tree->Branch("genElectron", &genElectron);
 	tree->Branch("genPhoton", &genPhoton);
 
@@ -279,7 +279,7 @@ void TreeWriter::Loop() {
 
 		// weights
 		if (pileupHisto == 0) {
-			pu_weight = 1.;
+			weight = 1.;
 		} else {
 			float trueNumInteractions = -1;
 			for( susy::PUSummaryInfoCollection::const_iterator iBX = event->pu.begin();
@@ -287,7 +287,7 @@ void TreeWriter::Loop() {
 				if (iBX->BX == 0)
 					trueNumInteractions = iBX->trueNumInteractions;
 			}
-			pu_weight = pileupHisto->GetBinContent( pileupHisto->FindBin( trueNumInteractions ) );
+			weight = pileupHisto->GetBinContent( pileupHisto->FindBin( trueNumInteractions ) );
 		}
 
 		// get ak5 jets
