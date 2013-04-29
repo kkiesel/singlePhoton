@@ -13,7 +13,7 @@ axisConf.read("axis.cfg")
 
 integratedLuminosity = 19.3 #fb
 
-def readTree( filename, treename = "photonTree" ):
+def readTree( filename, treename = "susyTree" ):
 	"""
 	filename: name of file containing the tree
 	treename: name of the tree
@@ -60,12 +60,15 @@ def createHistoFromTree(tree, variable, weight="", nBins=100, firstBin=None, las
 	from ROOT import TH1F
 	from random import randint
 	from sys import maxint
+	import re
 	if nEvents < 0:
 		nEvents = maxint
+	# Get Minimum and Maximum for x-axis. The replacement is needed for e.g.
+	# photon[0].pt. TODO: find better min/max for this case.
 	if firstBin == None:
-		firstBin = tree.GetMinimum( variable )
+		firstBin = tree.GetMinimum( re.sub("\[\d\]", "", variable ) )
 	if lastBin == None:
-		lastBin = tree.GetMaximum( variable )
+		lastBin = tree.GetMaximum( re.sub("\[\d\]", "", variable ) )
 	#make a random name you could give something meaningfull here,
 	#but that would make this less readable
 	name = "%x"%(randint(0, maxint))
