@@ -18,15 +18,15 @@ int main( int argc, char** argv ) {
 
 	// settings
 	tw->PileUpWeightFile("pileUpReweighting/puWeights.root");
-	tw->SetProcessNEvents(50);
-	tw->SetReportEvents(1000);
+	tw->SetProcessNEvents(-1);
+	tw->SetReportEvents(20000);
 	tw->SkimEvents(true);
 
 	double start_time = time(NULL);
 	tw->Loop();
 	double end_time = time(NULL);
 
-	std::cout << end_time - start_time << endl;
+	std::cout << "Job needed " << 1.*(end_time - start_time)/3600 << " h real time." << std::endl;
 
 }
 
