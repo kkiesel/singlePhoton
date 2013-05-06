@@ -5,14 +5,19 @@ datasets=(
 # srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/QCD_250-500_V01/
 # srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/QCD_500-1000_V01/
 # srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/QCD_1000-inf_V01/
-#srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/GJets_V01/
+# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/GJets_V01/
  srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/WJets_V01/
  srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/TTJets_V01/
 # srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/GVJets_V01/
 )
 # settings
-version="05"
+version="12"
+outputFolder=/scratch/hh/dust/naf/cms/user/kiesel
 files_per_job=20
+
+fetchScript=getOutput_${version}.sh
+echo "#!/bin/bash -e" > $fetchScript
+chmod +x $fetchScript
 
 for dataset in "${datasets[@]}"; do
 
@@ -40,7 +45,7 @@ for dataset in "${datasets[@]}"; do
                 files_to_submit=$files_to_submit"dcap://dcache-cms-dcap.desy.de"${files[$i]}" "
             fi
         done # files for one job
-        outputFileName=/scratch/hh/dust/naf/cms/user/kiesel/${jobPrefix}_tree.root
+        outputFileName=$outputFolder/${jobPrefix}_tree.root
 
         # now that we have all information, get data
         script=$jobPrefix.sh
@@ -48,15 +53,19 @@ for dataset in "${datasets[@]}"; do
         echo export SCRAM_ARCH="slc5_amd64_gcc462" > $script
         echo export VO_CMS_SW_DIR=/cvmfs/cms.cern.ch >> $script
         echo source $VO_CMS_SW_DIR/cmsset_default.sh >> $script
-        echo ini glite >> $script
         echo cd $HOME/CMSSW_5_3_8/src >> $script
-        echo ini cmssw >> $script
         echo cmsenv >> $script
         echo cd $HOME/treeWriter >> $script
+        echo make >> $script
 
         echo ./executable $outputFileName $files_to_submit >> $script
         chmod +x $script
-        qsub -b y -j y -l h_cpu=07:00:00 -l site=hh `pwd`/$jobPrefix.sh
-        echo
+        qsub -b y -j y -l h_cpu=7:00:00 -l site=hh `pwd`/$jobPrefix.sh
+        # i: merge stdout and stderr
+        # o: log file
     done # all jobs
+    echo "rm ${job_name}.${version}__*.sh" >> $fetchScript
+    echo "rm ~/${job_name}.${version}__*.sh.o*" >> $fetchScript
+    echo "hadd $outputFolder/${job_name}.${version}_tree.root $outputFolder/${job_name}.${version}__*.root" >> $fetchScript
+    echo "rm $outputFolder/${job_name}.${version}__*.root" >> $fetchScript
 done #dataset
