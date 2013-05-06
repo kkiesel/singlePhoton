@@ -330,6 +330,7 @@ void TreeWriter::Loop() {
 			thisphoton.hadTowOverEm = it->hadTowOverEm;
 			thisphoton.pixelseed = it->nPixelSeeds;
 			thisphoton.conversionSafeVeto = it->passelectronveto;
+			thisphoton.genInformation = 0;
 			photon.push_back( thisphoton );
 			if( loggingVerbosity > 2 )
 				std::cout << " p_T, gamma = " << thisphoton.pt << std::endl;
