@@ -16,7 +16,7 @@ class Photon : public Particle {
 		float chargedIso, neutralIso, photonIso;
 		bool conversionSafeVeto;
 		int pixelseed;
-		int genInformation;
+		short genInformation;
 };
 
 class Jet : public Particle{
