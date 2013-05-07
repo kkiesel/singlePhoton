@@ -1,7 +1,7 @@
 LIBS = $(shell root-config --libs)
 INCS = -I$(shell root-config --incdir) -I.
-#LIBS = /cvmfs/cms.cern.ch/slc5_amd64_gcc462/lcg/root/5.34.02-cms/lib
-#INCS = -I/cvmfs/cms.cern.ch/slc5_amd64_gcc462/lcg/root/5.34.02-cms/include
+
+WARN = -Wall -Wshadow
 
 SHARED_LIB = libSusyEvent.so libTreeObjects.so
 OBJ = treeWriter.o executable.o
@@ -11,10 +11,10 @@ all: $(SHARED_LIB) $(EXE)
 	@make -C pileUpReweighting --no-print-directory
 
 %.o:%.cc
-	g++ -o $@ $+ -c -O2 $(INCS)
+	g++ -o $@ $+ -c -O2 $(INCS) $(WARN)
 
 $(EXE): $(OBJ) $(SHARED_LIB)
-	g++ -o $@ $+ $(LIBS)
+	g++ -o $@ $+ $(LIBS) $(WARN)
 
 
 # see http://root.cern.ch/drupal/content/interacting-shared-libraries-rootcint
