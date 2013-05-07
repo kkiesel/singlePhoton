@@ -263,7 +263,7 @@ void TreeWriter::Loop() {
 	tree->Branch("genElectron", &genElectron);
 	tree->Branch("genPhoton", &genPhoton);
 
-	for (unsigned long jentry=0; jentry < processNEvents; ++jentry) {
+	for (long jentry=0; jentry < processNEvents; ++jentry) {
 		if ( loggingVerbosity>1 || jentry%reportEvery==0 )
 			std::cout << jentry << " / " << processNEvents << std :: endl;
 		inputTree->LoadTree( jentry );
