@@ -1,6 +1,6 @@
 #doku in https://twiki.cern.ch/twiki/bin/view/CMS/PileupJSONFileforData
 #TODO: look up json ntupelized data and update ANA_JSON
-ANA_JSON=/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions12/8TeV/Reprocessing/Cert_190456-203742_8TeV_22Jan2013ReReco_Collisions12_JSON.txt
+ANA_JSON=/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions12/8TeV/Reprocessing/Cert_190456-208686_8TeV_22Jan2013ReReco_Collisions12_JSON.txt
 PU_JSON=/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions12/8TeV/PileUp/pileup_latest.txt
 
 PU_CALC=pileupCalc.py --calcMode true --minBiasXsec 69300 --maxPileupBin 60 --numPileupBins 60
