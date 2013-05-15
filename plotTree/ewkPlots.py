@@ -6,7 +6,9 @@ import argparse
 from multiplot import *
 from treeFunctions import *
 import Styles
+import ratios
 Styles.tdrStyle()
+import os
 
 import ConfigParser
 axisConf = ConfigParser.SafeConfigParser()
@@ -14,20 +16,24 @@ axisConf.read("axis.cfg")
 
 if __name__ == "__main__":
 	arguments = argparse.ArgumentParser( description="Simple EWK" )
-	arguments.add_argument( "--plot", default="met" )
-	arguments.add_argument( "--dataset", default="EWK" )
+	arguments.add_argument( "--plot", default="photon.pt" )
+	arguments.add_argument( "--input", default="slimEWK_V01.12_tree.root" )
+	arguments.add_argument( "--savePrefix", default="new" )
 	opts = arguments.parse_args()
 
-	version = "07"
-	fileName = "slim%s_V01.%s_tree.root"%(opts.dataset, version )
+	ROOT.gROOT.SetBatch()
 
-	genE = Dataset( fileName, "genElectronTree", "abs(genElectron.eta) < 1.479", "e_{gen}", 1 )
-	recE = Dataset( fileName, "photonElectronTree", "@genElectron.size()>0 && photon[0].pixelseed < 0", "e", 2 )
-	gamma = Dataset( fileName, "photonTree", "@genElectron.size()>0 && photon[0].pixelseed < 0", "#gamma", 3 )
+	slimFileName = opts.input.replace( os.path.basename(opts.input), "slim"+os.path.basename(opts.input))
+
+	genE = Dataset( opts.input, "susyTree", "Max$(abs(genElectron.eta)) < 1.4442 && @genElectron.size() > 0", "e_{gen}", 1 )
+	recE = Dataset( slimFileName, "photonElectronTree", "photon.genInformation==1", "e", 2 )
+	gamma = Dataset( slimFileName, "photonTree", "photon.genInformation==1", "#gamma", 3 )
 
 	multihisto = Multihisto()
 
 	label, unit = readAxisConf( opts.plot, axisConf)
+
+	histForRatio = {}
 
 	for dataset in [genE, recE, gamma]:
 		if dataset.label == "e_{gen}":
@@ -43,10 +49,26 @@ if __name__ == "__main__":
 		hist.SetLineColor( dataset.color )
 		hist.SetLineWidth(2)
 		multihisto.addHisto( hist, dataset.label )
+		histForRatio[dataset.label] = hist
 
 	can = ROOT.TCanvas()
-	can.cd()
-	multihisto.Draw("hist")
-	can.SaveAs("pt_%s_new.pdf"%opts.dataset)
 
+	hPad = ROOT.TPad("hPad", "Histogram", 0, 0, 1, 1)
+	#hPad = ROOT.TPad("hPad", "Histogram", 0, 0.2, 1, 1)
+	hPad.cd()
+	multihisto.Draw("hist")
+
+	ratioPad = ROOT.TPad("ratioPad", "Ratio", 0, 0, 1, 0.2)
+	ratioPad.cd()
+	ratioPad.SetLogy(0)
+	ratioGraph = ratios.RatioGraph(histForRatio["e"], histForRatio["e_{gen}"])
+	ratioGraph.draw(ROOT.gPad, yMin=0.5, yMax=1.5, adaptiveBinning=False, errors="x")
+	ratioGraph.hAxis.SetYTitle( "e/e_{gen}")
+	ratioGraph.graph.Draw("same p")
+
+	can.cd()
+	hPad.Draw()
+	#ratioPad.Draw()
+	can.SaveAs("plots/%s_%s_%s.pdf"%(opts.input[0:5],opts.plot.replace(".",""),opts.savePrefix))
+	del can
 
