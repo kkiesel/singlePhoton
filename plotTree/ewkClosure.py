@@ -22,9 +22,10 @@ def applyFakeRate( histo, f, e_f ):
 		histo.SetBinError( i, sqrt((binContent*e_f)**2 + (histo.GetBinError(i)*f)**2 ) )
 	return histo
 
-def extractHisto( dataset, plot ):
-	histo = createHistoFromTree( dataset.tree, plot, "weight*(%s)"%(dataset.additionalCut), nBins=30, firstBin=0, lastBin=200)
-	label, unit = readAxisConf( opts.plot, axisConf )
+def extractHisto( dataset, plot, binning ):
+	histo = createHistoFromTree( dataset.tree, plot, "weight*(%s)"%(dataset.additionalCut), nBins=binning)
+	#histo = createHistoFromTree( dataset.tree, plot, "weight*(%s)"%(dataset.additionalCut), nBins=30, firstBin=0, lastBin=500)
+	label, unit, binning = readAxisConf( opts.plot, axisConf )
 	if unit:
 		histo.SetTitle(";%s%s;Entries / %s"%(label, unit, unit[2:-1]))
 	else:
@@ -58,15 +59,16 @@ if __name__ == "__main__":
 	slimFileName = opts.input.replace( os.path.basename(opts.input), "slim"+os.path.basename(opts.input))
 	datasetAffix = re.match("slim([^_]*)_.*", slimFileName ).groups()[0]
 
-	recE = extractHisto( Dataset( slimFileName, "photonElectronTree", "1", "e", 2 ), opts.plot )
+	label, unit, binning = readAxisConf( opts.plot, axisConf )
+
+	recE = extractHisto( Dataset( slimFileName, "photonElectronTree", "1", "e", 2 ), opts.plot, binning )
 	recE.SetFillColor( recE.GetLineColor() )
 	recE.SetFillStyle(3254)
 
 	recE = applyFakeRate( recE, fakeRate, fakeRateError )
 
-	gamma = extractHisto( Dataset( slimFileName, "photonTree", "Max$(photon.isGenElectron())", "#gamma", 1 ), opts.plot )
+	gamma = extractHisto( Dataset( slimFileName, "photonTree", "Max$(photon.isGenElectron())", "#gamma", 1 ), opts.plot, binning )
 
-	label, unit = readAxisConf( opts.plot, axisConf)
 	multihisto = Multihisto()
 	multihisto.leg.SetHeader( datasetAffix )
 	multihisto.addHisto( recE, "e#upoint#tildef_{e#rightarrow#gamma}", draw="e2" )
@@ -88,7 +90,7 @@ if __name__ == "__main__":
 	ratioGraph.graph.Draw("same p")
 
 	# draw systematic uncertanty in ratio:
-	syst = recE.Clone( "newname" )
+	syst = recE.Clone( "hist_ratio_syst" )
 	for bin in range( syst.GetNbinsX()+1 ):
 		if syst.GetBinContent(bin):
 			syst.SetBinError( bin, syst.GetBinError(bin) / syst.GetBinContent(bin) )

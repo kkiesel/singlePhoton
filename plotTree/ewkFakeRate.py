@@ -59,7 +59,7 @@ if __name__ == "__main__":
 	gamma = Dataset( slimFileName, "photonTree", "1", "#gamma", 1 )
 	gamma_with_match = Dataset( slimFileName, "photonTree", "photon.genInformation == 1", "#gamma_{match}", 1 )
 
-	label, unit = readAxisConf( opts.plot, axisConf )
+	label, unit, binning = readAxisConf( opts.plot, axisConf )
 	e_match_e_reco = divideDatasets( gamma_with_match, genE, label, unit )
 	e_match = divideDatasets( genE_with_match, gamma, label, unit )
 

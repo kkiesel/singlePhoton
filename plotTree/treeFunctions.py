@@ -82,17 +82,23 @@ def myLegend( x1, y1, x2=0,y2=0 ):
 	return leg
 
 def readAxisConf( plot, configuration ):
+	#brackets are identified as sections, so they have to be deleted
 	plot = plot.replace("[","").replace("]","")
 	try:
 		label = configuration.get( plot, "label" )
-		unit = configuration.get( plot, "unit" )
-		if unit != "":
-			unit = " ["+unit+"]"
 	except:
 		label = ""
-		unit = ""
 		print "Please specify %s in your axis configuration file."%plot
-	return label, unit
+	try:
+		unit = configuration.get( plot, "unit" )
+	except:
+		unit = ""
+	try:
+		binning = configuration.get( plot, "binning" )
+		binning = map(int, binning.split(" "))
+	except:
+		binning = []
+	return label, unit, binning
 
 def addHistos( histos, scales=None ):
 	"""
