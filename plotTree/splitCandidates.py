@@ -29,14 +29,15 @@ def deltaR( object1, object2 ):
 	import math
 	return math.sqrt( (object1.eta-object2.eta)**2 + (deltaPhi(object1.phi,object2.phi))**2 )
 
-def gammaSelectionClone( tree, newTreeName, weight, type_="tree::Photon", name="photon" ):
+def gammaSelectionClone( tree, newTreeName, type_="tree::Photon", name="photon" ):
 	"""Clones a tree and get access to photon vector"""
 	newTree = tree.CloneTree(0)
 	newTree.SetName( newTreeName )
 	photons = ROOT.std.vector(type_)()
 	newTree.SetBranchAddress( name, photons )
-	newTree.SetBranchAddress("weight", weight )
-	return newTree, photons, weight
+	# Set the size of the tree in memory to 10MB or get memory overflow.
+	newTree.SetMaxVirtualSize(int(1e7))
+	return newTree, photons
 
 def histoDefinition():
 	"""All histograms are defined here and put into an directory."""
@@ -64,7 +65,7 @@ def draw_histogram_dict( histograms, suffix="new" ):
 		dataset.Draw()
 		can.SaveAs("plots/%s_%s.pdf"%(name,suffix))
 
-def generalMatching( objects1, objects2, hist):
+def generalMatching( objects1, objects2, hist, typ="electron"):
 	"""Matches for each object in objects1 an object in objects2.
 	'hists' is a dict containing ROOT.TH* objects which will be filled and returned.
 	The gen information will be storend in first list and returned.
@@ -96,13 +97,32 @@ def generalMatching( objects1, objects2, hist):
 
 		if match:
 			if hasattr( o1, "genInformation" ):
-				o1.genInformation = 1
+				if typ == "photon":
+					o1.isGenPhoton( True )
+				elif typ == "electron":
+					o1.isGenElectron( True )
+				else:
+					print "Error, no matching"
 			else: # use phi variable for gen information. TODO: fix that
 				# only fill gen matching for photons matching a gen electrons.
 				# Electrons are not needed in fake rate
 				if not objects2[minIndex].pixelseed:
 					o1.phi = 5
 	return objects1, hist
+
+def clearJets( photonCanidates, jets, outJets, deltaR_=.3 ):
+	""" Cleares jets which are near photonCandidates
+	photonCandidates: list containing vectors of photonCandidates
+	jets: vector of ingoing photons
+	outJets: vector, in which the passing vectors will be stored
+	deltaR_: minimal distance between jet and photon-object
+	"""
+	for jet in jets:
+		for photonSample in photonCanidates:
+			for photon in photonSample:
+				if deltaR( jet, photon ) > deltaR_:
+					outJets.push_back( jet )
+	return outJets
 
 def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1, genMatching=False ):
 	print "Processing file {}".format(inputFileName)
@@ -116,13 +136,30 @@ def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1, gen
 	if processNEvents == -1:
 		processNEvents = eventHisto.GetBinContent(1)
 
+	import os
+	#outputFileName = "slim"+inputFileName
+	#outputFileName = os.path.dirname( inputFileName ) + "/slim" + os.path.basename( inputFileName )
+	outputFileName = "slim"+os.path.basename( inputFileName )
+	f = ROOT.TFile( outputFileName, "recreate" )
+	f.cd()
+
+	photonTree, photons = gammaSelectionClone( tree, "photonTree" )
+	photonJetTree, photonJets = gammaSelectionClone( tree, "photonJetTree" )
+	photonElectronTree, photonElectrons = gammaSelectionClone( tree, "photonElectronTree" )
+
+	# variables which will be changed in addition to photons:
 	weight = numpy.zeros(1, dtype=float)
-	photonTree, photons, weight = gammaSelectionClone( tree, "photonTree", weight )
-	photonJetTree, photonJets, weight = gammaSelectionClone( tree, "photonJetTree", weight )
-	photonElectronTree, photonElectrons, weight = gammaSelectionClone( tree, "photonElectronTree", weight )
+	jets = ROOT.std.vector("tree::Jet")()
+	for tree_ in [photonTree, photonJetTree, photonElectronTree]:
+		tree_.SetBranchAddress("weight", weight )
+		tree_.SetBranchAddress("jet", jets )
+
 	if genMatching:
-		genElectronTree, genElectrons, weight = gammaSelectionClone( tree, "genElectronTree", weight, "tree::Particle","genElectron" )
+		genElectronTree, genElectrons = gammaSelectionClone( tree, "genElectronTree", "tree::Particle","genElectron" )
 		histograms = histoDefinition()
+		genElectronTree.SetBranchAddress("weight", weight )
+		genElectronTree.SetBranchAddress("jet", jets )
+
 
 	emObjects = ROOT.std.vector("tree::Photon")()
 
@@ -132,8 +169,8 @@ def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1, gen
 
 		if event.GetReadEntry() > processNEvents:
 			break
-
 		weight[0] = event.weight * nExpected / processNEvents
+		jets.clear()
 		emObjects.clear()
 		photons.clear()
 		photonElectrons.clear()
@@ -169,7 +206,8 @@ def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1, gen
 					photonJets.push_back( gamma )
 
 		if genMatching:
-			emObjects, histograms = generalMatching( emObjects, event.genElectron, histograms )
+			emObjects, histograms = generalMatching( emObjects, event.genPhoton, histograms, "photon" )
+			emObjects, histograms = generalMatching( emObjects, event.genElectron, histograms, "electron" )
 			for genE in event.genElectron:
 				if abs(genE.eta) < 1.4442:
 					genElectrons.push_back( genE )
@@ -180,6 +218,10 @@ def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1, gen
 				photonElectrons.push_back( emObject )
 			else:
 				photons.push_back( emObject )
+
+		jets = clearJets( [emObjects, photonJets], event.jet, jets )
+		if jets.size() < 0: # TODO: change cut
+			continue
 
 		if photons.size() > 0:
 			photonTree.Fill()
@@ -192,9 +234,6 @@ def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1, gen
 			genElectronTree.Fill()
 
 
-	outputFileName = "slim"+inputFileName
-	f = ROOT.TFile( outputFileName, "recreate" )
-	f.cd()
 	photonTree.Write()
 	photonJetTree.Write()
 	photonElectronTree.Write()

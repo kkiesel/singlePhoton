@@ -36,13 +36,13 @@ def tdrStyle():
     # tdrStyle.SetHistFillStyle(0)
     tdrStyle.SetHistLineColor(1)
     tdrStyle.SetHistLineStyle(0)
-    tdrStyle.SetHistLineWidth(1)
+    tdrStyle.SetHistLineWidth(2)
     # tdrStyle.SetLegoInnerR(Float_t rad = 0.5)
     # tdrStyle.SetNumberContours(Int_t number = 20)
 
     tdrStyle.SetEndErrorSize(2)
 #  tdrStyle.SetErrorMarker(20)
-    tdrStyle.SetErrorX(0.)
+    #tdrStyle.SetErrorX(0.)
 
     tdrStyle.SetMarkerStyle(20)
 
@@ -80,7 +80,6 @@ def tdrStyle():
     tdrStyle.SetPadRightMargin(0.03)
 
 # For the Global title:
-
     tdrStyle.SetOptTitle(0)
     tdrStyle.SetTitleFont(42)
     tdrStyle.SetTitleColor(1)
@@ -95,7 +94,6 @@ def tdrStyle():
     # tdrStyle.SetTitleBorderSize(2)
 
 # For the axis titles:
-
     tdrStyle.SetTitleColor(1, "XYZ")
     tdrStyle.SetTitleFont(42, "XYZ")
     tdrStyle.SetTitleSize(0.06, "XYZ")
@@ -106,14 +104,12 @@ def tdrStyle():
     # tdrStyle.SetTitleOffset(1.1, "Y")  # Another way to set the Offset
 
 # For the axis labels:
-
     tdrStyle.SetLabelColor(1, "XYZ")
     tdrStyle.SetLabelFont(42, "XYZ")
     tdrStyle.SetLabelOffset(0.007, "XYZ")
     tdrStyle.SetLabelSize(0.05, "XYZ")
 
 # For the axis:
-
     tdrStyle.SetAxisColor(1, "XYZ")
     tdrStyle.SetStripDecimals(ROOT.kTRUE)
     tdrStyle.SetTickLength(0.03, "XYZ")
@@ -123,7 +119,7 @@ def tdrStyle():
 
 # Change for log plots:
     tdrStyle.SetOptLogx(0)
-    tdrStyle.SetOptLogy(0)
+    tdrStyle.SetOptLogy(1)
     tdrStyle.SetOptLogz(0)
 
 # Postscript options:
@@ -142,3 +138,13 @@ def tdrStyle():
 
     tdrStyle.cd()
     return tdrStyle
+
+
+def tdrStyle2D():
+	style = tdrStyle()
+	style.SetOptLogy(0)
+	style.SetOptLogz(1)
+	style.SetPadRightMargin(0.13)
+
+	style.cd()
+	return style

@@ -38,15 +38,22 @@ class Multihisto:
 	def __init__( self ):
 		self.histos = []
 		self.stack = []
-		self.drawRatio = True
+		self.denominator = None
+		self.numerator = None
 		self.leg = myLegend(.7,.7,.95,.92)
+		self.legendOption = "l"
 
-	def addHisto( self, singleHisto, label=None, toStack=False ):
+	def addHisto( self, singleHisto, label=None, toStack=False, draw="hist" ):
 		if toStack:
 			self.stack.append( singleHisto )
 		else:
-			self.histos.append( singleHisto )
-		self.leg.AddEntry( singleHisto, label, "l" )
+			self.histos.append( (singleHisto, draw) )
+		if label:
+			if draw == "e hist":
+				self.legendOption = "l"
+			if draw == "e2":
+				self.legendOption = "f"
+			self.leg.AddEntry( singleHisto, label, self.legendOption )
 
 	def stackHistos( self ):
 		if self.stack:
@@ -57,34 +64,37 @@ class Multihisto:
 
 	def GetMinimum( self ):
 		mini = 100000
-		for hist in self.histos:
+		for hist,draw in self.histos:
 			if hist.GetMinimum() < mini:
 				mini = hist.GetMinimum(0)
-		if ROOT.gROOT.GetStyle("tdrStyle").GetOptLogy():
-			return 1
-		else:
-			return mini
+		return mini
 
 	def GetMaximum( self ):
 		maxi = -100000
-		for hist in self.histos:
+		for hist, draw in self.histos:
 			if hist.GetMaximum() > maxi:
 				maxi = hist.GetMaximum()
-		if ROOT.gROOT.GetStyle("tdrStyle").GetOptLogy():
-			return maxi*5
-		else:
-			return maxi*1.2
+		return maxi
 
-	def Draw( self, option ):
+	def Draw( self  ):
 		self.stackHistos()
 
 		if self.histos:
-			self.histos[0].SetMaximum( self.GetMaximum() )
-			self.histos[0].SetMinimum( self.GetMinimum() )
+			# adjust maximum and minimum for log and not log
+			maximum = self.GetMaximum()
+			minimum = self.GetMinimum()
+			if ROOT.gPad.GetLogy():
+				maximum = maximum*5
+				minimum = 1
+			else:
+				maximum = maximum + (maximum-minimum)*.1
+				minimum = minimum - (maximum-minimum)*.1
+			self.histos[0][0].SetMaximum( maximum )
+			self.histos[0][0].SetMinimum( minimum )
 
-			self.histos[0].Draw( option )
-			for hist in self.histos[1:]:
-				hist.Draw("same %s"%option)
+			self.histos[0][0].Draw(self.histos[0][1])
+			for hist, draw in self.histos[1:]:
+				hist.Draw("same %s"%draw)
 		else:
 			print "No histogram added"
 

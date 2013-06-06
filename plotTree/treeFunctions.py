@@ -1,3 +1,9 @@
+def randomName():
+	from random import randint
+	from sys import maxint
+	return "%x"%(randint(0, maxint))
+
+
 def createHistoFromTree(tree, variable, weight="", nBins=100, firstBin=None, lastBin=None, nEvents=-1):
 	"""
 	tree: tree to create histo from
@@ -13,15 +19,14 @@ def createHistoFromTree(tree, variable, weight="", nBins=100, firstBin=None, las
 	if nEvents < 0:
 		nEvents = maxint
 
-	if firstBin == None:
-		firstBin = tree.GetMinimum( variable )
-	if lastBin == None:
-		lastBin = tree.GetMaximum( variable )
-
 	#make a random name you could give something meaningfull here,
 	#but that would make this less readable
 	name = "%x"%(randint(0, maxint))
 	if isinstance(nBins, int):
+		if firstBin == None:
+			firstBin = tree.GetMinimum( variable )
+		if lastBin == None:
+			lastBin = tree.GetMaximum( variable )
 		result = TH1F(name, variable, nBins, firstBin, lastBin)
 	else:
 		# assume nBins is list
@@ -88,3 +93,33 @@ def readAxisConf( plot, configuration ):
 		unit = ""
 		print "Please specify %s in your axis configuration file."%plot
 	return label, unit
+
+def addHistos( histos, scales=None ):
+	"""
+	add several histos with different scales to one single histo
+	histos: list of histograms
+	scales: list of scales (of same size as histos)
+
+	return: single histogram
+	"""
+	if not scales:
+		scales = [1]*len(histos)
+	else:
+		if len(histos) != len(scales):
+			print "Histos and scales have to have same dimension"
+
+	sumHist = histos[0].Clone( randomName() )
+	sumHist.Scale( scales[0] )
+
+	for i, h in enumerate(histos[1:]):
+		sumHist.Add( h, scales[i+1] )
+
+	return sumHist
+
+def divideHistos( numerator, denominator, bayes=False ):
+	option = ""
+	if bayes:
+		option = "B"
+	resultHisto = numerator.Clone( randomName() )
+	resultHisto.Divide( numerator, denominator, 1,1, option )
+	return resultHisto
