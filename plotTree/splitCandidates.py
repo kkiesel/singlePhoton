@@ -1,13 +1,11 @@
 #! /usr/bin/env python2
 # -*- coding: utf-8 -*-
-from treeFunctions import *
-import Styles
-Styles.tdrStyle2D()
 import numpy
-import ROOT
 import argparse
 import ConfigParser
 import sys
+import ROOT
+from treeFunctions import *
 
 def deltaPhi( phi1, phi2):
 	"""Computes delta phi.
@@ -53,6 +51,10 @@ def histoDefinition():
 
 def draw_histogram_dict( histograms, suffix="new" ):
 	"""Draw all histograms in this directory and save it as pdf."""
+	# disable open canvas
+	ROOT.gROOT.SetBatch()
+	import Styles
+	Styles.tdrStyle2D()
 	can = ROOT.TCanvas()
 	can.cd()
 	dataset = ROOT.TPaveText(.4,.9,.6,.98, "ndc")
@@ -102,7 +104,7 @@ def generalMatching( objects1, objects2, hist, typ="electron"):
 				elif typ == "electron":
 					o1.isGenElectron( True )
 				else:
-					print "Error, no matching"
+					print "ERROR: matching typ unknown."
 			else: # use phi variable for gen information. TODO: fix that
 				# only fill gen matching for photons matching a gen electrons.
 				# Electrons are not needed in fake rate
@@ -125,23 +127,21 @@ def clearJets( photonCanidates, jets, outJets, deltaR_=.3 ):
 	return outJets
 
 def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1, genMatching=False ):
+	"""Key function of splitCanidates.py. The main loop and object selection is
+	defined here."""
 	print "Processing file {}".format(inputFileName)
-
-	#genMatching = not shortName in ["WJets", "DY", "TTJets"]
 	if genMatching:
 		print "Match generated objects"
 
 	tree = readTree( inputFileName )
 	eventHisto = readHisto( inputFileName )
-	if processNEvents == -1:
+	if processNEvents < 0:
 		processNEvents = eventHisto.GetBinContent(1)
 
 	import os
-	#outputFileName = "slim"+inputFileName
-	#outputFileName = os.path.dirname( inputFileName ) + "/slim" + os.path.basename( inputFileName )
 	outputFileName = "slim"+os.path.basename( inputFileName )
-	f = ROOT.TFile( outputFileName, "recreate" )
-	f.cd()
+	fout = ROOT.TFile( outputFileName, "recreate" )
+	fout.cd()
 
 	photonTree, photons = gammaSelectionClone( tree, "photonTree" )
 	photonJetTree, photonJets = gammaSelectionClone( tree, "photonJetTree" )
@@ -160,15 +160,15 @@ def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1, gen
 		genElectronTree.SetBranchAddress("weight", weight )
 		genElectronTree.SetBranchAddress("jet", jets )
 
-
+	# temporal vector to save objects
 	emObjects = ROOT.std.vector("tree::Photon")()
 
 	for event in tree:
 		if not event.GetReadEntry()%100000:
 			print '{0}%\r'.format(100*event.GetReadEntry()/event.GetEntries())
-
 		if event.GetReadEntry() > processNEvents:
 			break
+
 		weight[0] = event.weight * nExpected / processNEvents
 		jets.clear()
 		emObjects.clear()
@@ -180,7 +180,7 @@ def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1, gen
 
 		for gamma in event.photon:
 
-			# cuts for every object to rject spikes
+			# cuts for every object to reject spikes
 			if gamma.r9 < 1 \
 			and gamma.sigmaIetaIeta > 0.001 \
 			and abs(gamma.eta) < 1.4442 \
@@ -233,14 +233,14 @@ def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1, gen
 		if genMatching and genElectrons.size() > 0:
 			genElectronTree.Fill()
 
-
+	# write everything to output file
 	photonTree.Write()
 	photonJetTree.Write()
 	photonElectronTree.Write()
 	if genMatching:
 		genElectronTree.Write()
 		draw_histogram_dict( histograms, shortName )
-	f.Close()
+	fout.Close()
 
 
 if __name__ == "__main__":
@@ -253,17 +253,14 @@ if __name__ == "__main__":
 	arguments.add_argument("--genMatching", action="store_true" )
 	opts = arguments.parse_args()
 
+	# set limit for number of events for testing reason
 	processNEvents = 10000 if opts.test else -1
 
-
-	# disable open canvas
-	ROOT.gROOT.SetBatch()
+	integratedLumi = 19300 #pb
 
 	datasetConfigName = "dataset.cfg"
 	datasetConf = ConfigParser.SafeConfigParser()
 	datasetConf.read( datasetConfigName )
-
-	integratedLumi = 19300 #pb
 
 	for inName in opts.input:
 		shortName = None
