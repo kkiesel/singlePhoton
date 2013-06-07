@@ -70,6 +70,25 @@ def readHisto( filename, histoname="eventNumbers" ):
 	histo = histo.Clone( histoname )
 	return histo
 
+def extractHisto( dataset, plot ):
+	label, unit, binning = readAxisConf( plot )
+	histo = createHistoFromTree( dataset.tree, plot, "weight*(%s)"%(dataset.additionalCut), nBins=binning)
+	histo.SetLineColor( dataset.color )
+	histo.SetMarkerColor( dataset.color )
+
+	ytitle = "Entries"
+	if binning:
+		ytitle+= " / Bin"
+		if unit:
+			label+= " [%s]"%unit
+	else:
+		ytitle+= " / %s"%histo.GetBinWidth(1)
+		if unit:
+			label+= " [%s]"%unit
+			ytitle+= " %s"%unit
+	histo.SetTitle(";%s;%s"%(label, ytitle))
+	return histo
+
 def myLegend( x1, y1, x2=0,y2=0 ):
 	import ROOT
 	if x2==0 or y2==0:
@@ -81,23 +100,16 @@ def myLegend( x1, y1, x2=0,y2=0 ):
 	leg.SetBorderSize(0)
 	return leg
 
-def readAxisConf( plot, configuration ):
+def readAxisConf( plot, configurationFileName="axis.cfg" ):
+	import ConfigParser
+	configuration = ConfigParser.SafeConfigParser()
+	configuration.read( configurationFileName )
 	#brackets are identified as sections, so they have to be deleted
 	plot = plot.replace("[","").replace("]","")
-	try:
-		label = configuration.get( plot, "label" )
-	except:
-		label = ""
-		print "Please specify %s in your axis configuration file."%plot
-	try:
-		unit = configuration.get( plot, "unit" )
-	except:
-		unit = ""
-	try:
-		binning = configuration.get( plot, "binning" )
-		binning = map(int, binning.split(" "))
-	except:
-		binning = []
+	label = configuration.get( plot, "label" )
+	unit = configuration.get( plot, "unit" )
+	binning = configuration.get( plot, "binning" )
+	binning = map(int, binning.split(" "))
 	return label, unit, binning
 
 def addHistos( histos, scales=None ):
