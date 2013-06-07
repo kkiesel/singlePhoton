@@ -14,15 +14,7 @@ style.SetOptLogy(0)
 ROOT.TGaxis.SetMaxDigits(3)
 ROOT.gROOT.SetBatch()
 
-import ConfigParser
-axisConf = ConfigParser.SafeConfigParser()
-axisConf.read("axis.cfg")
-
 ROOT.gSystem.Load("libTreeObjects.so")
-
-def extractHisto( dataset, plot ):
-	yutarosBinning = [ 25, 35, 40, 50, 60, 80, 100 ]
-	return createHistoFromTree( dataset.tree, plot, "weight*(%s)"%(dataset.additionalCut), nBins=yutarosBinning)
 
 def yutarosHistogramMC( color=2 ):
 	"""Creates Yutaros fake rate histogram for mc"""
@@ -63,21 +55,19 @@ def manipulateSaveName( saveName ):
 
 def plotNewFakeRate( fileName, opts ):
 	# dataset name is from beginning till first '_'
-	slimFileName = fileName.replace( os.path.basename(fileName), "slim"+os.path.basename(fileName))
-	datasetAffix = re.match("slim([^_]*)_.*", slimFileName ).groups()[0]
+	datasetAffix = re.match(".*slim([^_]*)_.*", fileName ).groups()[0]
 
-	h_gamma = extractHisto( Dataset( slimFileName, "photonTree", "photon.isGenElectron()" ), opts.plot )
-	h_e = extractHisto( Dataset( slimFileName, "photonElectronTree", "photon.isGenElectron()" ), opts.plot )
+	h_gamma = extractHisto( Dataset( fileName, "photonTree", "photon.isGenElectron()",color=1 ), opts.plot )
+	h_e = extractHisto( Dataset( fileName, "photonElectronTree", "photon.isGenElectron()",color=2 ), opts.plot )
 
 	fakeRate = divideHistos( h_gamma, addHistos( [h_gamma, h_e] ) )
+	fakeRate.GetYaxis().SetTitle("#gamma / (e+#gamma)")
+
+	yuOrig = yutarosHistogramMC()
 
 	can = ROOT.TCanvas()
 	can.cd()
 	can.SetLogy(0)
-
-	label, unit, binning = readAxisConf( opts.plot, axisConf )
-	fakeRate.SetTitle(";%s%s;#gamma / (e+#gamma)"%(label,unit) )
-	yuOrig = yutarosHistogramMC()
 
 	mhisto = Multihisto()
 	mhisto.legendOption = "lp"

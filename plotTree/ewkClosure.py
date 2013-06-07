@@ -1,18 +1,17 @@
 #! /usr/bin/env python2
 # -*- coding: utf-8 -*-
 import ROOT
-ROOT.gSystem.Load("libTreeObjects.so")
+import re
 import argparse
+from math import sqrt
 from multiplot import *
 from treeFunctions import *
-import Styles
-from math import sqrt
 import ratios
-Styles.tdrStyle()
+import Styles
 
-import ConfigParser
-axisConf = ConfigParser.SafeConfigParser()
-axisConf.read("axis.cfg")
+Styles.tdrStyle()
+ROOT.gROOT.SetBatch()
+ROOT.gSystem.Load("libTreeObjects.so")
 
 def applyFakeRate( histo, f, e_f ):
 	for i in range( histo.GetNbinsX() +1 ):
@@ -22,27 +21,7 @@ def applyFakeRate( histo, f, e_f ):
 		histo.SetBinError( i, sqrt((binContent*e_f)**2 + (histo.GetBinError(i)*f)**2 ) )
 	return histo
 
-def extractHisto( dataset, plot, binning ):
-	histo = createHistoFromTree( dataset.tree, plot, "weight*(%s)"%(dataset.additionalCut), nBins=binning)
-	#histo = createHistoFromTree( dataset.tree, plot, "weight*(%s)"%(dataset.additionalCut), nBins=30, firstBin=0, lastBin=500)
-	label, unit, binning = readAxisConf( opts.plot, axisConf )
-	if unit:
-		histo.SetTitle(";%s%s;Entries / %s"%(label, unit, unit[2:-1]))
-	else:
-		histo.SetTitle(";%s%s;Entries"%(label, unit))
-	histo.SetLineColor( dataset.color )
-	histo.SetMarkerColor( dataset.color )
-	histo.SetMarkerSize(0)
-	return histo
-
-if __name__ == "__main__":
-	arguments = argparse.ArgumentParser( description="Simple EWK" )
-	arguments.add_argument( "--plot", default="met" )
-	arguments.add_argument( "--input", default="EWK_V01.12_tree.root" )
-	arguments.add_argument( "--savePrefix", default="new" )
-	opts = arguments.parse_args()
-
-
+def closure( fileName, opts ):
 	##################################
 	fakeRate = 0.0084 # dy->ee mc yutaro
 	fakeRateError = 0.0005 # stat
@@ -53,21 +32,20 @@ if __name__ == "__main__":
 
 	##################################
 
-	ROOT.gROOT.SetBatch()
-	import re
 	# dataset name is from beginning till first '_'
-	slimFileName = opts.input.replace( os.path.basename(opts.input), "slim"+os.path.basename(opts.input))
-	datasetAffix = re.match("slim([^_]*)_.*", slimFileName ).groups()[0]
+	datasetAffix = re.match(".*slim([^_]*)_.*", fileName ).groups()[0]
 
-	label, unit, binning = readAxisConf( opts.plot, axisConf )
+	label, unit, binning = readAxisConf( opts.plot )
 
-	recE = extractHisto( Dataset( slimFileName, "photonElectronTree", "1", "e", 2 ), opts.plot, binning )
+	recE = extractHisto( Dataset( fileName, "photonElectronTree", "Min$(photon.pt)>80", "e", 2 ), opts.plot)
+	recE.SetMarkerSize(0)
 	recE.SetFillColor( recE.GetLineColor() )
 	recE.SetFillStyle(3254)
 
 	recE = applyFakeRate( recE, fakeRate, fakeRateError )
 
-	gamma = extractHisto( Dataset( slimFileName, "photonTree", "Max$(photon.isGenElectron())", "#gamma", 1 ), opts.plot, binning )
+	gamma = extractHisto( Dataset( fileName, "photonTree", "Max$(photon.isGenElectron()) && Min$(photon.pt)>80", "#gamma", 1 ), opts.plot)
+	gamma.SetMarkerSize(0)
 
 	multihisto = Multihisto()
 	multihisto.leg.SetHeader( datasetAffix )
@@ -102,4 +80,15 @@ if __name__ == "__main__":
 	ratioPad.Draw()
 	can.SaveAs("plots/%s_%s_%s.pdf"%(datasetAffix,opts.plot.replace(".",""),opts.savePrefix))
 	del can
+
+
+if __name__ == "__main__":
+	arguments = argparse.ArgumentParser( description="Simple EWK" )
+	arguments.add_argument( "--plot", default="met" )
+	arguments.add_argument( "--input", default=["EWK_V01.12_tree.root"], nargs="+" )
+	arguments.add_argument( "--savePrefix", default="new" )
+	opts = arguments.parse_args()
+
+	for inName in opts.input:
+		closure( inName, opts )
 
