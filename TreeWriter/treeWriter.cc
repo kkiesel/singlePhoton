@@ -21,7 +21,7 @@ void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
 	if (loggingVerbosity_ > 0)
 		std::cout << "Set Branch Address of susy::Event" << std::endl;
 	event = new susy::Event;
-	inputTree->SetBranchAddress("susyEvent", &event);
+	event->setInput( *inputTree );
 
 	// Here the number of proceeded events will be stored. For plotting, simply use L*sigma/eventNumber
 	eventNumbers = new TH1F("eventNumbers", "Histogram containing number of generated events", 1, 0, 1);
@@ -50,24 +50,10 @@ TreeWriter::~TreeWriter() {
 	if (pileupHisto != 0 )
 		delete pileupHisto;
 	inputTree->GetCurrentFile()->Close();
-	delete inputTree;
 	delete event;
+	delete inputTree;
 	delete outFile;
 	delete tree;
-}
-
-template<class Type>
-std::vector<Type>* getVectorFromMap( map<TString, vector<Type> > myMap, TString search ){
-	// if nothing is found, return a empty vector (which has to be deleted never the less)
-	std::vector<Type>* vec;
-	typename map<TString, vector<Type> >::iterator mapIt = myMap.find( search );
-	if( mapIt == myMap.end() ) {
-		cout << "ERROR: Collection \"" << search << "\" not found!" << endl;
-		vec = new std::vector<Type>;
-	} else
-		vec = &mapIt->second;
-	cout << vec->size() << endl;
-	return vec;
 }
 
 float deltaPhi( float phi1, float phi2) {
@@ -267,7 +253,7 @@ void TreeWriter::Loop() {
 		if ( loggingVerbosity>1 || jentry%reportEvery==0 )
 			std::cout << jentry << " / " << processNEvents << std :: endl;
 		inputTree->LoadTree( jentry );
-		inputTree->GetEntry( jentry );
+		event->getEntry(jentry);
 
 		photon.clear();
 		jet.clear();
