@@ -20,7 +20,6 @@ int main( int argc, char** argv ) {
 	tw->PileUpWeightFile("pileUpReweighting/puWeights.root");
 	tw->SetProcessNEvents(-1);
 	tw->SetReportEvents(20000);
-	tw->SkimEvents(true);
 
 	double start_time = time(NULL);
 	tw->Loop();
