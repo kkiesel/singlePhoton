@@ -206,7 +206,7 @@ bool isVetoElectron( const susy::Electron& electron, const susy::Event& event, c
 		effectiveAreaElectron(electron.momentum.Eta())*event.rho25, (float)0. ))
 		/ electron.momentum.Pt();
 	float d0 = d0correction( electron, event );
-	float dZ = std::abs( dZcorrection( *electron, event ) );
+	float dZ = std::abs( dZcorrection( electron, event ) );
 	bool isElectron = false;
 	isElectron  = (
 		electron.isEB()
