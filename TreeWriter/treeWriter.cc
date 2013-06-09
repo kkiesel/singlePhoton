@@ -3,7 +3,11 @@
 using namespace std;
 
 TreeWriter::TreeWriter( std::string inputName, std::string outputName, int loggingVerbosity_ ) {
-	// read the input file
+	/** Constructor function for a single input file.
+	 *
+	 * The tree from the file will be read.
+	 * inputName: points to a root file with a "susyTree"
+	 */
 	inputTree = new TChain("susyTree");
 	if (loggingVerbosity_ > 0)
 		std::cout << "Add files to chain" << std::endl;
@@ -12,12 +16,18 @@ TreeWriter::TreeWriter( std::string inputName, std::string outputName, int loggi
 }
 
 TreeWriter::TreeWriter( TChain* inputTree_, std::string outputName, int loggingVerbosity_ ) {
+	/** Constructor function for a TTree as input.
+	 */
 	inputTree = inputTree_;
 	Init( outputName, loggingVerbosity_ );
 }
 
 void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
-
+	/** Initialize the Object
+	 *
+	 * This function is called by each constructor function. Some basic setting
+	 * are done.
+	 */
 	if (loggingVerbosity_ > 0)
 		std::cout << "Set Branch Address of susy::Event" << std::endl;
 	event = new susy::Event;
@@ -41,11 +51,17 @@ void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
 }
 
 void TreeWriter::PileUpWeightFile( string pileupFileName ) {
+	/** Reads the pileup histogram from a given file.
+	 */
 	TFile *puFile = new TFile( pileupFileName.c_str() );
 	pileupHisto = (TH1F*) puFile->Get("pileup");
 }
 
 TreeWriter::~TreeWriter() {
+	/** Deconstructor
+	 *
+	 * Event has to be deleted before the tree.
+	 */
 	if (pileupHisto != 0 )
 		delete pileupHisto;
 	inputTree->GetCurrentFile()->Close();
@@ -56,13 +72,14 @@ TreeWriter::~TreeWriter() {
 }
 
 float deltaPhi( float phi1, float phi2) {
+	/** Delta Phi is computed for zylindical coordinates in the CMS system.
+	 */
 	float result = phi1 - phi2;
 	while (result > M_PI) result -= 2*M_PI;
 	while (result <= -M_PI) result += 2*M_PI;
 	return result;
 }
 
-// useful functions
 float deltaR( const TLorentzVector& v1, const TLorentzVector& v2 ) {
 	// deltaR  = sqrt ( deltaEta^2 + deltaPhi^2 )
 	return sqrt(pow(v1.Eta() - v2.Eta(), 2) + pow(deltaPhi(v1.Phi(),v2.Phi()), 2) );
@@ -163,7 +180,11 @@ float dZcorrection( const susy::Electron& electron, const susy::Event& event ) {
 	return dz;
 }
 
-bool isAdjacentToLightLepton( const susy::PFJet& jet, const std::vector<tree::Particle>& leptons, float deltaR_ = 0.3 ) {
+bool isAdjacentToLepton( const susy::PFJet& jet, const std::vector<tree::Particle>& leptons, float deltaR_ = 0.3 ) {
+	/** Leptons near the jet are searched.
+	 *
+	 * Returns true if a lepton is found in a certain radius near the jet.
+	 */
 	bool foundLepton = false;
 	for(std::vector<tree::Particle>::const_iterator lepton = leptons.begin(); lepton != leptons.end(); ++lepton) {
 		if (deltaR(jet, *lepton ) < deltaR_)
@@ -172,9 +193,12 @@ bool isAdjacentToLightLepton( const susy::PFJet& jet, const std::vector<tree::Pa
 	return foundLepton;
 }
 
-bool isLooseElectron( const susy::Electron& electron, const susy::Event& event, const int loggingVerbosity ) {
-	// for cuts see https://twiki.cern.ch/twiki/bin/viewauth/CMS/EgammaCutBasedIdentification
-
+bool isVetoElectron( const susy::Electron& electron, const susy::Event& event, const int loggingVerbosity ) {
+	/** Definition of veto working point for electrons.
+	 *
+	 * See https://twiki.cern.ch/twiki/bin/viewauth/CMS/EgammaCutBasedIdentification
+	 * for more information.
+	 */
 	if( electron.momentum.Pt() > 1e6 )
 		return false; // spike rejection
 	float iso = ( electron.chargedHadronIso +
@@ -182,32 +206,26 @@ bool isLooseElectron( const susy::Electron& electron, const susy::Event& event, 
 		effectiveAreaElectron(electron.momentum.Eta())*event.rho25, (float)0. ))
 		/ electron.momentum.Pt();
 	float d0 = d0correction( electron, event );
-	float dZ = 0;//std::abs( dZcorrection( *electron, *event ) );
-	if ( electron.isEB() ){
-		if ( fabs(electron.deltaEtaSuperClusterTrackAtVtx) < 0.007
+	float dZ = std::abs( dZcorrection( *electron, event ) );
+	bool isElectron = false;
+	isElectron  = (
+		electron.isEB()
+			&& ( fabs(electron.deltaEtaSuperClusterTrackAtVtx) < 0.007
 				|| fabs(electron.deltaPhiSuperClusterTrackAtVtx) < 0.8
 				|| electron.sigmaIetaIeta < 0.01
 				|| electron.hcalOverEcalBc < 0.15
 				|| d0 < 0.04
 				|| dZ < 0.2
 				|| iso < 0.15 )
-			return true;
-		else
-			return false;
-		}
-	else if( electron.isEE() ) {
-		if ( fabs(electron.deltaEtaSuperClusterTrackAtVtx) < 0.01
+		)||( electron.isEE()
+			&& ( fabs(electron.deltaEtaSuperClusterTrackAtVtx) < 0.01
 				|| fabs(electron.deltaPhiSuperClusterTrackAtVtx) < 0.7
 				|| electron.sigmaIetaIeta < 0.03
 				|| d0 < 0.04
 				|| dZ < 0.2
 				|| iso < 0.15 )
-			return true;
-		else
-			return false;
-		}
-	else // not in barrel nor in endcap
-		return false;
+		);
+	return isElectron;
 }
 
 
@@ -218,7 +236,6 @@ float getPtFromMatchedJet( const susy::Photon& myPhoton, const susy::PFJetCollec
 	 * At first all jets with DeltaR < 0.3 (isolation cone) are searched.
 	 * If several jets are found, take the one with the minimal pt difference
 	 * compared to the photon. If no such jets are found, keep the photon_pt
-	 * TODO: remove photon matched jet from jet-selection?
 	 */
 	std::vector<susy::PFJet> nearJets;
 	nearJets.clear();
@@ -260,14 +277,6 @@ float getPtFromMatchedJet( const susy::Photon& myPhoton, const susy::PFJetCollec
 	return pt;
 }
 
-void clearJetFromLightLeptons( std::vector<tree::Jet>& jets, std::vector<tree::Particle>& leptons, float deltaR=0.3 ) {
-	for(std::vector<tree::Jet>::iterator jet = jets.begin(); jet != jets.end(); ++jet ) {
-		for(std::vector<tree::Particle>::iterator em = leptons.begin(); em != leptons.end(); ++em ) {
-			if( deltaR( jet, em ) > deltaR )
-				jets.erase( jet ); // correct?
-		}
-	}
-}
 
 void TreeWriter::Loop() {
 	/**
@@ -396,7 +405,7 @@ void TreeWriter::Loop() {
 		// electrons
 		std::vector<susy::Electron> eVector = event->electrons["gsfElectrons"];
 		for(std::vector<susy::Electron>::iterator it = eVector.begin(); it < eVector.end(); ++it) {
-			if( it->momentum.Pt() < 15 || it->momentum.Eta() > 2.6 || !isLooseElectron( *it, *event, loggingVerbosity ) )
+			if( it->momentum.Pt() < 15 || it->momentum.Eta() > 2.6 || !isVetoElectron( *it, *event, loggingVerbosity ) )
 				continue;
 			tree::Particle thiselectron;
 			thiselectron.pt = it->momentum.Pt();
@@ -436,7 +445,7 @@ void TreeWriter::Loop() {
 
 			if(std::abs(corrP4.Eta()) > 2.6 ) continue;
 			if(corrP4.Pt() < 30 ) continue;
-			if( isAdjacentToLightLepton( *it, electron ) ||  isAdjacentToLightLepton( *it, muon ) ) continue;
+			if( isAdjacentToLepton( *it, electron ) ||  isAdjacentToLepton( *it, muon ) ) continue;
 			tree::Jet thisjet;
 			thisjet.pt = corrP4.Pt();
 			thisjet.eta = corrP4.Eta();
