@@ -37,7 +37,6 @@ void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
 	processNEvents = -1;
 	reportEvery = 1000;
 	loggingVerbosity = loggingVerbosity_;
-	skim = true;
 	pileupHisto = 0;
 }
 
@@ -68,6 +67,12 @@ float deltaR( const TLorentzVector& v1, const TLorentzVector& v2 ) {
 	// deltaR  = sqrt ( deltaEta^2 + deltaPhi^2 )
 	return sqrt(pow(v1.Eta() - v2.Eta(), 2) + pow(deltaPhi(v1.Phi(),v2.Phi()), 2) );
 }
+
+float deltaR( const susy::PFJet& v1, const tree::Particle& v2 ) {
+	// deltaR  = sqrt ( deltaEta^2 + deltaPhi^2 )
+	return sqrt(pow(v1.momentum.Eta() - v2.eta, 2) + pow(deltaPhi(v1.momentum.Phi(),v2.phi), 2) );
+}
+
 
 float effectiveAreaElectron( float eta ) {
 	// needed by calculating the isolation for electrons
@@ -158,6 +163,54 @@ float dZcorrection( const susy::Electron& electron, const susy::Event& event ) {
 	return dz;
 }
 
+bool isAdjacentToLightLepton( const susy::PFJet& jet, const std::vector<tree::Particle>& leptons, float deltaR_ = 0.3 ) {
+	bool foundLepton = false;
+	for(std::vector<tree::Particle>::const_iterator lepton = leptons.begin(); lepton != leptons.end(); ++lepton) {
+		if (deltaR(jet, *lepton ) < deltaR_)
+			foundLepton = true;
+	}
+	return foundLepton;
+}
+
+bool isLooseElectron( const susy::Electron& electron, const susy::Event& event, const int loggingVerbosity ) {
+	// for cuts see https://twiki.cern.ch/twiki/bin/viewauth/CMS/EgammaCutBasedIdentification
+
+	if( electron.momentum.Pt() > 1e6 )
+		return false; // spike rejection
+	float iso = ( electron.chargedHadronIso +
+		max(electron.neutralHadronIso+electron.photonIso -
+		effectiveAreaElectron(electron.momentum.Eta())*event.rho25, (float)0. ))
+		/ electron.momentum.Pt();
+	float d0 = d0correction( electron, event );
+	float dZ = 0;//std::abs( dZcorrection( *electron, *event ) );
+	if ( electron.isEB() ){
+		if ( fabs(electron.deltaEtaSuperClusterTrackAtVtx) < 0.007
+				|| fabs(electron.deltaPhiSuperClusterTrackAtVtx) < 0.8
+				|| electron.sigmaIetaIeta < 0.01
+				|| electron.hcalOverEcalBc < 0.15
+				|| d0 < 0.04
+				|| dZ < 0.2
+				|| iso < 0.15 )
+			return true;
+		else
+			return false;
+		}
+	else if( electron.isEE() ) {
+		if ( fabs(electron.deltaEtaSuperClusterTrackAtVtx) < 0.01
+				|| fabs(electron.deltaPhiSuperClusterTrackAtVtx) < 0.7
+				|| electron.sigmaIetaIeta < 0.03
+				|| d0 < 0.04
+				|| dZ < 0.2
+				|| iso < 0.15 )
+			return true;
+		else
+			return false;
+		}
+	else // not in barrel nor in endcap
+		return false;
+}
+
+
 float getPtFromMatchedJet( const susy::Photon& myPhoton, const susy::PFJetCollection& jetColl, int loggingVerbosity = 0 ) {
 	/**
 	 * \brief Takes jet p_T as photon p_T
@@ -204,11 +257,6 @@ float getPtFromMatchedJet( const susy::Photon& myPhoton, const susy::PFJetCollec
 			pt = it->momentum.Et();
 		}
 	}
-
-	// testing
-	if( nearJets.size() > 1 && loggingVerbosity > 0 )
-		std::cout << "There are several jets matching to this photon. "
-					<< "Please check if jet-matching is correct." << std::endl;
 	return pt;
 }
 
@@ -276,6 +324,17 @@ void TreeWriter::Loop() {
 			weight = pileupHisto->GetBinContent( pileupHisto->FindBin( trueNumInteractions ) );
 		}
 
+		// H_T
+		std::vector<susy::CaloJet> caloJets = event->caloJets["ak5"];
+		for(std::vector<susy::CaloJet>::iterator it = caloJets.begin();
+				it != caloJets.end(); ++it) {
+			if( std::abs( it->momentum.Eta() ) < 3 && it->momentum.Pt() > 40 )
+				ht += it->momentum.Pt();
+		}// for jet
+		if( ht < 450)
+			continue;
+
+
 		// get ak5 jets
 		std::vector<susy::PFJet> jetVector = event->pfJets["ak5"];
 
@@ -284,7 +343,7 @@ void TreeWriter::Loop() {
 
 		for(std::vector<susy::Photon>::iterator it = photonVector.begin();
 				it != photonVector.end(); ++it ) {
-			if( !(it->isEE() || it->isEB()) && it->momentum.Pt()<20 && it->isEBEtaGap() && it->isEBPhiGap() && it->isEERingGap() && it->isEEDeeGap() && it->isEBEEGap() && skim )
+			if( !(it->isEE() || it->isEB()) && it->momentum.Pt()<20 && it->isEBEtaGap() && it->isEBPhiGap() && it->isEERingGap() && it->isEEDeeGap() && it->isEBEEGap() )
 				continue;
 			tree::Photon thisphoton;
 
@@ -306,7 +365,7 @@ void TreeWriter::Loop() {
 				&& thisphoton.neutralIso<2.9+0.04*thisphoton.pt;
 
 			thisphoton.ptJet = getPtFromMatchedJet( *it, jetVector, loggingVerbosity );
-			if(!(loose_photon_endcap || loose_photon_barrel || thisphoton.ptJet > 75 ) && skim )
+			if(!(loose_photon_endcap || loose_photon_barrel || thisphoton.ptJet > 75 ) )
 				continue;
 			thisphoton.pt = it->momentum.Pt();
 			thisphoton.eta = it->momentum.Eta();
@@ -321,19 +380,43 @@ void TreeWriter::Loop() {
 			if( loggingVerbosity > 2 )
 				std::cout << " p_T, gamma = " << thisphoton.pt << std::endl;
 		}
-
-		if( photon.size() == 0 && skim )
-			continue;
+		if( photon.size() == 0 ) continue;
 		std::sort( photon.begin(), photon.end(), tree::EtGreater);
 		if( loggingVerbosity > 1 )
 			std::cout << "Found " << photon.size() << " photons" << std::endl;
 
+		// electrons
+		std::vector<susy::Electron> eVector = event->electrons["gsfElectrons"];
+		for(std::vector<susy::Electron>::iterator it = eVector.begin(); it < eVector.end(); ++it) {
+			if( it->momentum.Pt() < 15 || it->momentum.Eta() > 2.6 || !isLooseElectron( *it, *event, loggingVerbosity ) )
+				continue;
+			tree::Particle thiselectron;
+			thiselectron.pt = it->momentum.Pt();
+			thiselectron.eta = it->momentum.Eta();
+			thiselectron.phi = it->momentum.Phi();
+			electron.push_back( thiselectron );
+		}
+		if( loggingVerbosity > 1 )
+			std::cout << "Found " << electron.size() << " electrons" << std::endl;
+
+		// muons
+		std::vector<susy::Muon> mVector = event->muons["muons"];
+		for( std::vector<susy::Muon>::iterator it = mVector.begin(); it != mVector.end(); ++it) {
+			// see https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuideMuonId#Loose_Muon
+			if( it->momentum.Pt() < 15 || it->momentum.Eta() > 2.6 || !(it->isPFMuon() && (it->isGlobalMuon() || it->isTrackerMuon())) )
+				continue;
+			tree::Particle thismuon;
+			thismuon.pt = it->momentum.Et();
+			thismuon.eta = it->momentum.Eta();
+			thismuon.phi = it->momentum.Phi();
+			muon.push_back( thismuon );
+		}
+		if( loggingVerbosity > 1 )
+			std::cout << "Found " << muon.size() << " muons" << std::endl;
+
 		// jets
-
-
 		for(std::vector<susy::PFJet>::iterator it = jetVector.begin();
 				it != jetVector.end(); ++it) {
-			tree::Jet thisjet;
 
 			// scale with JEC
 			float scale = 1.;
@@ -343,13 +426,10 @@ void TreeWriter::Loop() {
 				scale = it->jecScaleFactors.find("L2L3")->second;
 			TLorentzVector corrP4 = scale * it->momentum;
 
-			// Calculate HT.
-			// The definiton differs from the saved jet, since trigger is described better
-			if( std::abs( corrP4.Eta() ) < 3 && corrP4.Pt() > 40 )
-				ht += thisjet.pt;
-
-			if(std::abs(corrP4.Eta()) > 2.6 && skim ) continue;
-			if(corrP4.Pt() < 30 && skim ) continue;
+			if(std::abs(corrP4.Eta()) > 2.6 ) continue;
+			if(corrP4.Pt() < 30 ) continue;
+			if( isAdjacentToLightLepton( *it, electron ) ||  isAdjacentToLightLepton( *it, muon ) ) continue;
+			tree::Jet thisjet;
 			thisjet.pt = corrP4.Pt();
 			thisjet.eta = corrP4.Eta();
 			thisjet.phi = corrP4.Phi();
@@ -365,22 +445,18 @@ void TreeWriter::Loop() {
 			thisjet.chargedEmEnergy = it->chargedEmEnergy;
 			thisjet.chargedMuEnergy = it->chargedMuEnergy;
 			thisjet.neutralEmEnergy = it->neutralEmEnergy;
+			jet.push_back( thisjet );
 
 			if( loggingVerbosity > 2 )
 				std::cout << " p_T, jet = " << thisjet.pt << std::endl;
-
-			jet.push_back( thisjet );
 		}// for jet
-		if( jet.size() < 2 && skim )
+
+
+		if( jet.size() < 2 )
 			continue;
 		std::sort( jet.begin(), jet.end(), tree::EtGreater);
 		if( loggingVerbosity > 1 )
 			std::cout << "Found " << jet.size() << " jets" << std::endl;
-
-		if( ht < 450 && skim)
-			continue;
-
-
 
 		// met
 		std::map<TString, susy::MET>::iterator met_it = event->metMap.find("pfMet");
@@ -397,67 +473,6 @@ void TreeWriter::Loop() {
 		if( loggingVerbosity > 2 )
 			std::cout << " type1met = " << type1met << std::endl;
 
-		// electrons
-		std::vector<susy::Electron> eVector = event->electrons["gsfElectrons"];
-		for(std::vector<susy::Electron>::iterator it = eVector.begin(); it < eVector.end(); ++it) {
-			tree::Particle thiselectron;
-			if( loggingVerbosity > 2 )
-				cout << " electron pt = " << it->momentum.Pt() << endl;
-			// for cuts see https://twiki.cern.ch/twiki/bin/viewauth/CMS/EgammaCutBasedIdentification
-			// use veto electrons
-			if( it->momentum.Pt() < 20  || it->momentum.Pt() > 1e6 )
-				continue; // spike rejection
-			float iso = ( it->chargedHadronIso + max(it->neutralHadronIso+it->photonIso - effectiveAreaElectron(it->momentum.Eta())*event->rho25, (float)0. )
-						) / it->momentum.Pt();
-			float d0 = d0correction( *it, *event );
-			float dZ = std::abs( dZcorrection( *it, *event ) );
-			if ( it->isEB() ){
-				if ( fabs(it->deltaEtaSuperClusterTrackAtVtx) > 0.007
-						|| fabs(it->deltaPhiSuperClusterTrackAtVtx) > 0.8
-						|| it->sigmaIetaIeta > 0.01
-						|| it->hcalOverEcalBc > 0.15
-						|| d0 > 0.04
-						|| dZ > 0.2
-						|| iso > 0.15 )
-					continue;
-				}
-			else if( it->isEE() ) {
-				if ( fabs(it->deltaEtaSuperClusterTrackAtVtx) > 0.01
-						|| fabs(it->deltaPhiSuperClusterTrackAtVtx) > 0.7
-						|| it->sigmaIetaIeta > 0.03
-						|| d0 > 0.04
-						|| dZ > 0.2
-						|| iso > 0.15 )
-					continue;
-				}
-			else // not in barrel nor in endcap
-				continue;
-
-			thiselectron.pt = it->momentum.Pt();
-			if( loggingVerbosity > 2 )
-				std::cout << " p_T, electron = " << it->momentum.Et() << std::endl;
-			thiselectron.eta = it->momentum.Eta();
-			thiselectron.phi = it->momentum.Phi();
-			electron.push_back( thiselectron );
-		}
-		if( loggingVerbosity > 1 )
-			std::cout << "Found " << electron.size() << " electrons" << std::endl;
-
-		// muons
-		tree::Particle thismuon;
-		std::vector<susy::Muon> mVector = event->muons["muons"];
-		for( std::vector<susy::Muon>::iterator it = mVector.begin(); it != mVector.end(); ++it) {
-			if( !( it->isPFMuon() && ( it->isGlobalMuon() || it->isTrackerMuon() ) ) )
-				continue; // see https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuideMuonId#Loose_Muon
-			thismuon.pt = it->momentum.Et();
-			if( thismuon.pt < 20 )
-				continue;
-			thismuon.eta = it->momentum.Eta();
-			thismuon.phi = it->momentum.Phi();
-			muon.push_back( thismuon );
-		}
-		if( loggingVerbosity > 1 )
-			std::cout << "Found " << muon.size() << " muons" << std::endl;
 
 		// vertices
 		nVertex = event->vertices.size();
