@@ -226,6 +226,14 @@ float getPtFromMatchedJet( const susy::Photon& myPhoton, const susy::PFJetCollec
 	return pt;
 }
 
+void clearJetFromLightLeptons( std::vector<tree::Jet>& jets, std::vector<tree::Particle>& leptons, float deltaR=0.3 ) {
+	for(std::vector<tree::Jet>::iterator jet = jets.begin(); jet != jets.end(); ++jet ) {
+		for(std::vector<tree::Particle>::iterator em = leptons.begin(); em != leptons.end(); ++em ) {
+			if( deltaR( jet, em ) > deltaR )
+				jets.erase( jet ); // correct?
+		}
+	}
+}
 
 void TreeWriter::Loop() {
 	/**
