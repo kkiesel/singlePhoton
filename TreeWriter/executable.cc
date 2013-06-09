@@ -9,7 +9,7 @@ int main( int argc, char** argv ) {
 	std::string outputFileName = argv[1];
 
 	TChain *inputTree = new TChain("susyTree");
-	for( unsigned int i=2; i<argc; ++i)
+	for( int i=2; i<argc; ++i)
 		inputTree->Add( argv[i] );
 
 	std::cout << "Write to output file \"" << outputFileName << "\"" << std::endl;

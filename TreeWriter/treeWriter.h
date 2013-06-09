@@ -22,7 +22,6 @@ class TreeWriter {
 		void SetProcessNEvents(int nEvents) { processNEvents = nEvents; }
 		void SetReportEvents(unsigned int nEvents) { reportEvery = nEvents; }
 		void SetLoggingVerbosity(unsigned int logVerb) { loggingVerbosity = logVerb; }
-		void SkimEvents(bool skim_){ skim = skim_; }
 		void PileUpWeightFile( std::string pileupFileName );
 
 		TChain* inputTree;
@@ -35,7 +34,6 @@ class TreeWriter {
 	private:
 		int processNEvents; // number of events to be processed
 		unsigned int reportEvery;
-		bool skim; // true by default. eg. nJets, jet.pt, etc
 		unsigned int loggingVerbosity;
 		// 0: no output
 		// 1: only steps are shown
