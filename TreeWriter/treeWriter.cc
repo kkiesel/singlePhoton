@@ -209,8 +209,9 @@ bool isVetoElectron( const susy::Electron& electron, const susy::Event& event, c
 	float d0 = d0correction( electron, event );
 	float dZ = std::abs( dZcorrection( electron, event ) );
 	bool isElectron = false;
+	float eta = std::abs(electron.momentum.Eta());
 	isElectron  = (
-		electron.isEB()
+		eta < 1.442
 			&& ( fabs(electron.deltaEtaSuperClusterTrackAtVtx) < 0.007
 				|| fabs(electron.deltaPhiSuperClusterTrackAtVtx) < 0.8
 				|| electron.sigmaIetaIeta < 0.01
@@ -218,7 +219,7 @@ bool isVetoElectron( const susy::Electron& electron, const susy::Event& event, c
 				|| d0 < 0.04
 				|| dZ < 0.2
 				|| iso < 0.15 )
-		)||( electron.isEE()
+		)||( (1.566 < eta && eta < 2.5)
 			&& ( fabs(electron.deltaEtaSuperClusterTrackAtVtx) < 0.01
 				|| fabs(electron.deltaPhiSuperClusterTrackAtVtx) < 0.7
 				|| electron.sigmaIetaIeta < 0.03
@@ -315,7 +316,7 @@ void TreeWriter::Loop() {
 	tree->Branch("genElectron", &genElectron);
 	tree->Branch("genPhoton", &genPhoton);
 
-	for (unsigned long jentry=0; jentry < processNEvents; ++jentry) {
+	for (long jentry=0; jentry < processNEvents; ++jentry) {
 		if ( loggingVerbosity>1 || jentry%reportEvery==0 )
 			std::cout << jentry << " / " << processNEvents << std :: endl;
 		inputTree->LoadTree( jentry );
