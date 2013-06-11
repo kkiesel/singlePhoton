@@ -91,7 +91,7 @@ def generalMatching( objects1, objects2, hist, typ="electron"):
 				else:
 					hist["dEtadPhiSmallPhoton"].Fill( absDeltaEta, absDeltaPhi )
 
-			if absDeltaEta < .008 and absDeltaPhi < .08 and absDeltaPt < .1:
+			if absDeltaEta < .01 and absDeltaPhi < .1 and absDeltaPt < .2:
 				match = True
 				if absDeltaPt < minDeltaPt:
 					minDeltaPt = absDeltaPt
