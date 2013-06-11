@@ -65,12 +65,10 @@ def closure( fileName, opts ):
 	ratioGraph.draw(ROOT.gPad, yMin=0.5, yMax=1.5, adaptiveBinning=False, errors="yx")
 	ratioGraph.hAxis.SetYTitle( "#gamma/(e#upoint#tilde{f})")
 
-	"""
-	scale_for_points = 3.66 # mean weight for w-jets photonTree
-	for point in range( ratioGraph.graph.GetN() ):
-		if not ratioGraph.graph.GetErrorY(point):
-			ratioGraph.graph.SetPointEYhigh( point, 1.14*scale_for_points/ ratioGraph.denominator.GetBinContent(point+1) )
-	"""
+	#scale_for_points = 3.66 # mean weight for w-jets photonTree
+	#for point in range( ratioGraph.graph.GetN() ):
+	#	if not ratioGraph.graph.GetErrorY(point):
+	#		ratioGraph.graph.SetPointEYhigh( point, 1.14*scale_for_points/ ratioGraph.denominator.GetBinContent(point+1) )
 
 	ratioGraph.graph.Draw("same p")
 
@@ -86,7 +84,10 @@ def closure( fileName, opts ):
 	hPad.Draw()
 	ratioPad.Draw()
 	can.SaveAs("plots/%s_%s_%s.pdf"%(datasetAffix,opts.plot.replace(".",""),opts.savePrefix))
-	del can
+
+	# avoid segmentation violation due to python garbage collector
+	ROOT.SetOwnership(hPad, False)
+	ROOT.SetOwnership(ratioPad, False)
 
 
 if __name__ == "__main__":
