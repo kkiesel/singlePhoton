@@ -31,7 +31,8 @@ void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
 	if (loggingVerbosity_ > 0)
 		std::cout << "Set Branch Address of susy::Event" << std::endl;
 	event = new susy::Event;
-	event->setInput( *inputTree );
+	//event->setInput( *inputTree );
+	inputTree->SetBranchAddress("susyEvent", &event );
 
 	// Here the number of proceeded events will be stored. For plotting, simply use L*sigma/eventNumber
 	eventNumbers = new TH1F("eventNumbers", "Histogram containing number of generated events", 1, 0, 1);
@@ -318,7 +319,8 @@ void TreeWriter::Loop() {
 		if ( loggingVerbosity>1 || jentry%reportEvery==0 )
 			std::cout << jentry << " / " << processNEvents << std :: endl;
 		inputTree->LoadTree( jentry );
-		event->getEntry(jentry);
+		//event->getEntry(jentry);
+		inputTree->GetEntry(jentry);
 
 		photon.clear();
 		jet.clear();
