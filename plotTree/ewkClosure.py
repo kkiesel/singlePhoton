@@ -23,8 +23,8 @@ def applyFakeRate( histo, f, e_f ):
 
 def closure( fileName, opts ):
 	##################################
-	fakeRate = 0.0084 # dy->ee mc yutaro
-	fakeRateError = 0.0005 # stat
+	fakeRate = 0.0084
+	fakeRateError = 0.0006 # stat
 
 	# correct fake rate, if it is estimated with yutaros method
 	fakeRateError = fakeRateError / (1-fakeRate)**2
@@ -37,7 +37,7 @@ def closure( fileName, opts ):
 
 	label, unit, binning = readAxisConf( opts.plot )
 
-	recE = extractHisto( Dataset( fileName, "photonElectronTree", "Min$(photon.pt)>80", "e", 2 ), opts.plot)
+	recE = extractHisto( Dataset( fileName, "photonElectronTree", "Max$(photon.isGenElectron()) && Min$(photon.pt)>80", "e", 2 ), opts.plot)
 	recE.SetMarkerSize(0)
 	recE.SetFillColor( recE.GetLineColor() )
 	recE.SetFillStyle(3254)
@@ -52,7 +52,6 @@ def closure( fileName, opts ):
 	multihisto.addHisto( recE, "e#upoint#tildef_{e#rightarrow#gamma}", draw="e2" )
 	multihisto.addHisto( gamma, "#gamma", draw="e hist" )
 
-
 	can = ROOT.TCanvas()
 
 	hPad = ROOT.TPad("hPad", "Histogram", 0, 0.2, 1, 1)
@@ -65,6 +64,14 @@ def closure( fileName, opts ):
 	ratioGraph = ratios.RatioGraph(gamma, recE)
 	ratioGraph.draw(ROOT.gPad, yMin=0.5, yMax=1.5, adaptiveBinning=False, errors="yx")
 	ratioGraph.hAxis.SetYTitle( "#gamma/(e#upoint#tilde{f})")
+
+	"""
+	scale_for_points = 3.66 # mean weight for w-jets photonTree
+	for point in range( ratioGraph.graph.GetN() ):
+		if not ratioGraph.graph.GetErrorY(point):
+			ratioGraph.graph.SetPointEYhigh( point, 1.14*scale_for_points/ ratioGraph.denominator.GetBinContent(point+1) )
+	"""
+
 	ratioGraph.graph.Draw("same p")
 
 	# draw systematic uncertanty in ratio:
