@@ -65,7 +65,8 @@ class Multihisto:
 	def GetMinimum( self ):
 		mini = 100000
 		for hist,draw in self.histos:
-			if hist.GetMinimum() < mini:
+			# search for minimum > 0
+			if hist.GetMinimum(0) < mini:
 				mini = hist.GetMinimum(0)
 		return mini
 
@@ -85,7 +86,7 @@ class Multihisto:
 			minimum = self.GetMinimum()
 			if ROOT.gPad.GetLogy():
 				maximum = maximum*5
-				minimum = 1
+				minimum = minimum/3
 			else:
 				maximum = maximum + (maximum-minimum)*.1
 				minimum = minimum - (maximum-minimum)*.1
