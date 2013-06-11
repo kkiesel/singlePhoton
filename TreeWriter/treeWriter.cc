@@ -315,7 +315,7 @@ void TreeWriter::Loop() {
 	tree->Branch("genElectron", &genElectron);
 	tree->Branch("genPhoton", &genPhoton);
 
-	for (long jentry=0; jentry < processNEvents; ++jentry) {
+	for (unsigned long jentry=0; jentry < processNEvents; ++jentry) {
 		if ( loggingVerbosity>1 || jentry%reportEvery==0 )
 			std::cout << jentry << " / " << processNEvents << std :: endl;
 		inputTree->LoadTree( jentry );
@@ -342,17 +342,6 @@ void TreeWriter::Loop() {
 			}
 			weight = pileupHisto->GetBinContent( pileupHisto->FindBin( trueNumInteractions ) );
 		}
-
-		// H_T
-		std::vector<susy::CaloJet> caloJets = event->caloJets["ak5"];
-		for(std::vector<susy::CaloJet>::iterator it = caloJets.begin();
-				it != caloJets.end(); ++it) {
-			if( std::abs( it->momentum.Eta() ) < 3 && it->momentum.Pt() > 40 )
-				ht += it->momentum.Pt();
-		}// for jet
-		if( ht < 450)
-			continue;
-
 
 		// get ak5 jets
 		std::vector<susy::PFJet> jetVector = event->pfJets["ak5"];
@@ -437,6 +426,11 @@ void TreeWriter::Loop() {
 		for(std::vector<susy::PFJet>::iterator it = jetVector.begin();
 				it != jetVector.end(); ++it) {
 
+			// compute H_T with uncorrected ak5PFJets, to have larger agreement
+			//  with trigger
+			if( std::abs( it->momentum.Eta() ) < 3 && it->momentum.Pt() > 40 )
+				ht += it->momentum.Pt();
+
 			// scale with JEC
 			float scale = 1.;
 			if(it->jecScaleFactors.count("L2L3") == 0)
@@ -470,12 +464,15 @@ void TreeWriter::Loop() {
 				std::cout << " p_T, jet = " << thisjet.pt << std::endl;
 		}// for jet
 
-
 		if( jet.size() < 2 )
 			continue;
 		std::sort( jet.begin(), jet.end(), tree::EtGreater);
 		if( loggingVerbosity > 1 )
 			std::cout << "Found " << jet.size() << " jets" << std::endl;
+
+		// H_T cut
+		if( ht < 450)
+			continue;
 
 		// met
 		std::map<TString, susy::MET>::iterator met_it = event->metMap.find("pfMet");
@@ -492,13 +489,16 @@ void TreeWriter::Loop() {
 		if( loggingVerbosity > 2 )
 			std::cout << " type1met = " << type1met << std::endl;
 
-
 		// vertices
 		nVertex = event->vertices.size();
 
 		tree::Particle thisGenParticle;
 		for( std::vector<susy::Particle>::iterator it = event->genParticles.begin(); it != event->genParticles.end(); ++it ) {
-			if( it->momentum.Pt() < 20 ) continue;
+			// status 3: particles in matrix element
+			// status 2: intermediate particles
+			// status 1: final particles (but can decay in geant, etc)
+			if( it->momentum.Pt() < 20 || it->status != 1) continue;
+
 			thisGenParticle.pt = it->momentum.Pt();
 			thisGenParticle.eta = it->momentum.Eta();
 			thisGenParticle.phi = it->momentum.Phi();
@@ -507,16 +507,13 @@ void TreeWriter::Loop() {
 					genPhoton.push_back( thisGenParticle );
 					break;
 				case 11: // electron
-					// Demand a W boson as mother particle of electron
-					if( abs(event->genParticles[it->motherIndex].pdgId) == 24 )
-						genElectron.push_back( thisGenParticle );
+					genElectron.push_back( thisGenParticle );
 					break;
 			}
 		}
 
 		tree->Fill();
 	} // for jentry
-
 
 	outFile->cd();
 	eventNumbers->Write();
