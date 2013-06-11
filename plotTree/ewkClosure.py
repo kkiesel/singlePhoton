@@ -37,14 +37,15 @@ def closure( fileName, opts ):
 
 	label, unit, binning = readAxisConf( opts.plot )
 
-	recE = extractHisto( Dataset( fileName, "photonElectronTree", "Max$(photon.isGenElectron()) && Min$(photon.pt)>80", "e", 2 ), opts.plot)
+	commonCut = "photon[0].isGenElectron() && photon[0].pt>80"
+	recE = extractHisto( Dataset( fileName, "photonElectronTree", commonCut, "e", 2 ), opts.plot)
 	recE.SetMarkerSize(0)
 	recE.SetFillColor( recE.GetLineColor() )
 	recE.SetFillStyle(3254)
 
 	recE = applyFakeRate( recE, fakeRate, fakeRateError )
 
-	gamma = extractHisto( Dataset( fileName, "photonTree", "Max$(photon.isGenElectron()) && Min$(photon.pt)>80", "#gamma", 1 ), opts.plot)
+	gamma = extractHisto( Dataset( fileName, "photonTree", commonCut, "#gamma", 1 ), opts.plot)
 	gamma.SetMarkerSize(0)
 
 	multihisto = Multihisto()
