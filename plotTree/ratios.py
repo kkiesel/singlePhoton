@@ -257,7 +257,7 @@ class RatioGraph:
         self.errorGraphs = self.getErrorGraphs()
         self.errorGraphs.reverse()
         for errorGraph in self.errorGraphs:
-            errorGraph.Draw("SAME2")
+            errorGraph.Draw("SAME2 0")
 
         self.oneLine = ROOT.TLine(self.xMin, 1.0, self.xMax, 1.0)
         self.oneLine.SetLineStyle(2)
@@ -266,7 +266,7 @@ class RatioGraph:
         self.hAxis.Draw("SAMEAXIS")
 
         self.graph = self.getGraph(adaptiveBinning, errors)
-        self.graph.Draw("SAMEZ")
+        self.graph.Draw("SAMEZ 0")
 
         pad.Update()
 
