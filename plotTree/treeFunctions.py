@@ -36,6 +36,8 @@ def createHistoFromTree(tree, variable, weight="", nBins=100, firstBin=None, las
 
 	result.Sumw2()
 	tree.Draw("%s>>%s"%(variable, name), weight, "goff", nEvents)
+	if not isinstance(nBins, int):
+		result.Scale(1,"width")
 	return result
 
 def readTree( filename, treename = "susyTree" ):
@@ -70,9 +72,27 @@ def readHisto( filename, histoname="eventNumbers" ):
 	histo = histo.Clone( histoname )
 	return histo
 
-def extractHisto( dataset, plot ):
+def appendOverflowBin( oldHist, overflow ):
+	import ROOT
+	import array
+	oldArray = oldHist.GetXaxis().GetXbins()
+	newArray = array.array('d', [0]*(oldArray.GetSize()+1))
+	for i in range( oldArray.GetSize() ):
+		newArray[i] = oldArray[i]
+	newArray[-1] = newArray[-2] + overflow
+	newHist = ROOT.TH1F( randomName(), "", len(newArray)-1, newArray )
+
+	for bin in range(1, len(newArray)):
+		newHist.SetBinContent(bin, oldHist.GetBinContent(bin ))
+		newHist.SetBinError(bin, oldHist.GetBinError(bin ))
+	return newHist
+
+def extractHisto( dataset, plot, overflow=0 ):
 	label, unit, binning = readAxisConf( plot )
 	histo = createHistoFromTree( dataset.tree, plot, "weight*(%s)"%(dataset.additionalCut), nBins=binning)
+	if overflow > 0:
+		histo = appendOverflowBin(histo, overflow)
+
 	histo.SetLineColor( dataset.color )
 	histo.SetMarkerColor( dataset.color )
 
