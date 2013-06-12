@@ -120,10 +120,13 @@ def clearJets( photonCanidates, jets, outJets, deltaR_=.3 ):
 	deltaR_: minimal distance between jet and photon-object
 	"""
 	for jet in jets:
+		aloneJet = True
 		for photonSample in photonCanidates:
 			for photon in photonSample:
-				if deltaR( jet, photon ) > deltaR_:
-					outJets.push_back( jet )
+				if deltaR( jet, photon ) < deltaR_:
+					aloneJet = False
+		if aloneJet:
+			outJets.push_back( jet )
 	return outJets
 
 def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1, genMatching=False ):
@@ -195,7 +198,7 @@ def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1, gen
 					emObjects.push_back( gamma )
 
 				# QCD fake object definition
-				if gamma.ptJet > 75 \
+				if gamma.ptJet > 80 \
 				and gamma.hadTowOverEm < 0.05 \
 				and gamma.sigmaIetaIeta < 0.014 \
 				and gamma.chargedIso < 15 \
@@ -220,7 +223,7 @@ def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1, gen
 				photons.push_back( emObject )
 
 		jets = clearJets( [emObjects, photonJets], event.jet, jets )
-		if jets.size() < 0: # TODO: change cut
+		if jets.size() < 2:
 			continue
 
 		if photons.size() > 0:
