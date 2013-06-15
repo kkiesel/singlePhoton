@@ -49,7 +49,7 @@ class Multihisto:
 		else:
 			self.histos.append( (singleHisto, draw) )
 		if label:
-			if draw == "e hist":
+			if "hist" in draw:
 				self.legendOption = "l"
 			if draw == "e2":
 				self.legendOption = "f"
