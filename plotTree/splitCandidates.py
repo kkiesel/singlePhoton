@@ -112,20 +112,15 @@ def generalMatching( objects1, objects2, hist, typ="electron"):
 					o1.phi = 5
 	return objects1, hist
 
-def clearJets( photonCanidates, jets, outJets, deltaR_=.3 ):
+def clearJets( photonLikeObj, inJets, outJets, deltaR_=.3 ):
 	""" Cleares jets which are near photonCandidates
 	photonCandidates: list containing vectors of photonCandidates
 	jets: vector of ingoing photons
 	outJets: vector, in which the passing vectors will be stored
 	deltaR_: minimal distance between jet and photon-object
 	"""
-	for jet in jets:
-		aloneJet = True
-		for photonSample in photonCanidates:
-			for photon in photonSample:
-				if deltaR( jet, photon ) < deltaR_:
-					aloneJet = False
-		if aloneJet:
+	for jet in inJets:
+		if deltaR( jet, photonLikeObj ) > deltaR_:
 			outJets.push_back( jet )
 	return outJets
 
@@ -222,7 +217,13 @@ def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1, gen
 			else:
 				photons.push_back( emObject )
 
-		jets = clearJets( [emObjects, photonJets], event.jet, jets )
+		if photons.size() > 0:
+			jets = clearJets( photons[0], event.jet, jets )
+		else:
+			if photonJets.size() > 0:
+				jets = clearJets( photonJets[0], event.jet, jets )
+			if photonElectrons.size() > 0:
+				jets = clearJets( photonElectrons[0], event.jet, jets )
 		if jets.size() < 2:
 			continue
 
