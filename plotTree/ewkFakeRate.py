@@ -48,7 +48,7 @@ def manipulateSaveName( saveName ):
 	"""Replace some charakters, so root nor unix have problems to read them."""
 	saveName = saveName.replace("/","VS")
 	saveName = saveName.replace(" ","_")
-	unallowedCharacters = ["{","}","(",")","#","|","."]
+	unallowedCharacters = ["{","}","(",")","#","|",".","[","]"]
 	for char in unallowedCharacters:
 		saveName = saveName.replace( char, "" )
 	return saveName
@@ -57,11 +57,12 @@ def plotNewFakeRate( fileName, opts ):
 	# dataset name is from beginning till first '_'
 	datasetAffix = re.match(".*slim([^_]*)_.*", fileName ).groups()[0]
 
-	h_gamma = extractHisto( Dataset( fileName, "photonTree", "photon.isGenElectron()",color=1 ), opts.plot, 10 )
-	h_e = extractHisto( Dataset( fileName, "photonElectronTree", "photon.isGenElectron()",color=2 ), opts.plot, 10 )
+	commonCut = ""
+	h_gamma = extractHisto( Dataset( fileName, "photonTree", commonCut+" photon.isGenElectron()",color=1 ), opts.plot, 20 )
+	h_e = extractHisto( Dataset( fileName, "photonElectronTree", commonCut+" photon.isGenElectron()",color=2 ), opts.plot, 20 )
 
 	fakeRate = divideHistos( h_gamma, addHistos( [h_gamma, h_e] ) )
-	fakeRate.GetYaxis().SetTitle("#gamma / (e+#gamma)")
+	fakeRate.GetYaxis().SetTitle("f_{e#rightarrow#gamma}")
 
 	yuOrig = yutarosHistogramMC()
 
