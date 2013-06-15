@@ -1,6 +1,10 @@
-VERSION = 12
+VERSION = 15
 SUFFIX = _V01.$(VERSION)_tree.root
 SAVESUFFIX = new
+
+qcd: 
+
+
 
 ewk: ewkClosure ewkFakeRate
 	@echo Done
@@ -12,5 +16,5 @@ ewkFakeRate: ewkFakeRate.py $(addsuffix $(SUFFIX), $(addprefix slim, TTJets WJet
 	@python2 ewkFakeRate.py --input $(filter-out ewkFakeRate.py, $^) --savePrefix $(SAVESUFFIX)
 
 slim%:% splitCandidates.py
-	@python2 splitCandidates.py --genMatching --input $<
+	@python2 splitCandidates.py --input $< # --genMatching
 
