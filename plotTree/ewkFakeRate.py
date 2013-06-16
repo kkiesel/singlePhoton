@@ -44,15 +44,6 @@ def drawDatasetLabel( datasetAffix ):
 	datasetLabel.AddText( datasetAffix )
 	return datasetLabel
 
-def manipulateSaveName( saveName ):
-	"""Replace some charakters, so root nor unix have problems to read them."""
-	saveName = saveName.replace("/","VS")
-	saveName = saveName.replace(" ","_")
-	unallowedCharacters = ["{","}","(",")","#","|",".","[","]"]
-	for char in unallowedCharacters:
-		saveName = saveName.replace( char, "" )
-	return saveName
-
 def plotNewFakeRate( fileName, opts ):
 	# dataset name is from beginning till first '_'
 	datasetAffix = re.match(".*slim([^_]*)_.*", fileName ).groups()[0]
