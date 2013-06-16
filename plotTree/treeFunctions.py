@@ -3,8 +3,7 @@ def randomName():
 	from sys import maxint
 	return "%x"%(randint(0, maxint))
 
-
-def createHistoFromTree(tree, variable, weight="", nBins=100, firstBin=None, lastBin=None, nEvents=-1):
+def createHistoFromTree(tree, variable, weight="", nBins=20, firstBin=None, lastBin=None, nEvents=-1):
 	"""
 	tree: tree to create histo from
 	variable: variable to plot (must be a branch of the tree)
@@ -24,9 +23,15 @@ def createHistoFromTree(tree, variable, weight="", nBins=100, firstBin=None, las
 	name = "%x"%(randint(0, maxint))
 	if isinstance(nBins, int):
 		if firstBin == None:
-			firstBin = tree.GetMinimum( variable )
+			# due to a strange behaviour, GetMaximum cant handle vectors
+			firstBin = tree.GetMinimum( variable.replace("[0]","" ))
 		if lastBin == None:
-			lastBin = tree.GetMaximum( variable )
+			lastBin = tree.GetMaximum( variable.replace("[0]","") )
+		varType = eval("type(tree.%s)"%(variable.replace("@","")) )
+		if varType == int or varType == long:
+			lastBin+=1.5
+			firstBin+=1.5
+			nBins = int(lastBin-firstBin)
 		result = TH1F(name, variable, nBins, firstBin, lastBin)
 	else:
 		# assume nBins is list
@@ -87,6 +92,64 @@ def appendOverflowBin( oldHist, overflow ):
 		newHist.SetBinError(bin, oldHist.GetBinError(bin ))
 	return newHist
 
+def getXMinXMax( histo_list ):
+	mins = []
+	maxs = []
+	for histo in histo_list:
+		mins.append( histo.GetBinLowEdge(1) )
+		lastBin = histo.GetNbinsX()
+		maxs.append( histo.GetBinLowEdge(lastBin)+histo.GetBinWidth(lastBin) )
+	return min(mins), max(maxs)
+
+def getHisto( tree, plot, cut="1", overflow=0, weight="weight", color=1, firstBin=None, lastBin=None ):
+	label, unit, binning = readAxisConf( plot )
+	if binning:
+		histo = createHistoFromTree( tree, plot, "%s*(%s)"%(weight, cut), nBins=binning)
+	else:
+		histo = createHistoFromTree( tree, plot, "%s*(%s)"%(weight, cut), firstBin=firstBin, lastBin=lastBin )
+	if overflow > 0:
+		histo = appendOverflowBin(histo, overflow)
+
+	histo.SetLineColor( color )
+	histo.SetMarkerColor( color )
+	histo.SetLineWidth(2)
+
+	ytitle = "Entries"
+	if binning:
+		ytitle+= " / Bin"
+		if unit:
+			label+= " [%s]"%unit
+	else:
+		if histo.GetBinWidth(1) != 1:
+			ytitle+= " / {:.1f}".format(histo.GetBinWidth(1))
+		if unit:
+			label+= " [%s]"%unit
+			ytitle+= " %s"%unit
+	histo.SetTitle(";%s;%s"%(label, ytitle))
+	return histo
+
+def getQCDErrorHisto( tree, plot, cut="1", overflow=0, weight="weight", firstBin=None, lastBin=None ):
+	label, unit, binning = readAxisConf( plot )
+	if binning:
+		histoUp = createHistoFromTree( tree, plot, "(weight*(w_qcd+w_qcd_error))*(%s)"%(cut), nBins=binning)
+		histoDown = createHistoFromTree( tree, plot, "(weight*(w_qcd-w_qcd_error))*(%s)"%(cut), nBins=binning)
+	else:
+		histoUp = createHistoFromTree( tree, plot, "(weight*(w_qcd+w_qcd_error))*(%s)"%(cut), firstBin=firstBin, lastBin=lastBin )
+		histoDown = createHistoFromTree( tree, plot, "(weight*(w_qcd-w_qcd_error))*(%s)"%(cut), firstBin=firstBin, lastBin=lastBin )
+	if overflow > 0:
+		histoUp = appendOverflowBin(histoUp, overflow)
+		histoDown = appendOverflowBin(histoDown, overflow)
+
+	outHisto = histoUp.Clone( randomName() )
+	for bin in range( histoUp.GetNbinsX()+1 ):
+		up = histoUp.GetBinContent(bin)
+		down = histoDown.GetBinContent(bin)
+		outHisto.SetBinContent( bin, (up+down)/2 )
+		outHisto.SetBinError( bin, (up-down)/2 )
+	return outHisto
+
+
+
 def extractHisto( dataset, plot, overflow=0 ):
 	label, unit, binning = readAxisConf( plot )
 	histo = createHistoFromTree( dataset.tree, plot, "weight*(%s)"%(dataset.additionalCut), nBins=binning)
@@ -126,10 +189,15 @@ def readAxisConf( plot, configurationFileName="axis.cfg" ):
 	configuration.read( configurationFileName )
 	#brackets are identified as sections, so they have to be deleted
 	plot = plot.replace("[","").replace("]","")
+	if not configuration.has_section( plot ):
+		return "","",""
 	label = configuration.get( plot, "label" )
 	unit = configuration.get( plot, "unit" )
 	binning = configuration.get( plot, "binning" )
-	binning = map(int, binning.split(" "))
+	if binning:
+		binning = map(float, binning.split(" "))
+	else:
+		binning = []
 	return label, unit, binning
 
 def addHistos( histos, scales=None ):
@@ -161,3 +229,15 @@ def divideHistos( numerator, denominator, bayes=False ):
 	resultHisto = numerator.Clone( randomName() )
 	resultHisto.Divide( numerator, denominator, 1,1, option )
 	return resultHisto
+
+def manipulateSaveName( saveName ):
+	"""Replace some charakters, so root nor unix have problems to read them."""
+	#saveName = saveName.replace("/","VS")
+	saveName = saveName.replace(" ","_")
+	unallowedCharacters = ["{","}","(",")","#","|",".","[","]","/"]
+	for char in unallowedCharacters:
+		saveName = saveName.replace( char, "" )
+	return saveName
+
+def SaveAs( can, folder, name, ending="pdf" ):
+	can.SaveAs( folder+"/"+manipulateSaveName( name )+"."+ending )
