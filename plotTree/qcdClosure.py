@@ -47,8 +47,9 @@ def qcdClosure( fileName, opts ):
 			+"&& Max$(photon.sigmaIetaIeta) < 0.014" \
 			+"&& Max$(photon.hadTowOverEm) < 0.05" \
 			+"&& Max$(photon.chargedIso) < 15" \
-			+"&& Max$(photon.neutralIso-0.0001*photon.pt)<3.5" \
-			+"&& Max$(photon.photonIso-0.0001*photon.pt) < 1.3" \
+			+"&& Max$(photon.neutralIso-0.04*photon.pt)<3.5" \
+			+"&& Max$(photon.photonIso-0.005*photon.pt) < 1.3" \
+			+"&& ( Min$(photon.chargedIso)>2.6 || Min$(photon.sigmaIetaIeta)>0.012) " \
 			+"&& @photon.size()>0"
 
 	gSignalTree = readTree( fileName, "photonTree").CopyTree( signalCut )
@@ -73,12 +74,12 @@ def qcdClosure( fileName, opts ):
 	weight.Draw()
 	SaveAs( can, "plots", "qcd_weight" )
 
-	#writeWeights( fileName, foControlTree, weight )
+	writeWeights( fileName, foControlTree, weight )
 
 	for tree in [ foSignalTree, foControlTree ]:
 		tree.AddFriend( "weightTree", fileName )
 
-	for plot in ["photon[0].ptJet", "met", "ht", "photon[0].sigmaIetaIeta", "nVertex"]:
+	for plot in ["photon[0].ptJet", "met", "ht", "jet[0].pt", "nVertex"]:
 		# The first attempt to get the histogram is only to get the minimal
 		# and maximal value on the x-axis, for not predefined binning
 		h_gamma = getHisto( gControlTree, plot )
@@ -104,9 +105,9 @@ def qcdClosure( fileName, opts ):
 		ratioPad = ROOT.TPad("ratioPad", "Ratio", 0, 0, 1, 0.2)
 		ratioPad.cd()
 		ratioPad.SetLogy(0)
-		ratioGraph = ratios.RatioGraph(h_gamma, h_fo)
+		ratioGraph = ratios.RatioGraph(h_fo, h_gamma)
 		ratioGraph.draw(ROOT.gPad, yMin=0.5, yMax=1.5, adaptiveBinning=False, errors="yx")
-		ratioGraph.hAxis.SetYTitle( "#gamma/#gamma_{pred}")
+		ratioGraph.hAxis.SetYTitle( "#gamma_{pred}/#gamma")
 		can.cd()
 		hPad.Draw()
 		ratioPad.Draw()
