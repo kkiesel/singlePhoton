@@ -1,12 +1,17 @@
 #include<iostream>
 #include<math.h>
 #include<string>
+#include <map>
+#include <set>
+#include <fstream>
 
 #include "TSystem.h"
 #include "TFile.h"
 #include "TTree.h"
 #include "TChain.h"
 #include "TH1F.h"
+#include <TPRegexp.h>
+#include <TArrayI.h>
 
 #include "SusyEvent.h"
 #include "TreeObjects.h"
@@ -23,6 +28,7 @@ class TreeWriter {
 		void SetReportEvents(unsigned int nEvents) { reportEvery = nEvents; }
 		void SetLoggingVerbosity(unsigned int logVerb) { loggingVerbosity = logVerb; }
 		void PileUpWeightFile( std::string pileupFileName );
+		void IncludeAJson(TString const&);
 
 		TChain* inputTree;
 		susy::Event* event;
@@ -50,6 +56,8 @@ class TreeWriter {
 		std::vector<tree::Particle> muon;
 		std::vector<tree::Particle> genElectron;
 		std::vector<tree::Particle> genPhoton;
+		
+		map<unsigned, set<unsigned> > goodLumiList;
 
 		float met;
 		float met_phi;
