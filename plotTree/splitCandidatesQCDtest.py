@@ -164,7 +164,7 @@ def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1, gen
 	for event in tree:
 		if not event.GetReadEntry()%100000:
 			print '{0}%\r'.format(100*event.GetReadEntry()/event.GetEntries())
-		if event.GetReadEntry()%1: ## warning: take only each 10th event!
+		if event.GetReadEntry()%100: ## warning: take only each x-th event!
 			continue
 		if event.GetReadEntry() > processNEvents:
 			break
@@ -186,6 +186,16 @@ def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1, gen
 			and abs(gamma.eta) < 1.4442 \
 			and gamma.pt > 80:
 
+				# gen matching
+				matchGenPhoton = False
+				for trueGamma in event.genPhoton:
+					absDeltaPt = 2*abs( trueGamma.pt - gamma.pt ) / ( trueGamma.pt + gamma.pt )
+					DeltaR = deltaR( gamma, trueGamma )
+					if DeltaR < 0.3 and absDeltaPt < .2:
+						matchGenPhoton = True
+				if matchGenPhoton:
+					gamma.isGenPhoton(True)
+
 				# look for gamma and electrons
 				if gamma.hadTowOverEm < 0.05 \
 				and gamma.sigmaIetaIeta < 0.012 \
@@ -195,35 +205,7 @@ def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1, gen
 					emObjects.push_back( gamma )
 
 				elif not gamma.pixelseed:
-					isGenPhoton = False
-					for trueGamma in event.genPhoton:
-						absDeltaPt = 2*abs( trueGamma.pt - gamma.pt ) / ( trueGamma.pt + gamma.pt )
-						if abs( gamma.eta - trueGamma.eta ) < .01 and abs( deltaPhi( trueGamma.phi, gamma.phi ) ) < .1 and absDeltaPt < .2:
-							isGenPhoton = True
-					if isGenPhoton:
-						gamma.isGenPhoton(True)
 					photonJets.push_back( gamma )
-
-				"""
-				# QCD fake object definition
-				if gamma.ptJet > 80 \
-				and gamma.hadTowOverEm < 0.05 \
-				and gamma.sigmaIetaIeta < 0.014 \
-				and gamma.chargedIso < 15 \
-				and gamma.neutralIso < 3.5 + 0.04*gamma.pt \
-				and gamma.photonIso < 1.3 + 0.005*gamma.pt \
-				and not gamma.pixelseed \
-				and ( gamma.sigmaIetaIeta>=0.012 or gamma.chargedIso>=2.6):
-					photonJets.push_back( gamma )
-				"""
-
-		if genMatching:
-			emObjects, histograms = generalMatching( emObjects, event.genPhoton, histograms, "photon" )
-			emObjects, histograms = generalMatching( emObjects, event.genElectron, histograms, "electron" )
-			for genE in event.genElectron:
-				if abs(genE.eta) < 1.4442:
-					genElectrons.push_back( genE )
-			genElectrons, histograms = generalMatching( genElectrons, emObjects, histograms )
 
 		for emObject in emObjects:
 			if emObject.pixelseed:
@@ -231,23 +213,21 @@ def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1, gen
 			else:
 				photons.push_back( emObject )
 
-		if photons.size() > 0:
+		minJets = 2
+		if photons.size():
 			jets = clearJets( photons[0], event.jet, jets )
+			if jets.size() >= minJets:
+				photonTree.Fill()
 		else:
-			if photonJets.size() > 0:
-				jets = clearJets( photonJets[0], event.jet, jets )
-			if photonElectrons.size() > 0:
+			if photonElectrons.size():
 				jets = clearJets( photonElectrons[0], event.jet, jets )
-		if jets.size() < 2:
-			continue
-
-		if photons.size() > 0:
-			photonTree.Fill()
-		else:
-			if photonElectrons.size() > 0:
-				photonElectronTree.Fill()
-			if photonJets.size() > 0:
-				photonJetTree.Fill()
+				if jets.size() >= minJets:
+					photonElectronTree.Fill()
+			if photonJets.size():
+				jets.clear()
+				jets = clearJets( photonJets[0], event.jet, jets, -1 ) # take all jets, deltaR = -1
+				if jets.size() >= minJets:
+					photonJetTree.Fill()
 		if genMatching and genElectrons.size() > 0:
 			genElectronTree.Fill()
 
