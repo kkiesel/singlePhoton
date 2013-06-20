@@ -79,16 +79,28 @@ def qcdClosure( fileName, opts ):
 	for tree in [ foSignalTree, foControlTree ]:
 		tree.AddFriend( "weightTree", fileName )
 
-	for plot in ["photon[0].ptJet", "met", "ht", "jet[0].pt", "nVertex"]:
+	for plot in ["electron.pt", "muon.pt", "photon[0].eta", "photon[0].ptJet", "Length$(photon[0].pt)", "met","ht", "nVertex", "jet[0].pt", "jet.pt", "Length$(jet.pt)","genPhoton.pt","Length$(genPhoton.pt)"]:
 		# The first attempt to get the histogram is only to get the minimal
 		# and maximal value on the x-axis, for not predefined binning
-		h_gamma = getHisto( gControlTree, plot )
-		h_fo = getHisto( foControlTree, plot )
+		h_gamma = getHisto( gSignalTree, plot )
+		h_fo = getHisto( foSignalTree, plot )
 		xMin, xMax = getXMinXMax( [ h_gamma, h_fo ] )
 
-		h_gamma = getHisto( gControlTree, plot, color=1, firstBin=xMin,lastBin=xMax )
-		h_fo = getHisto( foControlTree, plot, weight="weight*w_qcd", color=6,firstBin=xMin,lastBin=xMax )
-		h_fo_error = getQCDErrorHisto( foControlTree, plot, firstBin=xMin, lastBin=xMax )
+		# for integers, adjust nBins and shift by 0.5
+		if "Length$(" in plot:
+			xMin -= .5
+			xMax += .5
+			nBins = int(xMax-xMin)
+		else:
+			nBins = 20
+
+		# there is a muon with 7000 GeV, which destroys the automatic binning
+		if plot == "muon.pt":
+			xMax = 200
+
+		h_gamma = getHisto( gSignalTree, plot, color=1, nBins=nBins, firstBin=xMin,lastBin=xMax )
+		h_fo = getHisto( foSignalTree, plot, weight="weight*w_qcd", color=6, nBins=nBins, firstBin=xMin,lastBin=xMax )
+		h_fo_error = getQCDErrorHisto( foSignalTree, plot, nBins=nBins, firstBin=xMin, lastBin=xMax )
 		h_fo_error.SetFillColor(2)
 		h_fo_error.SetFillStyle(3254)
 		h_fo_error.SetMarkerSize(0)
@@ -107,6 +119,7 @@ def qcdClosure( fileName, opts ):
 		ratioPad.SetLogy(0)
 		ratioGraph = ratios.RatioGraph(h_fo, h_gamma)
 		ratioGraph.draw(ROOT.gPad, yMin=0.5, yMax=1.5, adaptiveBinning=False, errors="yx")
+		ratioGraph.graph.Draw("same p e0") # draw nice points
 		ratioGraph.hAxis.SetYTitle( "#gamma_{pred}/#gamma")
 		can.cd()
 		hPad.Draw()
