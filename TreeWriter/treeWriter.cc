@@ -323,6 +323,25 @@ float getPtFromMatchedJet( const susy::Photon& myPhoton, const susy::PFJetCollec
 }
 
 
+bool TreeWriter::passTrigger() {
+	/**
+	 * Checks if event passes the HLT trigger paths.
+	 *
+	 * If the a trigger path contains one of the triggers defined in triggerNames,
+	 * true will be returned. If no match is found, false is returned.
+	 */
+	for( std::vector<const char*>::iterator it = triggerNames.begin();
+			it != triggerNames.end(); ++it ) {
+		for( susy::TriggerMap::iterator tm = event->hltMap.begin();
+				tm != event->hltMap.end(); ++tm ) {
+			if ( tm->first.Contains( *it ) && (int(tm->second.second)))
+				return true;
+		}
+	}
+	return false;
+}
+
+
 void TreeWriter::Loop() {
 	/**
 	 * \brief Loops over input chain and fills tree
@@ -365,6 +384,9 @@ void TreeWriter::Loop() {
 		inputTree->LoadTree( jentry );
 		//event->getEntry(jentry);
 		inputTree->GetEntry(jentry);
+
+		if ( ! passTrigger( ) )
+			continue;
 
 		photon.clear();
 		jet.clear();

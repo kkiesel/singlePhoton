@@ -29,6 +29,7 @@ class TreeWriter {
 		void SetLoggingVerbosity(unsigned int logVerb) { loggingVerbosity = logVerb; }
 		void PileUpWeightFile( std::string pileupFileName );
 		void IncludeAJson(TString const&);
+		void SetTriggerPaths( std::vector<const char*>& tp ) { triggerNames = tp; }
 
 		TChain* inputTree;
 		susy::Event* event;
@@ -38,6 +39,7 @@ class TreeWriter {
 		TH1F* eventNumbers;
 
 	private:
+		bool passTrigger();
 		int processNEvents; // number of events to be processed
 		unsigned int reportEvery;
 		unsigned int loggingVerbosity;
@@ -56,8 +58,9 @@ class TreeWriter {
 		std::vector<tree::Particle> muon;
 		std::vector<tree::Particle> genElectron;
 		std::vector<tree::Particle> genPhoton;
-		
-		map<unsigned, set<unsigned> > goodLumiList;
+
+		std::map<unsigned, std::set<unsigned> > goodLumiList;
+		std::vector<const char*> triggerNames;
 
 		float met;
 		float met_phi;

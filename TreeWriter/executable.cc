@@ -21,6 +21,11 @@ int main( int argc, char** argv ) {
 	tw->SetProcessNEvents(-1);
 	tw->SetReportEvents(20000);
 
+	std::vector<const char*> triggerNames;
+	triggerNames.push_back( "HLT_Photon70_CaloIdXL_PFHT400_v" );
+	triggerNames.push_back( "HLT_Photon70_CaloIdXL_PFNoPUHT400_v" );
+	tw->SetTriggerPaths( triggerNames );
+
 	double start_time = time(NULL);
 	tw->Loop();
 	double end_time = time(NULL);
