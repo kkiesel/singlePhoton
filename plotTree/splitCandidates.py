@@ -91,7 +91,8 @@ def generalMatching( objects1, objects2, hist, typ="electron"):
 				else:
 					hist["dEtadPhiSmallPhoton"].Fill( absDeltaEta, absDeltaPhi )
 
-			if absDeltaEta < .01 and absDeltaPhi < .1 and absDeltaPt < .2:
+			#if absDeltaEta < .01 and absDeltaPhi < .1 and absDeltaPt < .2:
+			if deltaR( o1, o2 ) < 0.5:
 				match = True
 				if absDeltaPt < minDeltaPt:
 					minDeltaPt = absDeltaPt
@@ -124,7 +125,7 @@ def clearJets( photonLikeObj, inJets, outJets, deltaR_=.3 ):
 			outJets.push_back( jet )
 	return outJets
 
-def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1, genMatching=False ):
+def splitCandidates( inputFileName, processNEvents=-1, genMatching=False ):
 	"""Key function of splitCanidates.py. The main loop and object selection is
 	defined here."""
 	print "Processing file {}".format(inputFileName)
@@ -146,16 +147,13 @@ def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1, gen
 	photonElectronTree, photonElectrons = gammaSelectionClone( tree, "photonElectronTree" )
 
 	# variables which will be changed in addition to photons:
-	weight = numpy.zeros(1, dtype=float)
 	jets = ROOT.std.vector("tree::Jet")()
 	for tree_ in [photonTree, photonJetTree, photonElectronTree]:
-		tree_.SetBranchAddress("weight", weight )
 		tree_.SetBranchAddress("jet", jets )
 
 	if genMatching:
 		genElectronTree, genElectrons = gammaSelectionClone( tree, "genElectronTree", "tree::Particle","genElectron" )
 		histograms = histoDefinition()
-		genElectronTree.SetBranchAddress("weight", weight )
 		genElectronTree.SetBranchAddress("jet", jets )
 
 	# temporal vector to save objects
@@ -167,7 +165,6 @@ def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1, gen
 		if event.GetReadEntry() > processNEvents:
 			break
 
-		weight[0] = event.weight * nExpected / processNEvents
 		jets.clear()
 		emObjects.clear()
 		photons.clear()
@@ -243,7 +240,8 @@ def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1, gen
 	photonElectronTree.Write()
 	if genMatching:
 		genElectronTree.Write()
-		draw_histogram_dict( histograms, shortName )
+		draw_histogram_dict( histograms, inName[0:5] )
+	eventHisto.Write()
 	fout.Close()
 
 
@@ -260,25 +258,6 @@ if __name__ == "__main__":
 	# set limit for number of events for testing reason
 	processNEvents = 10000 if opts.test else -1
 
-	integratedLumi = 19300 #pb
-
-	datasetConfigName = "dataset.cfg"
-	datasetConf = ConfigParser.SafeConfigParser()
-	datasetConf.read( datasetConfigName )
-
 	for inName in opts.input:
-		shortName = None
-		for configName in datasetConf.sections():
-			if inName.count( configName ):
-				shortName = configName
-				crosssection = datasetConf.getfloat( configName, "crosssection" )
-		if not shortName:
-			print "No configuration for input file {} defined in '{}'".format(
-					inName, datasetConfigName )
-			continue
-
-		# N = L * sigma
-		nExpected = integratedLumi * crosssection
-
-		splitCandidates( inName, shortName, nExpected, processNEvents, opts.genMatching )
+		splitCandidates( inName, processNEvents, opts.genMatching )
 
