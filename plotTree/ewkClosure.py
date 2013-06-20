@@ -21,7 +21,7 @@ def applyFakeRate( histo, f, e_f ):
 		histo.SetBinError( i, sqrt((binContent*e_f)**2 + (histo.GetBinError(i)*f)**2 ) )
 	return histo
 
-def closure( fileName, opts ):
+def closure( fileName, opts, scale ):
 	##################################
 	fakeRate = 0.0084
 	fakeRateError = 0.0006 # stat
@@ -37,16 +37,21 @@ def closure( fileName, opts ):
 
 	label, unit, binning = readAxisConf( opts.plot )
 
-	commonCut = "photon[0].pt>80 && met>100"
-	recE = extractHisto( Dataset( fileName, "photonElectronTree", commonCut, "e", 2 ), opts.plot)
-	recE.SetMarkerSize(0)
+	commonCut = "photon[0].pt>80 && @photon.size() && met>100"
+
+	gTree = readTree( fileName, "photonTree" ).CopyTree( commonCut )
+	eTree = readTree( fileName, "photonElectronTree" ).CopyTree( commonCut )
+
+	recE = getHisto( eTree, opts.plot, color=2, weight="1" )
 	recE.SetFillColor( recE.GetLineColor() )
 	recE.SetFillStyle(3254)
-
 	recE = applyFakeRate( recE, fakeRate, fakeRateError )
 
-	gamma = extractHisto( Dataset( fileName, "photonTree", commonCut+"&& photon[0].isGenElectron()", "#gamma", 1 ), opts.plot)
-	gamma.SetMarkerSize(0)
+	gamma = getHisto( gTree, opts.plot, color=1, weight="1", cut="!photon[0].isGenPhoton()" )
+
+	for h in [gamma, recE ]:
+		h.SetMarkerSize(0)
+		h.Scale( scale )
 
 	if opts.alternativeStatistics:
 		#error_hist = extractHisto( Dataset( fileName, "photonTree", "weight*(1)","name", 1), opts.plot )
@@ -93,7 +98,7 @@ def closure( fileName, opts ):
 	can.cd()
 	hPad.Draw()
 	ratioPad.Draw()
-	can.SaveAs("plots/%s_%s_%s.pdf"%(datasetAffix,opts.plot.replace(".",""),opts.savePrefix))
+	can.SaveAs("plots/%s_%s_%s.pdf"%(datasetAffix,opts.plot.replace(".",""),opts.save))
 
 	# avoid segmentation violation due to python garbage collector
 	ROOT.SetOwnership(hPad, False)
@@ -105,9 +110,29 @@ if __name__ == "__main__":
 	arguments.add_argument( "--plot", default="met" )
 	arguments.add_argument( "--alternativeStatistics", action='store_true')
 	arguments.add_argument( "--input", default=["EWK_V01.12_tree.root"], nargs="+" )
-	arguments.add_argument( "--savePrefix", default="new" )
+	arguments.add_argument( "--save", default="new" )
 	opts = arguments.parse_args()
 
+	integratedLumi = 19300 #pb
+
+	datasetConfigName = "dataset.cfg"
+	datasetConf = ConfigParser.SafeConfigParser()
+	datasetConf.read( datasetConfigName )
+
 	for inName in opts.input:
-		closure( inName, opts )
+		shortName = None
+		for configName in datasetConf.sections():
+			if inName.count( configName ):
+				shortName = configName
+				crosssection = datasetConf.getfloat( configName, "crosssection" )
+		if not shortName:
+			print "No configuration for input file {} defined in '{}'".format(
+					inName, datasetConfigName )
+			continue
+		eventHisto = readHisto( inName )
+		nGen = eventHisto.GetBinContent(1)
+
+
+
+		closure( inName, opts, integratedLumi*crosssection/nGen )
 
