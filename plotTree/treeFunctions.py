@@ -18,28 +18,22 @@ def createHistoFromTree(tree, variable, weight="", nBins=20, firstBin=None, last
 	"""
 	from ROOT import TH1F
 	name = randomName()
-	if isinstance(nBins, int):
-		if firstBin == None:
-			# due to a strange behaviour, GetMaximum cant handle vectors
-			firstBin = tree.GetMinimum( variable.replace("[0]","" ))
-		if lastBin == None:
-			lastBin = tree.GetMaximum( variable.replace("[0]","") )
-		varType = eval("type(tree.%s)"%(variable.replace("@","")) )
-		if varType == int or varType == long:
-			lastBin+=1.5
-			firstBin+=1.5
-			nBins = int(lastBin-firstBin)
-		result = TH1F(name, variable, nBins, firstBin, lastBin)
-	else:
-		# assume nBins is list
+	if isinstance( nBins, list ):
 		import array
 		xBins = array.array('d', nBins )
 		result = TH1F(name, variable, len(nBins)-1, xBins)
-
-	result.Sumw2()
-	tree.Draw("%s>>%s"%(variable, name), weight, "goff")
-	if not isinstance(nBins, int):
+		result.Sumw2()
+		tree.Draw("%s>>%s"%(variable, name), weight, "goff")
 		result.Scale(1,"width")
+	elif firstBin==None and lastBin==None:
+		import ROOT
+		tree.Draw("%s>>%s"%(variable,name), weight, "goff")
+		result = ROOT.gDirectory.Get( name )
+		result.Sumw2() # applying the errors here is perhaps not entirely correct
+	else:
+		result = TH1F(name, variable, nBins, firstBin, lastBin)
+		result.Sumw2()
+		tree.Draw("%s>>%s"%(variable, name), weight, "goff")
 	return result
 
 def readTree( filename, treename = "susyTree" ):
@@ -112,9 +106,13 @@ def roundToSignificantDigits(x, sig=2):
 	from math import log10, floor
 	if x >= 10**(sig-1):
 		return int(round(x))
-	return round(x, sig-int(floor(log10(x)))-1)
+	if x>0:
+		return round(x, sig-int(floor(log10(x)))-1)
+	elif x<0:
+		return round(-x, sig-int(floor(log10(-x)))-1)
+	return x
 
-def getHisto( tree, plot, cut="1", overflow=0, weight="weight", color=1, firstBin=None, lastBin=None ):
+def getHisto( tree, plot, cut="1", overflow=0, weight="weight", color=1, nBins=20, firstBin=None, lastBin=None ):
 	"""Creates a histogram and apply the axis settings
 	cut: cutstring applied to the tree
 	overflow: size of the overflow bin, if overflow>0
@@ -123,7 +121,7 @@ def getHisto( tree, plot, cut="1", overflow=0, weight="weight", color=1, firstBi
 	if binning:
 		histo = createHistoFromTree( tree, plot, "%s*(%s)"%(weight, cut), nBins=binning)
 	else:
-		histo = createHistoFromTree( tree, plot, "%s*(%s)"%(weight, cut), firstBin=firstBin, lastBin=lastBin )
+		histo = createHistoFromTree( tree, plot, "%s*(%s)"%(weight, cut), nBins=nBins, firstBin=firstBin, lastBin=lastBin )
 	if overflow > 0:
 		histo = appendOverflowBin(histo, overflow)
 
@@ -132,6 +130,27 @@ def getHisto( tree, plot, cut="1", overflow=0, weight="weight", color=1, firstBi
 	histo.SetLineWidth(2)
 
 	ytitle = "Entries"
+	if not label:
+		import re
+		objVarExpr = "([a-zA-Z]+)\[{0,1}(\d*)\]{0,1}\.([a-zA-Z]+)" # matches eg photon.pt
+		if "Length$(" in plot:
+			obj, nObj, var = re.match( "Length\$\(%s\)"%objVarExpr, plot ).groups()
+			label = "N_{%s}"%obj
+
+		elif "." in plot:
+			obj, nObj, var = re.match( objVarExpr, plot ).groups()
+			var = var.replace("phi","#phi_{")
+			var = var.replace("eta","#eta_{")
+			var = var.replace("pt","p_{T ")
+			obj = obj.replace("gamma","#gamma")
+			obj = obj.replace("electron","e")
+			obj = obj.replace("muon", "#mu")
+			if nObj:
+				label = "%s%s.%s}"%(var,int(nObj)+1,obj)
+			else:
+				label = "%s%s}"%(var,obj)
+		else:
+			label = plot
 	if binning:
 		ytitle+= " / Bin"
 		if unit:
@@ -145,7 +164,7 @@ def getHisto( tree, plot, cut="1", overflow=0, weight="weight", color=1, firstBi
 	histo.SetTitle(";%s;%s"%(label, ytitle))
 	return histo
 
-def getQCDErrorHisto( tree, plot, cut="1", overflow=0, firstBin=None, lastBin=None ):
+def getQCDErrorHisto( tree, plot, cut="1", overflow=0, nBins=20, firstBin=None, lastBin=None ):
 	"""Applies w_qcd +- w_qcd_error for qcd error propagation.
 	The returned histo's content is the mean, the error are the shifts up and down.
 	"""
@@ -154,8 +173,8 @@ def getQCDErrorHisto( tree, plot, cut="1", overflow=0, firstBin=None, lastBin=No
 		histoUp = createHistoFromTree( tree, plot, "(weight*(w_qcd+w_qcd_error))*(%s)"%(cut), nBins=binning)
 		histoDown = createHistoFromTree( tree, plot, "(weight*(w_qcd-w_qcd_error))*(%s)"%(cut), nBins=binning)
 	else:
-		histoUp = createHistoFromTree( tree, plot, "(weight*(w_qcd+w_qcd_error))*(%s)"%(cut), firstBin=firstBin, lastBin=lastBin )
-		histoDown = createHistoFromTree( tree, plot, "(weight*(w_qcd-w_qcd_error))*(%s)"%(cut), firstBin=firstBin, lastBin=lastBin )
+		histoUp = createHistoFromTree( tree, plot, "(weight*(w_qcd+w_qcd_error))*(%s)"%(cut), nBins=nBins, firstBin=firstBin, lastBin=lastBin )
+		histoDown = createHistoFromTree( tree, plot, "(weight*(w_qcd-w_qcd_error))*(%s)"%(cut), nBins=nBins, firstBin=firstBin, lastBin=lastBin )
 	if overflow > 0:
 		histoUp = appendOverflowBin(histoUp, overflow)
 		histoDown = appendOverflowBin(histoDown, overflow)
@@ -251,7 +270,7 @@ def manipulateSaveName( saveName ):
 	"""Replace some charakters, so root nor unix have problems to read them."""
 	#saveName = saveName.replace("/","VS")
 	saveName = saveName.replace(" ","_")
-	unallowedCharacters = ["{","}","(",")","#","|",".","[","]","/"]
+	unallowedCharacters = ["{","}","(",")","#","|",".","[","]","/","$"]
 	for char in unallowedCharacters:
 		saveName = saveName.replace( char, "" )
 	return saveName
