@@ -1,7 +1,7 @@
 #include "treeWriter.h"
 
 using namespace std;
-
+testest
 TreeWriter::TreeWriter( std::string inputName, std::string outputName, int loggingVerbosity_ ) {
 	/** Constructor function for a single input file.
 	 *
