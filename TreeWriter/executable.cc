@@ -1,36 +1,69 @@
 #include "treeWriter.h"
 
+char* getCmdOption(char ** begin, char ** end, const std::string & option) {
+	char ** itr = std::find(begin, end, option);
+	if (itr != end && ++itr != end)
+		return *itr;
+	return 0;
+}
+
+bool cmdOptionExists(char** begin, char** end, const std::string& option) {
+	return std::find(begin, end, option) != end;
+}
+
+void printHelp() {
+	std::cout << "Usage: ./executable [-h] [-MC] -o outFileName.root -i inputFileName1.root inputFileName2.root ..." << std::endl;
+}
+
 int main( int argc, char** argv ) {
 
-	if( argc < 2 ) {
-		std::cout << "usage: ./execute outputFileName.root input1.root input2.root ..." << std::endl;
+	if( cmdOptionExists( argv, argv+argc, "-h" ) ) {
+		printHelp();
+		return 0;
+	}
+
+	bool isMC = cmdOptionExists( argv, argv+argc, "-MC" ); // false by default
+
+	char * filename = getCmdOption(argv, argv + argc, "-o");
+	std::string outputFileName;
+	if (filename) {
+		std::cout << "got filename" << std::endl;
+		outputFileName = filename;
+	} else {
+		std::cout << "No output filename specified." << std::endl;
+		printHelp();
 		return 1;
 	}
-	std::string outputFileName = argv[1];
 
 	TChain *inputTree = new TChain("susyTree");
-	for( int i=2; i<argc; ++i)
-		inputTree->Add( argv[i] );
+	char ** itr = std::find(argv, argv+argc, (std::string)"-i");
+	while (itr != argv && ++itr != argv+argc)
+		inputTree->Add( *itr );
 
 	std::cout << "Write to output file \"" << outputFileName << "\"" << std::endl;
 
 	TreeWriter *tw = new TreeWriter( inputTree, outputFileName, 0 );
-
-	// settings
-	tw->PileUpWeightFile("pileUpReweighting/puWeights.root");
+	// common settings
 	tw->SetProcessNEvents(-1);
 	tw->SetReportEvents(20000);
 
-	std::vector<const char*> triggerNames;
-	triggerNames.push_back( "HLT_Photon70_CaloIdXL_PFHT400_v" );
-	triggerNames.push_back( "HLT_Photon70_CaloIdXL_PFNoPUHT400_v" );
-	tw->SetTriggerPaths( triggerNames );
+	if( isMC ) {
+		tw->PileUpWeightFile("pileUpReweighting/puWeights.root");
+	} else {
+		tw->IncludeAJson("../../Cert_190456-208686_8TeV_22Jan2013ReReco_Collisions12_JSON.txt");
+		std::vector<const char*> triggerNames;
+		triggerNames.push_back( "HLT_Photon70_CaloIdXL_PFHT400_v" );
+		triggerNames.push_back( "HLT_Photon70_CaloIdXL_PFNoPUHT400_v" );
+		tw->SetTriggerPaths( triggerNames );
+	}
 
 	double start_time = time(NULL);
 	tw->Loop();
 	double end_time = time(NULL);
 
 	std::cout << "Job needed " << 1.*(end_time - start_time)/3600 << " h real time." << std::endl;
-
+	delete tw;
+	delete inputTree;
+	return 0;
 }
 
