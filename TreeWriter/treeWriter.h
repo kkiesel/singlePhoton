@@ -50,6 +50,9 @@ class TreeWriter {
 
 		// important dataset information
 		TH1F* pileupHisto;
+		std::map<unsigned, std::set<unsigned> > goodLumiList;
+		std::vector<const char*> triggerNames;
+
 
 		// variables which will be stored in the tree
 		std::vector<tree::Photon> photon;
@@ -58,9 +61,6 @@ class TreeWriter {
 		std::vector<tree::Particle> muon;
 		std::vector<tree::Particle> genElectron;
 		std::vector<tree::Particle> genPhoton;
-
-		std::map<unsigned, std::set<unsigned> > goodLumiList;
-		std::vector<const char*> triggerNames;
 
 		float met;
 		float met_phi;
