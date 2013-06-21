@@ -52,47 +52,46 @@ void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
 }
 
 void TreeWriter::IncludeAJson(TString const& _fileName) {
-  if(_fileName == "") return;
+	if(_fileName == "") return;
 
-  ifstream inputFile(_fileName);
-  if(!inputFile.is_open()){
-    cerr << "Cannot open JSON file " << _fileName << endl;
-    return;
-  }
+	ifstream inputFile(_fileName);
+	if(!inputFile.is_open()){
+		cerr << "Cannot open JSON file " << _fileName << endl;
+		return;
+	}
 
-  string line;
-  TString jsonText;
-  while(true){
-    getline(inputFile, line);
-    if(!inputFile.good()) break;
-    jsonText += line;
-  }
-  inputFile.close();
+	string line;
+	TString jsonText;
+	while(true){
+		getline(inputFile, line);
+		if(!inputFile.good()) break;
+		jsonText += line;
+	}
+	inputFile.close();
 
-  TPRegexp runBlockPat("\"([0-9]+)\":[ ]*\\[((?:\\[[0-9]+,[ ]*[0-9]+\\](?:,[ ]*|))+)\\]");
-  TPRegexp lumiBlockPat("\\[([0-9]+),[ ]*([0-9]+)\\]");
+	TPRegexp runBlockPat("\"([0-9]+)\":[ ]*\\[((?:\\[[0-9]+,[ ]*[0-9]+\\](?:,[ ]*|))+)\\]");
+	TPRegexp lumiBlockPat("\\[([0-9]+),[ ]*([0-9]+)\\]");
 
-  TArrayI positions(2);
-  positions[1] = 0;
-  while(runBlockPat.Match(jsonText, "g", positions[1], 10, &positions) == 3){
-    TString runBlock(jsonText(positions[0], positions[1] - positions[0]));
-    TString lumiPart(jsonText(positions[4], positions[5] - positions[4]));
+	TArrayI positions(2);
+	positions[1] = 0;
+	while(runBlockPat.Match(jsonText, "g", positions[1], 10, &positions) == 3){
+		TString runBlock(jsonText(positions[0], positions[1] - positions[0]));
+		TString lumiPart(jsonText(positions[4], positions[5] - positions[4]));
 
-    unsigned run(TString(jsonText(positions[2], positions[3] - positions[2])).Atoi());
-    set<unsigned>& lumis(goodLumiList[run]);
+		unsigned run(TString(jsonText(positions[2], positions[3] - positions[2])).Atoi());
+		set<unsigned>& lumis(goodLumiList[run]);
 
-    TArrayI lumiPos(2);
-    lumiPos[1] = 0;
-    while(lumiBlockPat.Match(lumiPart, "g", lumiPos[1], 10, &lumiPos) == 3){
-      TString lumiBlock(lumiPart(lumiPos[0], lumiPos[1] - lumiPos[0]));
-      int begin(TString(lumiPart(lumiPos[2], lumiPos[3] - lumiPos[2])).Atoi());
-      int end(TString(lumiPart(lumiPos[4], lumiPos[5] - lumiPos[4])).Atoi());
-      for(int lumi(begin); lumi <= end; ++lumi)
-        lumis.insert(lumi);
-    }
-  }
+		TArrayI lumiPos(2);
+		lumiPos[1] = 0;
+		while(lumiBlockPat.Match(lumiPart, "g", lumiPos[1], 10, &lumiPos) == 3){
+			TString lumiBlock(lumiPart(lumiPos[0], lumiPos[1] - lumiPos[0]));
+			int begin(TString(lumiPart(lumiPos[2], lumiPos[3] - lumiPos[2])).Atoi());
+			int end(TString(lumiPart(lumiPos[4], lumiPos[5] - lumiPos[4])).Atoi());
+			for(int lumi(begin); lumi <= end; ++lumi)
+				lumis.insert(lumi);
+		}
+	}
 }
-
 
 void TreeWriter::PileUpWeightFile( string pileupFileName ) {
 	/** Reads the pileup histogram from a given file.
