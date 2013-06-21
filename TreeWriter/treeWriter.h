@@ -40,6 +40,7 @@ class TreeWriter {
 
 	private:
 		bool passTrigger();
+		bool isGoodLumi();
 		int processNEvents; // number of events to be processed
 		unsigned int reportEvery;
 		unsigned int loggingVerbosity;

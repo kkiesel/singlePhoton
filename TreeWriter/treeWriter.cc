@@ -340,6 +340,20 @@ bool TreeWriter::passTrigger() {
 	return false;
 }
 
+bool TreeWriter::isGoodLumi() {
+	/**
+	 * Check if current event is in json file added by 'IncludeAJson(TString )'
+	 */
+	bool goodLumi = false;
+	unsigned run = event->runNumber;
+	unsigned lumi = event->luminosityBlockNumber;
+	std::map<unsigned, std::set<unsigned> >::const_iterator rItr(goodLumiList.find(run));
+	if(rItr != goodLumiList.end()){
+		std::set<unsigned>::const_iterator lItr(rItr->second.find(lumi));
+		if(lItr != rItr->second.end()) goodLumi = true;
+	}
+	return goodLumi;
+}
 
 void TreeWriter::Loop() {
 	/**
@@ -384,8 +398,9 @@ void TreeWriter::Loop() {
 		//event->getEntry(jentry);
 		inputTree->GetEntry(jentry);
 
-		if ( ! passTrigger( ) )
-			continue;
+		if ( ! passTrigger() ) continue;
+		if ( ! isGoodLumi() ) continue;
+
 
 		photon.clear();
 		jet.clear();
