@@ -27,7 +27,6 @@ int main( int argc, char** argv ) {
 	char * filename = getCmdOption(argv, argv + argc, "-o");
 	std::string outputFileName;
 	if (filename) {
-		std::cout << "got filename" << std::endl;
 		outputFileName = filename;
 	} else {
 		std::cout << "No output filename specified." << std::endl;
@@ -62,8 +61,6 @@ int main( int argc, char** argv ) {
 	double end_time = time(NULL);
 
 	std::cout << "Job needed " << 1.*(end_time - start_time)/3600 << " h real time." << std::endl;
-	delete tw;
-	delete inputTree;
 	return 0;
 }
 
