@@ -1,6 +1,6 @@
-#include<iostream>
-#include<math.h>
-#include<string>
+#include <iostream>
+#include <math.h>
+#include <string>
 #include <map>
 #include <set>
 #include <fstream>
@@ -10,8 +10,8 @@
 #include "TTree.h"
 #include "TChain.h"
 #include "TH1F.h"
-#include <TPRegexp.h>
-#include <TArrayI.h>
+#include "TPRegexp.h"
+#include "TArrayI.h"
 
 #include "SusyEvent.h"
 #include "TreeObjects.h"
@@ -27,9 +27,9 @@ class TreeWriter {
 		void SetProcessNEvents(int nEvents) { processNEvents = nEvents; }
 		void SetReportEvents(unsigned int nEvents) { reportEvery = nEvents; }
 		void SetLoggingVerbosity(unsigned int logVerb) { loggingVerbosity = logVerb; }
-		void PileUpWeightFile( std::string pileupFileName );
-		void IncludeAJson(TString const&);
-		void SetTriggerPaths( std::vector<const char*>& tp ) { triggerNames = tp; }
+		void SetTriggerPaths( std::vector<const char*> const & tp ) { triggerNames = tp; }
+		void PileUpWeightFile( std::string const & pileupFileName );
+		void IncludeAJson( TString const & _fileName );
 
 		TChain* inputTree;
 		susy::Event* event;
@@ -40,7 +40,7 @@ class TreeWriter {
 
 	private:
 		bool passTrigger();
-		bool isGoodLumi();
+		bool isGoodLumi() const;
 		int processNEvents; // number of events to be processed
 		unsigned int reportEvery;
 		unsigned int loggingVerbosity;
@@ -71,4 +71,3 @@ class TreeWriter {
 		int nVertex;
 		double weight;
 };
-

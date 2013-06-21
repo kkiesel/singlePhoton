@@ -93,7 +93,7 @@ void TreeWriter::IncludeAJson(TString const& _fileName) {
 	}
 }
 
-void TreeWriter::PileUpWeightFile( string pileupFileName ) {
+void TreeWriter::PileUpWeightFile( std::string const & pileupFileName ) {
 	/** Reads the pileup histogram from a given file.
 	 */
 	TFile *puFile = new TFile( pileupFileName.c_str() );
@@ -340,7 +340,7 @@ bool TreeWriter::passTrigger() {
 	return false;
 }
 
-bool TreeWriter::isGoodLumi() {
+bool TreeWriter::isGoodLumi() const {
 	/**
 	 * Check if current event is in json file added by 'IncludeAJson(TString )'
 	 */
