@@ -275,12 +275,16 @@ void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
 	pileupHisto = 0;
 }
 
+bool TreeWriter::isData() {
+	//event->getEntry(jentry);
+	inputTree->GetEntry(1);
+	return event->isRealData;
+}
+
 void TreeWriter::IncludeAJson(TString const& _fileName) {
 	/** Read a Json file which contains good runNumbers and Lumi-sections.
 	 * The content will be stored in the class variable 'goodLumiList'.
 	 */
-	if(_fileName == "") return;
-
 	ifstream inputFile(_fileName);
 	if(!inputFile.is_open()){
 		std::cerr << "Cannot open JSON file " << _fileName << std::endl;
