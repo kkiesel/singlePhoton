@@ -23,6 +23,7 @@ class TreeWriter {
 		void Init( std::string outputName, int loggingVerbosity_ );
 		virtual ~TreeWriter();
 		virtual void Loop();
+		bool isData();
 
 		void SetProcessNEvents(int nEvents) { processNEvents = nEvents; }
 		void SetReportEvents(unsigned int nEvents) { reportEvery = nEvents; }
