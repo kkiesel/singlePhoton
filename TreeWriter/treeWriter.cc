@@ -1,119 +1,5 @@
 #include "treeWriter.h"
 
-using namespace std;
-
-TreeWriter::TreeWriter( std::string inputName, std::string outputName, int loggingVerbosity_ ) {
-	/** Constructor function for a single input file.
-	 *
-	 * The tree from the file will be read.
-	 * inputName: points to a root file with a "susyTree"
-	 */
-	inputTree = new TChain("susyTree");
-	if (loggingVerbosity_ > 0)
-		std::cout << "Add files to chain" << std::endl;
-	inputTree->Add( inputName.c_str() );
-	Init( outputName, loggingVerbosity_ );
-}
-
-TreeWriter::TreeWriter( TChain* inputTree_, std::string outputName, int loggingVerbosity_ ) {
-	/** Constructor function for a TTree as input.
-	 */
-	inputTree = inputTree_;
-	Init( outputName, loggingVerbosity_ );
-}
-
-void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
-	/** Initialize the Object
-	 *
-	 * This function is called by each constructor function. Some basic setting
-	 * are done.
-	 */
-	if (loggingVerbosity_ > 0)
-		std::cout << "Set Branch Address of susy::Event" << std::endl;
-	event = new susy::Event;
-	//event->setInput( *inputTree );
-	inputTree->SetBranchAddress("susyEvent", &event );
-
-	// Here the number of proceeded events will be stored. For plotting, simply use L*sigma/eventNumber
-	eventNumbers = new TH1F("eventNumbers", "Histogram containing number of generated events", 1, 0, 1);
-	eventNumbers->GetXaxis()->SetBinLabel(1,"Number of generated events");
-
-	// open the output file
-	if (loggingVerbosity_>0)
-		std::cout << "Open file " << outputName << " for writing." << std::endl;
-	outFile = new TFile( outputName.c_str(), "recreate" );
-	tree = new TTree("susyTree","Tree for single photon analysis");
-
-	// set default parameter
-	processNEvents = -1;
-	reportEvery = 1000;
-	loggingVerbosity = loggingVerbosity_;
-	pileupHisto = 0;
-}
-
-void TreeWriter::IncludeAJson(TString const& _fileName) {
-	if(_fileName == "") return;
-
-	ifstream inputFile(_fileName);
-	if(!inputFile.is_open()){
-		cerr << "Cannot open JSON file " << _fileName << endl;
-		return;
-	}
-
-	string line;
-	TString jsonText;
-	while(true){
-		getline(inputFile, line);
-		if(!inputFile.good()) break;
-		jsonText += line;
-	}
-	inputFile.close();
-
-	TPRegexp runBlockPat("\"([0-9]+)\":[ ]*\\[((?:\\[[0-9]+,[ ]*[0-9]+\\](?:,[ ]*|))+)\\]");
-	TPRegexp lumiBlockPat("\\[([0-9]+),[ ]*([0-9]+)\\]");
-
-	TArrayI positions(2);
-	positions[1] = 0;
-	while(runBlockPat.Match(jsonText, "g", positions[1], 10, &positions) == 3){
-		TString runBlock(jsonText(positions[0], positions[1] - positions[0]));
-		TString lumiPart(jsonText(positions[4], positions[5] - positions[4]));
-
-		unsigned run(TString(jsonText(positions[2], positions[3] - positions[2])).Atoi());
-		set<unsigned>& lumis(goodLumiList[run]);
-
-		TArrayI lumiPos(2);
-		lumiPos[1] = 0;
-		while(lumiBlockPat.Match(lumiPart, "g", lumiPos[1], 10, &lumiPos) == 3){
-			TString lumiBlock(lumiPart(lumiPos[0], lumiPos[1] - lumiPos[0]));
-			int begin(TString(lumiPart(lumiPos[2], lumiPos[3] - lumiPos[2])).Atoi());
-			int end(TString(lumiPart(lumiPos[4], lumiPos[5] - lumiPos[4])).Atoi());
-			for(int lumi(begin); lumi <= end; ++lumi)
-				lumis.insert(lumi);
-		}
-	}
-}
-
-void TreeWriter::PileUpWeightFile( std::string const & pileupFileName ) {
-	/** Reads the pileup histogram from a given file.
-	 */
-	TFile *puFile = new TFile( pileupFileName.c_str() );
-	pileupHisto = (TH1F*) puFile->Get("pileup");
-}
-
-TreeWriter::~TreeWriter() {
-	/** Deconstructor
-	 *
-	 * Event has to be deleted before the tree.
-	 */
-	if (pileupHisto != 0 )
-		delete pileupHisto;
-	inputTree->GetCurrentFile()->Close();
-	delete event;
-	delete inputTree;
-	delete outFile;
-	delete tree;
-}
-
 float deltaPhi( float phi1, float phi2) {
 	/** Delta Phi is computed for zylindical coordinates in the CMS system.
 	 */
@@ -133,11 +19,11 @@ float deltaR( const susy::PFJet& v1, const tree::Particle& v2 ) {
 	return sqrt(pow(v1.momentum.Eta() - v2.eta, 2) + pow(deltaPhi(v1.momentum.Phi(),v2.phi), 2) );
 }
 
-
 float effectiveAreaElectron( float eta ) {
-	// needed by calculating the isolation for electrons
-	// see https://twiki.cern.ch/twiki/bin/view/CMS/EgammaEARhoCorrection
-	// only for Delta R = 0.3 on 2012 Data
+	/** Returns the effective area for the isolation criteria for electrons.
+	 * See https://twiki.cern.ch/twiki/bin/view/CMS/EgammaEARhoCorrection
+	 * only for Delta R = 0.3 on 2012 Data
+	 */
 	eta = fabs( eta );
 	float ea;
 	if( eta < 1.0 ) ea = 0.13;
@@ -150,8 +36,10 @@ float effectiveAreaElectron( float eta ) {
 	return ea;
 }
 
-// correct iso, see https://twiki.cern.ch/twiki/bin/view/CMS/CutBasedPhotonID2012
 float chargedHadronIso_corrected(const susy::Photon& gamma, float rho) {
+	/** Correct isolation for photons,
+	 * see https://twiki.cern.ch/twiki/bin/view/CMS/CutBasedPhotonID2012
+	 */
 	float eta = fabs(gamma.caloPosition.Eta());
 	float ea;
 
@@ -164,7 +52,7 @@ float chargedHadronIso_corrected(const susy::Photon& gamma, float rho) {
 	else ea = 0.012;
 
 	float iso = gamma.chargedHadronIso;
-	iso = max(iso - rho*ea, (float)0.);
+	iso = std::max(iso - rho*ea, (float)0.);
 
 	return iso;
 }
@@ -182,7 +70,7 @@ float neutralHadronIso_corrected(const susy::Photon& gamma, float rho) {
 	else ea = 0.072;
 
 	float iso = gamma.neutralHadronIso;
-	iso = max(iso - rho*ea, (float)0.);
+	iso = std::max(iso - rho*ea, (float)0.);
 
 	return iso;
 }
@@ -200,7 +88,7 @@ float photonIso_corrected(const susy::Photon& gamma, float rho) {
 	else ea = 0.266;
 
 	float iso = gamma.photonIso;
-	iso = max(iso - rho*ea, (float)0.);
+	iso = std::max(iso - rho*ea, (float)0.);
 
 	return iso;
 }
@@ -245,7 +133,7 @@ bool isVetoElectron( const susy::Electron& electron, const susy::Event& event, c
 	if( electron.momentum.Pt() > 1e6 )
 		return false; // spike rejection
 	float iso = ( electron.chargedHadronIso +
-		max(electron.neutralHadronIso+electron.photonIso -
+		std::max(electron.neutralHadronIso+electron.photonIso -
 		effectiveAreaElectron(electron.momentum.Eta())*event.rho25, (float)0. ))
 		/ electron.momentum.Pt();
 	float d0 = d0correction( electron, event );
@@ -271,7 +159,6 @@ bool isVetoElectron( const susy::Electron& electron, const susy::Event& event, c
 		);
 	return isElectron;
 }
-
 
 float getPtFromMatchedJet( const susy::Photon& myPhoton, const susy::PFJetCollection& jetColl, int loggingVerbosity = 0 ) {
 	/**
@@ -321,6 +208,124 @@ float getPtFromMatchedJet( const susy::Photon& myPhoton, const susy::PFJetCollec
 	return pt;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// Here the class implementation begins ///////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+TreeWriter::TreeWriter( std::string inputName, std::string outputName, int loggingVerbosity_ ) {
+	/** Constructor function for a single input file.
+	 *
+	 * The tree from the file will be read.
+	 * inputName: points to a root file with a "susyTree"
+	 */
+	inputTree = new TChain("susyTree");
+	if (loggingVerbosity_ > 0)
+		std::cout << "Add files to chain" << std::endl;
+	inputTree->Add( inputName.c_str() );
+	Init( outputName, loggingVerbosity_ );
+}
+
+TreeWriter::TreeWriter( TChain* inputTree_, std::string outputName, int loggingVerbosity_ ) {
+	/** Constructor function for a TTree as input.
+	 */
+	inputTree = inputTree_;
+	Init( outputName, loggingVerbosity_ );
+}
+
+TreeWriter::~TreeWriter() {
+	/** Deconstructor
+	 *
+	 * Event has to be deleted before the tree.
+	 */
+	if (pileupHisto != 0 )
+		delete pileupHisto;
+	inputTree->GetCurrentFile()->Close();
+	delete event;
+	delete inputTree;
+	delete outFile;
+	delete tree;
+}
+
+void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
+	/** Initialize the Object
+	 *
+	 * This function is called by each constructor function. Some basic setting
+	 * are done.
+	 */
+	if (loggingVerbosity_ > 0)
+		std::cout << "Set Branch Address of susy::Event" << std::endl;
+	event = new susy::Event;
+	//event->setInput( *inputTree );
+	inputTree->SetBranchAddress("susyEvent", &event );
+
+	// Here the number of proceeded events will be stored. For plotting, simply use L*sigma/eventNumber
+	eventNumbers = new TH1F("eventNumbers", "Histogram containing number of generated events", 1, 0, 1);
+	eventNumbers->GetXaxis()->SetBinLabel(1,"Number of generated events");
+
+	// open the output file
+	if (loggingVerbosity_>0)
+		std::cout << "Open file " << outputName << " for writing." << std::endl;
+	outFile = new TFile( outputName.c_str(), "recreate" );
+	tree = new TTree("susyTree","Tree for single photon analysis");
+
+	// set default parameter
+	processNEvents = -1;
+	reportEvery = 1000;
+	loggingVerbosity = loggingVerbosity_;
+	pileupHisto = 0;
+}
+
+void TreeWriter::IncludeAJson(TString const& _fileName) {
+	/** Read a Json file which contains good runNumbers and Lumi-sections.
+	 * The content will be stored in the class variable 'goodLumiList'.
+	 */
+	if(_fileName == "") return;
+
+	ifstream inputFile(_fileName);
+	if(!inputFile.is_open()){
+		std::cerr << "Cannot open JSON file " << _fileName << std::endl;
+		return;
+	}
+
+	std::string line;
+	TString jsonText;
+	while(true){
+		getline(inputFile, line);
+		if(!inputFile.good()) break;
+		jsonText += line;
+	}
+	inputFile.close();
+
+	TPRegexp runBlockPat("\"([0-9]+)\":[ ]*\\[((?:\\[[0-9]+,[ ]*[0-9]+\\](?:,[ ]*|))+)\\]");
+	TPRegexp lumiBlockPat("\\[([0-9]+),[ ]*([0-9]+)\\]");
+
+	TArrayI positions(2);
+	positions[1] = 0;
+	while(runBlockPat.Match(jsonText, "g", positions[1], 10, &positions) == 3){
+		TString runBlock(jsonText(positions[0], positions[1] - positions[0]));
+		TString lumiPart(jsonText(positions[4], positions[5] - positions[4]));
+
+		unsigned run(TString(jsonText(positions[2], positions[3] - positions[2])).Atoi());
+		std::set<unsigned>& lumis(goodLumiList[run]);
+
+		TArrayI lumiPos(2);
+		lumiPos[1] = 0;
+		while(lumiBlockPat.Match(lumiPart, "g", lumiPos[1], 10, &lumiPos) == 3){
+			TString lumiBlock(lumiPart(lumiPos[0], lumiPos[1] - lumiPos[0]));
+			int begin(TString(lumiPart(lumiPos[2], lumiPos[3] - lumiPos[2])).Atoi());
+			int end(TString(lumiPart(lumiPos[4], lumiPos[5] - lumiPos[4])).Atoi());
+			for(int lumi(begin); lumi <= end; ++lumi)
+				lumis.insert(lumi);
+		}
+	}
+}
+
+void TreeWriter::PileUpWeightFile( std::string const & pileupFileName ) {
+	/** Reads the pileup histogram from a given file.
+	 */
+	TFile *puFile = new TFile( pileupFileName.c_str() );
+	pileupHisto = (TH1F*) puFile->Get("pileup");
+}
 
 bool TreeWriter::passTrigger() {
 	/**
@@ -400,7 +405,6 @@ void TreeWriter::Loop() {
 
 		if ( ! passTrigger() ) continue;
 		if ( ! isGoodLumi() ) continue;
-
 
 		photon.clear();
 		jet.clear();
