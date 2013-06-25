@@ -293,9 +293,8 @@ void TreeWriter::IncludeAJson(TString const& _fileName) {
 
 	std::string line;
 	TString jsonText;
-	while(true){
+	while(inputFile.good()){
 		getline(inputFile, line);
-		if(!inputFile.good()) break;
 		jsonText += line;
 	}
 	inputFile.close();
