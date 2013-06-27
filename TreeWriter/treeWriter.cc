@@ -408,6 +408,7 @@ void TreeWriter::Loop() {
 
 		if ( ! passTrigger() ) continue;
 		if ( ! isGoodLumi() ) continue;
+		if ( ! event->passMetFilters() ) continue;
 
 		photon.clear();
 		jet.clear();
