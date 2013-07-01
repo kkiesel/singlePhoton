@@ -21,10 +21,10 @@ def applyFakeRate( histo, f, e_f ):
 		histo.SetBinError( i, sqrt((binContent*e_f)**2 + (histo.GetBinError(i)*f)**2 ) )
 	return histo
 
-def closure( fileName, opts ):
+def closure( fileName, opts, scale ):
 	##################################
-	fakeRate = 0.0084 # dy->ee mc yutaro
-	fakeRateError = 0.0005 # stat
+	fakeRate = 0.0084
+	fakeRateError = 0.0006 # stat
 
 	# correct fake rate, if it is estimated with yutaros method
 	fakeRateError = fakeRateError / (1-fakeRate)**2
@@ -37,21 +37,34 @@ def closure( fileName, opts ):
 
 	label, unit, binning = readAxisConf( opts.plot )
 
-	recE = extractHisto( Dataset( fileName, "photonElectronTree", "Min$(photon.pt)>80", "e", 2 ), opts.plot)
-	recE.SetMarkerSize(0)
+	commonCut = "photon[0].pt>80 && @photon.size() && met>100"
+
+	gTree = readTree( fileName, "photonTree" ).CopyTree( commonCut )
+	eTree = readTree( fileName, "photonElectronTree" ).CopyTree( commonCut )
+
+	recE = getHisto( eTree, opts.plot, color=2, weight="1" )
 	recE.SetFillColor( recE.GetLineColor() )
 	recE.SetFillStyle(3254)
-
 	recE = applyFakeRate( recE, fakeRate, fakeRateError )
 
-	gamma = extractHisto( Dataset( fileName, "photonTree", "Max$(photon.isGenElectron()) && Min$(photon.pt)>80", "#gamma", 1 ), opts.plot)
-	gamma.SetMarkerSize(0)
+	gamma = getHisto( gTree, opts.plot, color=1, weight="1", cut="!photon[0].isGenPhoton()" )
+
+	for h in [gamma, recE ]:
+		h.SetMarkerSize(0)
+		h.Scale( scale )
+
+	if opts.alternativeStatistics:
+		#error_hist = extractHisto( Dataset( fileName, "photonTree", "weight*(1)","name", 1), opts.plot )
+		scale_for_points = 3.66 # mean weight for w-jets photonTree
+		for bin in range(gamma.GetNbinsX()+1):
+			#gamma.SetBinError( bin, error_hist.GetBinError( bin ) )
+			if not gamma.GetBinContent(bin) and bin>10:
+				gamma.SetBinError(bin,1.14*scale_for_points/gamma.GetBinWidth(bin))
 
 	multihisto = Multihisto()
 	multihisto.leg.SetHeader( datasetAffix )
 	multihisto.addHisto( recE, "e#upoint#tildef_{e#rightarrow#gamma}", draw="e2" )
-	multihisto.addHisto( gamma, "#gamma", draw="e hist" )
-
+	multihisto.addHisto( gamma, "#gamma", draw="e0 hist" )
 
 	can = ROOT.TCanvas()
 
@@ -65,7 +78,14 @@ def closure( fileName, opts ):
 	ratioGraph = ratios.RatioGraph(gamma, recE)
 	ratioGraph.draw(ROOT.gPad, yMin=0.5, yMax=1.5, adaptiveBinning=False, errors="yx")
 	ratioGraph.hAxis.SetYTitle( "#gamma/(e#upoint#tilde{f})")
-	ratioGraph.graph.Draw("same p")
+
+	if opts.alternativeStatistics:
+		for point in range( ratioGraph.graph.GetN() ):
+			if not ratioGraph.graph.GetErrorY(point):
+				# read out point+1, since histograms start with bin 1
+				ratioGraph.graph.SetPointEYhigh( point, ratioGraph.numerator.GetBinError(point+11) / ratioGraph.denominator.GetBinContent(point+11) )
+
+	ratioGraph.graph.Draw("same p e1")
 
 	# draw systematic uncertanty in ratio:
 	syst = recE.Clone( "hist_ratio_syst" )
@@ -78,17 +98,41 @@ def closure( fileName, opts ):
 	can.cd()
 	hPad.Draw()
 	ratioPad.Draw()
-	can.SaveAs("plots/%s_%s_%s.pdf"%(datasetAffix,opts.plot.replace(".",""),opts.savePrefix))
-	del can
+	can.SaveAs("plots/%s_%s_%s.pdf"%(datasetAffix,opts.plot.replace(".",""),opts.save))
+
+	# avoid segmentation violation due to python garbage collector
+	ROOT.SetOwnership(hPad, False)
+	ROOT.SetOwnership(ratioPad, False)
 
 
 if __name__ == "__main__":
 	arguments = argparse.ArgumentParser( description="Simple EWK" )
 	arguments.add_argument( "--plot", default="met" )
+	arguments.add_argument( "--alternativeStatistics", action='store_true')
 	arguments.add_argument( "--input", default=["EWK_V01.12_tree.root"], nargs="+" )
-	arguments.add_argument( "--savePrefix", default="new" )
+	arguments.add_argument( "--save", default="new" )
 	opts = arguments.parse_args()
 
+	integratedLumi = 19300 #pb
+
+	datasetConfigName = "dataset.cfg"
+	datasetConf = ConfigParser.SafeConfigParser()
+	datasetConf.read( datasetConfigName )
+
 	for inName in opts.input:
-		closure( inName, opts )
+		shortName = None
+		for configName in datasetConf.sections():
+			if inName.count( configName ):
+				shortName = configName
+				crosssection = datasetConf.getfloat( configName, "crosssection" )
+		if not shortName:
+			print "No configuration for input file {} defined in '{}'".format(
+					inName, datasetConfigName )
+			continue
+		eventHisto = readHisto( inName )
+		nGen = eventHisto.GetBinContent(1)
+
+
+
+		closure( inName, opts, integratedLumi*crosssection/nGen )
 

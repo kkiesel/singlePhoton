@@ -1,12 +1,17 @@
-#include<iostream>
-#include<math.h>
-#include<string>
+#include <iostream>
+#include <math.h>
+#include <string>
+#include <map>
+#include <set>
+#include <fstream>
 
 #include "TSystem.h"
 #include "TFile.h"
 #include "TTree.h"
 #include "TChain.h"
 #include "TH1F.h"
+#include "TPRegexp.h"
+#include "TArrayI.h"
 
 #include "SusyEvent.h"
 #include "TreeObjects.h"
@@ -18,11 +23,14 @@ class TreeWriter {
 		void Init( std::string outputName, int loggingVerbosity_ );
 		virtual ~TreeWriter();
 		virtual void Loop();
+		bool isData();
 
 		void SetProcessNEvents(int nEvents) { processNEvents = nEvents; }
 		void SetReportEvents(unsigned int nEvents) { reportEvery = nEvents; }
 		void SetLoggingVerbosity(unsigned int logVerb) { loggingVerbosity = logVerb; }
-		void PileUpWeightFile( std::string pileupFileName );
+		void SetTriggerPaths( std::vector<const char*> const & tp ) { triggerNames = tp; }
+		void PileUpWeightFile( std::string const & pileupFileName );
+		void IncludeAJson( TString const & _fileName );
 
 		TChain* inputTree;
 		susy::Event* event;
@@ -32,6 +40,8 @@ class TreeWriter {
 		TH1F* eventNumbers;
 
 	private:
+		bool passTrigger();
+		bool isGoodLumi() const;
 		int processNEvents; // number of events to be processed
 		unsigned int reportEvery;
 		unsigned int loggingVerbosity;
@@ -42,6 +52,9 @@ class TreeWriter {
 
 		// important dataset information
 		TH1F* pileupHisto;
+		std::map<unsigned, std::set<unsigned> > goodLumiList;
+		std::vector<const char*> triggerNames;
+
 
 		// variables which will be stored in the tree
 		std::vector<tree::Photon> photon;
@@ -59,4 +72,3 @@ class TreeWriter {
 		int nVertex;
 		double weight;
 };
-

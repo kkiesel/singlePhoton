@@ -91,8 +91,7 @@ def generalMatching( objects1, objects2, hist, typ="electron"):
 				else:
 					hist["dEtadPhiSmallPhoton"].Fill( absDeltaEta, absDeltaPhi )
 
-			#if absDeltaEta < .01 and absDeltaPhi < .1 and absDeltaPt < .2:
-			if deltaR( o1, o2 ) < 0.5:
+			if absDeltaEta < .01 and absDeltaPhi < .1 and absDeltaPt < .2:
 				match = True
 				if absDeltaPt < minDeltaPt:
 					minDeltaPt = absDeltaPt
@@ -125,7 +124,7 @@ def clearJets( photonLikeObj, inJets, outJets, deltaR_=.3 ):
 			outJets.push_back( jet )
 	return outJets
 
-def splitCandidates( inputFileName, processNEvents=-1, genMatching=False ):
+def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1, genMatching=False ):
 	"""Key function of splitCanidates.py. The main loop and object selection is
 	defined here."""
 	print "Processing file {}".format(inputFileName)
@@ -147,13 +146,16 @@ def splitCandidates( inputFileName, processNEvents=-1, genMatching=False ):
 	photonElectronTree, photonElectrons = gammaSelectionClone( tree, "photonElectronTree" )
 
 	# variables which will be changed in addition to photons:
+	weight = numpy.zeros(1, dtype=float)
 	jets = ROOT.std.vector("tree::Jet")()
 	for tree_ in [photonTree, photonJetTree, photonElectronTree]:
+		tree_.SetBranchAddress("weight", weight )
 		tree_.SetBranchAddress("jet", jets )
 
 	if genMatching:
 		genElectronTree, genElectrons = gammaSelectionClone( tree, "genElectronTree", "tree::Particle","genElectron" )
 		histograms = histoDefinition()
+		genElectronTree.SetBranchAddress("weight", weight )
 		genElectronTree.SetBranchAddress("jet", jets )
 
 	# temporal vector to save objects
@@ -162,9 +164,12 @@ def splitCandidates( inputFileName, processNEvents=-1, genMatching=False ):
 	for event in tree:
 		if not event.GetReadEntry()%100000:
 			print '{0}%\r'.format(100*event.GetReadEntry()/event.GetEntries())
+		if event.GetReadEntry()%100: ## warning: take only each x-th event!
+			continue
 		if event.GetReadEntry() > processNEvents:
 			break
 
+		weight[0] = event.weight * nExpected / processNEvents
 		jets.clear()
 		emObjects.clear()
 		photons.clear()
@@ -179,7 +184,17 @@ def splitCandidates( inputFileName, processNEvents=-1, genMatching=False ):
 			if gamma.r9 < 1 \
 			and gamma.sigmaIetaIeta > 0.001 \
 			and abs(gamma.eta) < 1.4442 \
-			and gamma.pt > 20:
+			and gamma.pt > 80:
+
+				# gen matching
+				matchGenPhoton = False
+				for trueGamma in event.genPhoton:
+					absDeltaPt = 2*abs( trueGamma.pt - gamma.pt ) / ( trueGamma.pt + gamma.pt )
+					DeltaR = deltaR( gamma, trueGamma )
+					if DeltaR < 0.3 and absDeltaPt < .2:
+						matchGenPhoton = True
+				if matchGenPhoton:
+					gamma.isGenPhoton(True)
 
 				# look for gamma and electrons
 				if gamma.hadTowOverEm < 0.05 \
@@ -189,24 +204,8 @@ def splitCandidates( inputFileName, processNEvents=-1, genMatching=False ):
 				and gamma.photonIso < 1.3 + 0.005*gamma.pt:
 					emObjects.push_back( gamma )
 
-				# QCD fake object definition
-				if gamma.ptJet > 80 \
-				and gamma.hadTowOverEm < 0.05 \
-				and gamma.sigmaIetaIeta < 0.014 \
-				and gamma.chargedIso < 15 \
-				and gamma.neutralIso < 3.5 + 0.04*gamma.pt \
-				and gamma.photonIso < 1.3 + 0.005*gamma.pt \
-				and not gamma.pixelseed \
-				and ( gamma.sigmaIetaIeta>=0.012 or gamma.chargedIso>=2.6):
+				elif not gamma.pixelseed:
 					photonJets.push_back( gamma )
-
-		if genMatching:
-			emObjects, histograms = generalMatching( emObjects, event.genPhoton, histograms, "photon" )
-			emObjects, histograms = generalMatching( emObjects, event.genElectron, histograms, "electron" )
-			for genE in event.genElectron:
-				if abs(genE.eta) < 1.4442:
-					genElectrons.push_back( genE )
-			genElectrons, histograms = generalMatching( genElectrons, emObjects, histograms )
 
 		for emObject in emObjects:
 			if emObject.pixelseed:
@@ -214,34 +213,31 @@ def splitCandidates( inputFileName, processNEvents=-1, genMatching=False ):
 			else:
 				photons.push_back( emObject )
 
-		if photons.size() > 0:
+		minJets = 2
+		if photons.size():
 			jets = clearJets( photons[0], event.jet, jets )
+			if jets.size() >= minJets:
+				photonTree.Fill()
 		else:
-			if photonJets.size() > 0:
-				jets = clearJets( photonJets[0], event.jet, jets )
-			if photonElectrons.size() > 0:
+			if photonElectrons.size():
 				jets = clearJets( photonElectrons[0], event.jet, jets )
-		if jets.size() < 2:
-			continue
-
-		if photons.size() > 0:
-			photonTree.Fill()
-		else:
-			if photonElectrons.size() > 0:
-				photonElectronTree.Fill()
-			if photonJets.size() > 0:
-				photonJetTree.Fill()
+				if jets.size() >= minJets:
+					photonElectronTree.Fill()
+			if photonJets.size():
+				jets.clear()
+				jets = clearJets( photonJets[0], event.jet, jets, -1 ) # take all jets, deltaR = -1
+				if jets.size() >= minJets:
+					photonJetTree.Fill()
 		if genMatching and genElectrons.size() > 0:
 			genElectronTree.Fill()
 
 	# write everything to output file
 	photonTree.Write()
 	photonJetTree.Write()
-	photonElectronTree.Write()
+	#photonElectronTree.Write()
 	if genMatching:
 		genElectronTree.Write()
-		draw_histogram_dict( histograms, inName[0:5] )
-	eventHisto.Write()
+		draw_histogram_dict( histograms, shortName )
 	fout.Close()
 
 
@@ -258,6 +254,25 @@ if __name__ == "__main__":
 	# set limit for number of events for testing reason
 	processNEvents = 10000 if opts.test else -1
 
+	integratedLumi = 19300 #pb
+
+	datasetConfigName = "dataset.cfg"
+	datasetConf = ConfigParser.SafeConfigParser()
+	datasetConf.read( datasetConfigName )
+
 	for inName in opts.input:
-		splitCandidates( inName, processNEvents, opts.genMatching )
+		shortName = None
+		for configName in datasetConf.sections():
+			if inName.count( configName ):
+				shortName = configName
+				crosssection = datasetConf.getfloat( configName, "crosssection" )
+		if not shortName:
+			print "No configuration for input file {} defined in '{}'".format(
+					inName, datasetConfigName )
+			continue
+
+		# N = L * sigma
+		nExpected = integratedLumi * crosssection
+
+		splitCandidates( inName, shortName, nExpected, processNEvents, opts.genMatching )
 

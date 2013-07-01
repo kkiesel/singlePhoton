@@ -15,17 +15,30 @@ int main( int argc, char** argv ) {
 	std::cout << "Write to output file \"" << outputFileName << "\"" << std::endl;
 
 	TreeWriter *tw = new TreeWriter( inputTree, outputFileName, 0 );
+	bool isData = tw->isData();
 
-	// settings
-	tw->PileUpWeightFile("pileUpReweighting/puWeights.root");
+	// common settings
 	tw->SetProcessNEvents(-1);
 	tw->SetReportEvents(20000);
+
+	if( isData ) {
+		std::cout << "Process data." << std::endl;
+		//tw->IncludeAJson( "../../Cert_190456-208686_8TeV_22Jan2013ReReco_Collisions12_JSON.txt" );
+		tw->IncludeAJson( "/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions12/8TeV/Reprocessing/Cert_190456-208686_8TeV_22Jan2013ReReco_Collisions12_JSON.txt" );
+		std::vector<const char*> triggerNames;
+		triggerNames.push_back( "HLT_Photon70_CaloIdXL_PFHT400_v" );
+		triggerNames.push_back( "HLT_Photon70_CaloIdXL_PFNoPUHT400_v" );
+		tw->SetTriggerPaths( triggerNames );
+	} else {
+		std::cout << "Process simulation." << std::endl;
+		tw->PileUpWeightFile("pileUpReweighting/puWeights.root");
+	}
 
 	double start_time = time(NULL);
 	tw->Loop();
 	double end_time = time(NULL);
 
 	std::cout << "Job needed " << 1.*(end_time - start_time)/3600 << " h real time." << std::endl;
-
+	return 0;
 }
 

@@ -14,7 +14,7 @@ all: $(SHARED_LIB) $(EXE)
 	g++ -o $@ $+ -c -O2 $(INCS) $(WARN)
 
 $(EXE): $(OBJ) $(SHARED_LIB)
-	g++ -o $@ $+ $(LIBS) $(WARN)
+	g++ -O2 -o $@ $+ $(LIBS) $(WARN)
 
 
 # see http://root.cern.ch/drupal/content/interacting-shared-libraries-rootcint
@@ -26,7 +26,7 @@ lib%.so: %.h %_LinkDef.h
 	@if [ -d $(CMSSW_BASE)/lib/$(SCRAM_ARCH) -a "$(CMSSW_BASE)" != "" ]; then\
 		cp $@ $(CMSSW_BASE)/lib/$(SCRAM_ARCH);\
 	else\
-		echo "Please copy the library manually";\
+		echo "\n###\nPlease copy the library manually!\n###\n";\
 	fi
 
 clean:

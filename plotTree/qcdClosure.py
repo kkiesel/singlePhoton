@@ -1,250 +1,140 @@
 #! /usr/bin/env python2
 # -*- coding: utf-8 -*-
-
 import ROOT
 import argparse
 import ConfigParser
-import os.path
+from math import sqrt
+from multiplot import *
+from treeFunctions import *
+import ratios
+import Styles
+
+Styles.tdrStyle()
+ROOT.gROOT.SetBatch()
+ROOT.gSystem.Load("libTreeObjects.so")
 
 # to use user defined help message, sys.arv has to be sent to python and not
 # to TApplication
 ROOT.PyConfig.IgnoreCommandLineOptions = True
 
-# use tdr style defined in own macro
-import Styles
-Styles.tdrStyle()
+def writeWeights( fileName, tree, h_weight ):
+	f = ROOT.TFile( fileName, "update" )
 
-# this is the configuration file for plots including label, etc.
-axisConf = ConfigParser.SafeConfigParser()
-axisConf.read("axis.cfg")
+	weightTree = ROOT.TTree("weightTree", "Tree containing QCD weights" )
+	import numpy
+	weight = numpy.zeros( 1, dtype=float)
+	weight_error = numpy.zeros( 1, dtype=float)
 
-# global variables:
-integratedLuminosity = 19.3 #fb
-
-def readTree( filename, treename = "susyTree" ):
-	"""
-	filename: name of file containing the tree
-	treename: name of the tree
-	returns: TTree Object
-	"""
-	if not os.path.isfile(filename):
-		print( "File %s does not exist"%filename)
-	tree = ROOT.TChain( treename )
-	tree.AddFile( filename )
-	return tree
-
-def createHistoFromTree2D(tree, variable, weight="", nBin=50):
-	"""
-	tree: tree to create histo from
-	variable: variable to plot (must be a branch of the tree)
-	weight: weights to apply (e.g. "var1*(var2 > 15)" will use weights from var1 and cut on var2 > 15
-	nBins, firstBin, lastBin: number of bins, first bin and last bin (same as in TH1F constructor)
-	nEvents: number of events to process (-1 = all)
-	returns: histogram
-	"""
-	from random import randint
-	from sys import maxint
-	#make a random name you could give something meaningfull here,
-	#but that would make this less readable
-	name = "%x"%(randint(0, maxint))
-
-	# automatic binning if lastbin < firstbin
-	result = ROOT.TH2F(name, variable, nBin, 0, -1, nBin, 0, -1)
-	result.Sumw2()
-	tree.Draw("%s>>%s"%(variable, name), weight, "goff,colz")
-	return result
-
-def createHistoFromTree(tree, variable, weight="", nBins=100, firstBin=None, lastBin=None, nEvents=-1):
-	"""
-	tree: tree to create histo from
-	variable: variable to plot (must be a branch of the tree)
-	weight: weights to apply (e.g. "var1*(var2 > 15)" will use weights from var1 and cut on var2 > 15
-	nBins, firstBin, lastBin: number of bins, first bin and last bin (same as in TH1F constructor)
-	nEvents: number of events to process (-1 = all)
-	returns: histogram
-	"""
-	if ":" in variable:
-		return createHistoFromTree2D(tree, variable, weight="")
-	from ROOT import TH1F
-	from random import randint
-	from sys import maxint
-	if nEvents < 0:
-		nEvents = maxint
-	if firstBin == None:
-		firstBin = tree.GetMinimum( variable )
-	if lastBin == None:
-		lastBin = tree.GetMaximum( variable )
-	#make a random name you could give something meaningfull here,
-	#but that would make this less readable
-	name = "%x"%(randint(0, maxint))
-	result = TH1F(name, variable, nBins, firstBin, lastBin)
-	result.Sumw2()
-	tree.Draw("%s>>%s"%(variable, name), weight, "goff", nEvents)
-	return result
-
-def plot2D( tree, plot, cut, save=False ):
-	# read axis config file
-	var = plot.split(":")
-	try:
-		xlabel = axisConf.get( var[0], "label" )
-	except:
-		xlabel = ""
-	try:
-		ylabel = axisConf.get( var[1], "label" )
-	except:
-		ylabel = ""
-	try:
-		xunit = axisConf.get( var[0], "unit" )
-	except:
-		xunit = ""
-	try:
-		yunit = axisConf.get( var[1], "unit" )
-	except:
-		yunit = ""
-	if xunit != "":
-		xunit = " ["+xunit+"]"
-	if yunit != "":
-		yunit = " ["+yunit+"]"
-
-	# modify histo
-	histo = createHistoFromTree2D( tree, plot, cut )
-	histo.SetTitle(";%s%s;%s%s"%(ylabel,yunit,xlabel,xunit))
-
-	# draw histo
-	canvas = ROOT.TCanvas()
-	canvas.cd()
-	histo.Draw("colz")
-
-	# draw information
-	cutText = ROOT.TPaveText(.5,.8,.9,.9,"ndc")
-	cutText.SetBorderSize(0)
-	cutText.SetFillColor(0)
-	for line in cut.split("&&"):
-		cutText.AddText( line )
-	cutText.Draw()
-
-	topInfo = ROOT.TPaveText(.1,.95,1,1,"ndc")
-	topInfo.SetBorderSize(0)
-	topInfo.SetFillColor(0)
-	topInfo.AddText("Work in progress, %sfb^{-1}, #sqrt{s}=8TeV"%"?")
-	topInfo.Draw()
-
-	if save:
-		canvas.SaveAs("%.pdf"%variable)
-	else:
-		raw_input()
-
-def fillWeights( tree, jetCut, photonCut ):
-
-	# this is the binning with witch the fo reweighting will be done and has to be studied
-	nBins = 50
-	xMin = 80
-	xMax = 300
-	h_photonPt = createHistoFromTree( tree, "photon[0].pt", photonCut, nBins, xMin, xMax )
-	h_jetPt = createHistoFromTree( tree, "photon[0].pt", jetCut, nBins, xMin, xMax )
-
-	# h_jetPt is now histogram with w^{-1} = h_jetPt / h_photonPt
-	h_jetPt.Divide( h_photonPt )
-	import array
-	weight = array.array( "f", [0] )
-	tree.Branch( "weight2", weight, "weight2/F" )
+	weightTree.Branch( "w_qcd", weight, "w_qcd/D" )
+	weightTree.Branch( "w_qcd_error", weight_error, "w_qcd_error/D" )
 
 	for event in tree:
-		pt = tree.photon.at(0).pt
-		#print "p_T = %i GeV"%pt
-		weight = h_jetPt.GetBinContent( h_jetPt.FindBin( pt ) )
-		print weight
-		#print tree.weight2
-		#tree.Fill()
+		if not event.GetReadEntry()%10000:
+			print "%s / %s"%(event.GetReadEntry(), event.GetEntries() )
+		pt = tree.photon.at(0).ptJet
+		weight[0] = h_weight.GetBinContent( h_weight.FindBin( pt ) )
+		weight_error[0] = h_weight.GetBinError( h_weight.FindBin( pt ) )
+		weightTree.Fill()
 
+	f.cd()
+	weightTree.Write()
+	f.Close()
 
+def qcdClosure( fileName, opts ):
+	signalCut = "met > 100"
+	controlCut = "met <= 100"
+	foCut = "Min$(photon.pt) > 80" \
+			+"&& Max$(photon.sigmaIetaIeta) < 0.014" \
+			+"&& Max$(photon.hadTowOverEm) < 0.05" \
+			+"&& Max$(photon.chargedIso) < 15" \
+			+"&& Max$(photon.neutralIso-0.04*photon.pt)<3.5" \
+			+"&& Max$(photon.photonIso-0.005*photon.pt) < 1.3" \
+			+"&& ( Min$(photon.chargedIso)>2.6 || Min$(photon.sigmaIetaIeta)>0.012) " \
+			+"&& @photon.size()>0"
 
-def plot( tree, plot, cut, save=False ):
-	# read axis config file
-	try:
-		label = axisConf.get( plot, "label" )
-		unit = axisConf.get( plot, "unit" )
-		if unit != "":
-			unit = " ["+unit+"]"
-	except:
-		print "please specify label and unit in axis configuration file"
-		label = plot
-		unit = ""
+	gSignalTree = readTree( fileName, "photonTree").CopyTree( signalCut )
+	gControlTree = readTree( fileName, "photonTree").CopyTree( controlCut )
+	foSignalTree = readTree( fileName, "photonJetTree").CopyTree( signalCut+"&&"+foCut )
+	foControlTree = readTree( fileName, "photonJetTree").CopyTree( controlCut+"&&"+foCut )
 
-	# modify histo
-	histo = createHistoFromTree( tree, plot, cut )
-	histo.SetTitle(";%s%s;Entries"%(label,unit))
-	histo.SetLineColor(1)
+	can = ROOT.TCanvas()
+	can.cd()
 
-	# draw histo
-	canvas = ROOT.TCanvas()
-	canvas.cd()
-	canvas.SetLogy()
-	histo.Draw("hist")
+	weight_numerator = getHisto( gControlTree, "photon[0].ptJet", color=1 )
+	weight_denominator = getHisto( foControlTree, "photon[0].ptJet", color=6 )
 
-	# draw information
-	cutText = ROOT.TPaveText(.5,.8,.9,.9,"ndc")
-	cutText.SetBorderSize(0)
-	cutText.SetFillColor(0)
-	for line in cut.split("&&"):
-		cutText.AddText( line )
-	cutText.Draw()
+	multiToWeight = Multihisto()
+	multiToWeight.addHisto( weight_numerator, "#gamma" )
+	multiToWeight.addHisto( weight_denominator, "#gamma_{jet}" )
+	multiToWeight.Draw()
+	SaveAs(can, "plots", "qcd_pt_preWeighting")
 
-	topInfo = ROOT.TPaveText(.1,.95,1,1,"ndc")
-	topInfo.SetBorderSize(0)
-	topInfo.SetFillColor(0)
-	topInfo.AddText("Work in progress, %sfb^{-1}, #sqrt{s}=8TeV"%"?")
-	topInfo.Draw()
+	weight = divideHistos( weight_numerator, weight_denominator )
+	weight.GetYaxis().SetTitle("w")
+	weight.Draw()
+	SaveAs( can, "plots", "qcd_weight" )
 
-	if save:
-		canvas.SaveAs("%s.pdf"%plot)
-	else:
-		raw_input()
+	writeWeights( fileName, foControlTree, weight )
 
+	for tree in [ foSignalTree, foControlTree ]:
+		tree.AddFriend( "weightTree", fileName )
+
+	for plot in ["electron.pt", "muon.pt", "photon[0].eta", "photon[0].ptJet", "Length$(photon[0].pt)", "met","ht", "nVertex", "jet[0].pt", "jet.pt", "Length$(jet.pt)","genPhoton.pt","Length$(genPhoton.pt)"]:
+		# The first attempt to get the histogram is only to get the minimal
+		# and maximal value on the x-axis, for not predefined binning
+		h_gamma = getHisto( gSignalTree, plot )
+		h_fo = getHisto( foSignalTree, plot )
+		xMin, xMax = getXMinXMax( [ h_gamma, h_fo ] )
+
+		# for integers, adjust nBins and shift by 0.5
+		if "Length$(" in plot:
+			xMin -= .5
+			xMax += .5
+			nBins = int(xMax-xMin)
+		else:
+			nBins = 20
+
+		# there is a muon with 7000 GeV, which destroys the automatic binning
+		if plot == "muon.pt":
+			xMax = 200
+
+		h_gamma = getHisto( gSignalTree, plot, color=1, nBins=nBins, firstBin=xMin,lastBin=xMax )
+		h_fo = getHisto( foSignalTree, plot, weight="weight*w_qcd", color=6, nBins=nBins, firstBin=xMin,lastBin=xMax )
+		h_fo_error = getQCDErrorHisto( foSignalTree, plot, nBins=nBins, firstBin=xMin, lastBin=xMax )
+		h_fo_error.SetFillColor(2)
+		h_fo_error.SetFillStyle(3254)
+		h_fo_error.SetMarkerSize(0)
+
+		muhisto = Multihisto()
+		muhisto.addHisto( h_gamma, "#gamma", draw="hist e0" )
+		muhisto.addHisto( h_fo, "#gamma_{jet}#upointw", draw="hist e0")
+		muhisto.addHisto( h_fo_error, "#sigma_{w}", draw="e2")
+
+		hPad = ROOT.TPad("hPad", "Histogram", 0, 0.2, 1, 1)
+		hPad.cd()
+		muhisto.Draw()
+
+		ratioPad = ROOT.TPad("ratioPad", "Ratio", 0, 0, 1, 0.2)
+		ratioPad.cd()
+		ratioPad.SetLogy(0)
+		ratioGraph = ratios.RatioGraph(h_fo, h_gamma)
+		ratioGraph.draw(ROOT.gPad, yMin=0.5, yMax=1.5, adaptiveBinning=False, errors="yx")
+		ratioGraph.graph.Draw("same p e0") # draw nice points
+		ratioGraph.hAxis.SetYTitle( "#gamma_{pred}/#gamma")
+		can.cd()
+		hPad.Draw()
+		ratioPad.Draw()
+		SaveAs(can, "plots","qcd_%s_afterWeighting"%plot )
+		ROOT.SetOwnership( hPad, False )
+		ROOT.SetOwnership( ratioPad, False )
 
 if __name__ == "__main__":
-	# include knowledge about objects saved in the tree
-	ROOT.gSystem.Load("../treeWriter/libTreeObjects.so")
-
 	arguments = argparse.ArgumentParser( description="Calculate weighting "
 			+"factors for QCD background estimation." )
-	arguments.add_argument("-f", "--file", default="../treeWriter/myTree.root",
-			help="ROOT file containing a TTree produced by 'treeWriter'.")
-	arguments.add_argument("-c", "--cut", default="", help="TCut string.")
-	arguments.add_argument("-d", "--distribution", default =['met'], nargs="+",
-			help="Distributions to plot.")
+	arguments.add_argument("--input", default=[""], nargs="+" )
+	arguments.add_argument("--plot", default="met" )
 	arguments.add_argument("--save", action="store_true", help="Save canvas as pdf.")
 	opts = arguments.parse_args()
 
-	tree = readTree( opts.file )
-
-	# see https://twiki.cern.ch/twiki/bin/viewauth/CMS/CutBasedPhotonID2012
-	# for more information on 2012 Photon ID
-	# TODO: Single tower H/E
-	# TODO: correct isolation with ρ
-	photonCut2012ID = "photon.sigmaIetaIeta<0.012 \
-&& photon.chargedIso < 2.6 \
-&& photon.neutralIso < 3.5 + 0.04*photon.pt \
-&& photon.photonIso < 1.3 + 0.005*photon.pt"
-
-	jetPhotonCut = "photon.sigmaIetaIeta > 0.012 && photon.sigmaIetaIeta<0.02 \
-&& photon.chargedIso < 2.6 \
-&& photon.neutralIso < 3.5 + 0.04*photon.pt \
-&& photon.photonIso < 1.3 + 0.005*photon.pt"
-
-	fillWeights( tree, jetPhotonCut, photonCut2012ID )
-
-	if opts.cut == "photon":
-		opts.cut = photonCut2012ID
-	elif opts.cut == "jetphoton":
-		opts.cut = jetPhotonCut
-
-	if "all" in opts.distribution:
-		opts.distribution = axisConf.sections()
-
-	for plots in opts.distribution:
-		if ":" in plots:
-			plot2D( tree, plots, opts.cut, opts.save )
-		else:
-			plot( tree, plots, opts.cut, opts.save )
-
+	for inName in opts.input:
+		qcdClosure( inName, opts )
