@@ -8,11 +8,13 @@ datasets=(
 # srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/GJets_V01/
 # srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/WJets_V01/
 # srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/TTJets_V01/
- srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/DY_to_ee/
+# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/DY_to_ee/
 # srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/GVJets_V01/
+ srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/WGamma_V01/
+ srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/ZGamma_V01/
 )
 # settings
-version="14"
+version="17"
 outputFolder=/scratch/hh/dust/naf/cms/user/kiesel
 files_per_job=20
 
@@ -56,7 +58,7 @@ for dataset in "${datasets[@]}"; do
         echo source $VO_CMS_SW_DIR/cmsset_default.sh >> $script
         echo cd $HOME/CMSSW_5_3_8/src >> $script
         echo cmsenv >> $script
-        echo cd $HOME/treeWriter >> $script
+        echo cd $HOME/singlePhoton/TreeWriter >> $script
         echo make >> $script
 
         echo ./executable $outputFileName $files_to_submit >> $script
