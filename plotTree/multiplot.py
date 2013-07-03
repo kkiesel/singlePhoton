@@ -37,7 +37,8 @@ class SingleHisto:
 class Multihisto:
 	def __init__( self ):
 		self.histos = []
-		self.stack = []
+		self.histosToStack = []
+		self.stack = None
 		self.denominator = None
 		self.numerator = None
 		self.leg = myLegend(.7,.7,.95,.92)
@@ -45,29 +46,36 @@ class Multihisto:
 
 	def addHisto( self, singleHisto, label=None, toStack=False, draw="hist" ):
 		if toStack:
-			self.stack.append( singleHisto )
+			self.histosToStack.append( singleHisto )
+			self.leg.AddEntry( singleHisto, label, "f" )
 		else:
 			self.histos.append( (singleHisto, draw) )
-		if label:
-			if "hist" in draw:
-				self.legendOption = "l"
-			if draw == "e2":
-				self.legendOption = "f"
-			self.leg.AddEntry( singleHisto, label, self.legendOption )
+			if label:
+				if "hist" in draw:
+					self.legendOption = "l"
+				if draw == "e2":
+					self.legendOption = "f"
+				self.leg.AddEntry( singleHisto, label, self.legendOption )
 
 	def stackHistos( self ):
-		if self.stack:
-			stack = ROOT.THStack()
-			for h in self.stack:
-				stack.Add( h )
-		#self.histo.append( stack )
+		# sort histograms first
+		self.histosToStack.sort( key=lambda x: x.Integral() )
+		self.stack = ROOT.THStack()
+		for h in self.histosToStack:
+			self.stack.Add( h )
+		self.histos.append( (self.stack,"hist") )
 
 	def GetMinimum( self ):
 		mini = 100000
 		for hist,draw in self.histos:
 			# search for minimum > 0
-			if hist.GetMinimum(0) < mini:
-				mini = hist.GetMinimum(0)
+			try:
+				if hist.GetMinimum(0) < mini:
+					mini = hist.GetMinimum(0)
+			except:
+				myMin = hist.GetMinimum()
+				if myMin < mini and myMin > 0:
+					mini = myMin
 		return mini
 
 	def GetMaximum( self ):
