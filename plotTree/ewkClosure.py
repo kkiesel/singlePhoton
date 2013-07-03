@@ -42,12 +42,21 @@ def closure( fileName, opts, scale ):
 	gTree = readTree( fileName, "photonTree" ).CopyTree( commonCut )
 	eTree = readTree( fileName, "photonElectronTree" ).CopyTree( commonCut )
 
-	recE = getHisto( eTree, opts.plot, color=2, weight="1" )
+	if opts.plot == "nVertex":
+		nBins = 6
+		firstBin = 3
+		lastBin = 35
+	else:
+		nBins = 20
+		firstBin = None
+		lastBin = None
+
+	recE = getHisto( eTree, opts.plot, color=2, weight="1", nBins=nBins, firstBin=firstBin, lastBin=lastBin )
 	recE.SetFillColor( recE.GetLineColor() )
 	recE.SetFillStyle(3254)
 	recE = applyFakeRate( recE, fakeRate, fakeRateError )
 
-	gamma = getHisto( gTree, opts.plot, color=1, weight="1", cut="!photon[0].isGenPhoton()" )
+	gamma = getHisto( gTree, opts.plot, color=1, weight="1", cut="!photon[0].isGenPhoton()", nBins=nBins, firstBin=firstBin, lastBin=lastBin )
 
 	for h in [gamma, recE ]:
 		h.SetMarkerSize(0)
