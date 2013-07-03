@@ -406,9 +406,8 @@ void TreeWriter::Loop() {
 		//event->getEntry(jentry);
 		inputTree->GetEntry(jentry);
 
-		if ( ! passTrigger() ) continue;
-		if ( ! isGoodLumi() ) continue;
-		if ( ! event->passMetFilters() ) continue;
+		if ( event->isRealData )
+			if ( !passTrigger() || !isGoodLumi() || !event->passMetFilters() ) continue;
 
 		photon.clear();
 		jet.clear();
