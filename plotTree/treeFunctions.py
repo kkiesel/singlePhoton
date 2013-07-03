@@ -27,8 +27,11 @@ def createHistoFromTree(tree, variable, weight="", nBins=20, firstBin=None, last
 		result.Scale(1,"width")
 	elif firstBin==None and lastBin==None:
 		import ROOT
-		tree.Draw("%s>>%s"%(variable,name), weight, "goff")
+		tree.Draw("%s>>%s(%s,,)"%(variable,name,nBins), weight, "goff")
 		result = ROOT.gDirectory.Get( name )
+		if type( result ) == type( ROOT.TObject() ):
+			print "Warning, no entries"
+			return ROOT.TH1F()
 		result.Sumw2() # applying the errors here is perhaps not entirely correct
 	else:
 		result = TH1F(name, variable, nBins, firstBin, lastBin)
@@ -129,6 +132,10 @@ def getHisto( tree, plot, cut="1", overflow=0, weight="weight", color=1, nBins=2
 	histo.SetMarkerColor( color )
 	histo.SetLineWidth(2)
 
+	histo.SetTitle( getHistoTitle( histo, plot, label, unit, binning ) )
+	return histo
+
+def getHistoTitle( histo, plot, label, unit, binning ):
 	ytitle = "Entries"
 	if not label:
 		import re
@@ -139,9 +146,16 @@ def getHisto( tree, plot, cut="1", overflow=0, weight="weight", color=1, nBins=2
 
 		elif "." in plot:
 			obj, nObj, var = re.match( objVarExpr, plot ).groups()
-			var = var.replace("phi","#phi_{")
-			var = var.replace("eta","#eta_{")
+			var = var.replace("phi","#phi")
+			var = var.replace("eta","#eta")
 			var = var.replace("pt","p_{T ")
+			var = var.replace("sigmaIetaIeta","#sigma_{i#etai#eta")
+			var = var.replace("hadTowOverEm","H/E")
+			var = var.replace("chargedIso", "Iso^{#pm}")
+			var = var.replace("neutralIso", "Iso^{0}")
+			var = var.replace("photonIso", "Iso^{#gamma}")
+			if "_{" not in var:
+				var += "_{"
 			obj = obj.replace("gamma","#gamma")
 			obj = obj.replace("electron","e")
 			obj = obj.replace("muon", "#mu")
@@ -161,8 +175,8 @@ def getHisto( tree, plot, cut="1", overflow=0, weight="weight", color=1, nBins=2
 		if unit:
 			label+= " [%s]"%unit
 			ytitle+= " %s"%unit
-	histo.SetTitle(";%s;%s"%(label, ytitle))
-	return histo
+	return ";%s;%s"%( label, ytitle )
+
 
 def getQCDErrorHisto( tree, plot, cut="1", overflow=0, nBins=20, firstBin=None, lastBin=None ):
 	"""Applies w_qcd +- w_qcd_error for qcd error propagation.
