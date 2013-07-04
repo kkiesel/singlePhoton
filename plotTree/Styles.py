@@ -144,7 +144,7 @@ def tdrStyle2D():
 	style = tdrStyle()
 	style.SetOptLogy(0)
 	style.SetOptLogz(1)
-	style.SetPadRightMargin(0.13)
+	style.SetPadRightMargin(0.15)
 
 	style.cd()
 	return style
