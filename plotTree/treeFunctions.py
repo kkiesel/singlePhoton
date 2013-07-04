@@ -7,6 +7,23 @@ def randomName():
 	from sys import maxint
 	return "%x"%(randint(0, maxint))
 
+def createHistoFromTree2D(tree, variable, weight, nBinsX=[], nBinsY=[] ):
+	from ROOT import TH2F
+	import array
+	name = randomName()
+	if isinstance( nBinsX, list ):
+		xBins = array.array( 'd', nBinsX )
+		if isinstance( nBinsY, list ):
+			yBins = array.array( 'd', nBinsY )
+			result = TH2F( name, variable, len(nBinsX)-1, xBins, len(nBinsY)-1, yBins )
+			result.Sumw2()
+			tree.Draw("%s>>%s"%(variable, name), weight, "goff")
+			result.Scale(1, "width")
+	yLabel, xLabel = variable.split(":")
+	result.SetTitle(";%s;%s"%( getAxisTitle( xLabel ), getAxisTitle( yLabel ) ) )
+	return result
+
+
 def createHistoFromTree(tree, variable, weight="", nBins=20, firstBin=None, lastBin=None ):
 	"""
 	tree: tree to create histo from
@@ -69,6 +86,45 @@ def readHisto( filename, histoname="eventNumbers" ):
 	histo.SetName(histoname+"Clone")
 	histo = histo.Clone( histoname )
 	return histo
+
+def getAxisBinningFromHisto( axis ):
+	result = []
+	xbins = axis.GetXbins()
+	if xbins.GetSize(): # variable binning
+		for i in range( xbins.GetSize() ):
+			result.append( xbins[i] )
+	else:
+		result = [ axis.GetBinLowEdge(1) ]
+		width = axis.GetBinWidth(1)
+		for i in range( 1, axis.GetNbins()+1 ):
+			result.append( result[-1]+width )
+	return result
+
+def appendFlowBin2D( oldHist, firstBinX=0, lastBinX=0, firstBinY=0, lastBinY=0 ):
+	# this is still buggy. If the over/underflow bin is too small, it is not drawn.
+	oldXList = getAxisBinningFromHisto( oldHist.GetXaxis() )
+	oldYList = getAxisBinningFromHisto( oldHist.GetYaxis() )
+	if firstBinX:
+		oldXList.insert( 0, oldXList[0] - firstBinX )
+	if lastBinX:
+		oldXList.append( oldXList[-1] + lastBinX )
+	if firstBinY:
+		oldYList.insert( 0, oldYList[0] - firstBinY )
+	if lastBinY:
+		oldYList.append( oldYList[-1] + lastBinY )
+	import array
+	newX = array.array("d", oldXList )
+	newY = array.array("d", oldYList )
+	import ROOT
+	title = oldHist.GetTitle()+";"+oldHist.GetXaxis().GetTitle()+";"+oldHist.GetYaxis().GetTitle()
+	newHist = ROOT.TH2D( randomName(), title, len(newX)-1, newX, len(newY)-1, newY )
+	for i in range(oldHist.GetNbinsX()+2):
+		for j in range(oldHist.GetNbinsY()+2):
+			newBin = newHist.FindBin( oldHist.GetXaxis().GetBinCenter(i), oldHist.GetYaxis().GetBinCenter(j) )
+			newHist.SetBinContent( newBin, oldHist.GetBinContent(i,j) )
+			newHist.SetBinError( newBin, oldHist.GetBinError(i,j) )
+	return newHist
+
 
 def appendOverflowBin( oldHist, overflow ):
 	"""Append the overflow bin to a histogram.
@@ -134,6 +190,43 @@ def getHisto( tree, plot, cut="1", overflow=0, weight="weight", color=1, nBins=2
 
 	histo.SetTitle( getHistoTitle( histo, plot, label, unit, binning ) )
 	return histo
+
+def getAxisTitle( plot ):
+	objectReplacement = {
+			"gamma": "#gamma",
+			"electron": "e",
+			"muon": "#mu"
+		}
+	variableReplacement = {
+			"phi":"#phi",
+			"eta":"#eta",
+			"pt":"p_{T ",
+			"ptJet":"p_{T* ",
+			"sigmaIetaIeta":"#sigma_{i#etai#eta",
+			"hadTowOverEm":"H/E",
+			"chargedIso": "Iso^{#pm}",
+			"neutralIso": "Iso^{0}",
+			"photonIso": "Iso^{#gamma}"
+		}
+	import re
+	objVarExpr = "([a-zA-Z]+)\[{0,1}(\d*)\]{0,1}\.([a-zA-Z]+)" # matches eg photon.pt
+	if "Length$(" in plot:
+		obj, nObj, var = re.match( "Length\$\(%s\)"%objVarExpr, plot ).groups()
+		obj = reduce(lambda x, y: x.replace(y, objectReplacement[y]), objectReplacement, obj )
+		label = "N_{%s}"%obj
+	elif "." in plot:
+		obj, nObj, var = re.match( objVarExpr, plot ).groups()
+		var = reduce(lambda x, y: x.replace(y, variableReplacement[y]), variableReplacement, var )
+		obj = reduce(lambda x, y: x.replace(y, objectReplacement[y]), objectReplacement, obj )
+		if "_{" not in var:
+			var += "_{"
+		if nObj:
+			label = "%s%s.%s}"%(var,int(nObj)+1,obj)
+		else:
+			label = "%s%s}"%(var,obj)
+	else:
+		label = plot
+	return label
 
 def getHistoTitle( histo, plot, label, unit, binning ):
 	ytitle = "Entries"
