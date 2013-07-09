@@ -193,7 +193,7 @@ def getHisto( tree, plot, cut="1", overflow=0, weight="weight", color=1, nBins=2
 
 def getAxisTitle( plot ):
 	objectReplacement = {
-			"gamma": "#gamma",
+			"photon": "#gamma",
 			"electron": "e",
 			"muon": "#mu"
 		}
@@ -224,6 +224,8 @@ def getAxisTitle( plot ):
 			label = "%s%s.%s}"%(var,int(nObj)+1,obj)
 		else:
 			label = "%s%s}"%(var,obj)
+	elif plot == "ht":
+		label = "H_{T}"
 	else:
 		label = plot
 	return label
