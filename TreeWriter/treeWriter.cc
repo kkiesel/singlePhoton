@@ -160,6 +160,27 @@ bool isVetoElectron( const susy::Electron& electron, const susy::Event& event, c
 	return isElectron;
 }
 
+bool looseJetId( const susy::PFJet& jet ) {
+	/**
+	 * \brief Apply loose cut on jets.
+	 *
+	 * See https://twiki.cern.ch/twiki/bin/viewauth/CMS/JetID#Recommendations_for_7_TeV_data_a
+	 * for more information.
+	 */
+	double energy = jet.momentum.E();
+	if (
+			jet.neutralHadronEnergy / energy < 0.99
+			&& jet.neutralEmEnergy / energy < 0.99
+			&& jet.nConstituents > 1
+			&& ( std::abs(jet.momentum.Eta())>=2.4
+				|| ( jet.chargedHadronEnergy / energy > 0
+					&& jet.chargedMultiplicity > 0
+					&& jet.chargedEmEnergy < 0.99 ) ) )
+		return true;
+	else
+		return false;
+}
+
 float getPtFromMatchedJet( const susy::Photon& myPhoton, const susy::PFJetCollection& jetColl, int loggingVerbosity = 0 ) {
 	/**
 	 * \brief Takes jet p_T as photon p_T
@@ -513,6 +534,8 @@ void TreeWriter::Loop() {
 		for(std::vector<susy::PFJet>::iterator it = jetVector.begin();
 				it != jetVector.end(); ++it) {
 
+			if( !looseJetId( *it ) ) continue
+
 			// compute H_T with uncorrected ak5PFJets, to have larger agreement
 			//  with trigger
 			if( std::abs( it->momentum.Eta() ) < 3 && it->momentum.Pt() > 40 )
@@ -520,10 +543,10 @@ void TreeWriter::Loop() {
 
 			// scale with JEC
 			float scale = 1.;
-			if(it->jecScaleFactors.count("L2L3") == 0)
+			if(it->jecScaleFactors.count("L1FastL2L3") == 0)
 				std::cout << "ERROR: JEC is not available for this jet" << std::endl;
 			else
-				scale = it->jecScaleFactors.find("L2L3")->second;
+				scale = it->jecScaleFactors.find("L1FastL2L3")->second;
 			TLorentzVector corrP4 = scale * it->momentum;
 
 			if(std::abs(corrP4.Eta()) > 2.6 ) continue;

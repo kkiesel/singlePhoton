@@ -3,6 +3,7 @@
 import ROOT
 import argparse
 import ConfigParser
+import re
 from math import sqrt
 from multiplot import *
 from treeFunctions import *
@@ -17,45 +18,25 @@ ROOT.gSystem.Load("libTreeObjects.so")
 # to TApplication
 ROOT.PyConfig.IgnoreCommandLineOptions = True
 
-def writeWeight1D( fileName, tree, h_weight, variable ):
-	f = ROOT.TFile( fileName, "update" )
-
-	weightTree = ROOT.TTree("weightTree", "Tree containing QCD weights" )
-	import numpy
-	weight = numpy.zeros( 1, dtype=float)
-	weight_error = numpy.zeros( 1, dtype=float)
-
-	weightTree.Branch( "w_qcd", weight, "w_qcd/D" )
-	weightTree.Branch( "w_qcd_error", weight_error, "w_qcd_error/D" )
-
-	variable = variable.replace("[0]",".at(0)")
-	variable = "tree."+variable
-
-	for event in tree:
-		if not event.GetReadEntry()%10000:
-			print "%s / %s"%(event.GetReadEntry(), event.GetEntries() )
-		pt = eval( variable )
-		weight[0] = h_weight.GetBinContent( h_weight.FindBin( pt ) )
-		weight_error[0] = h_weight.GetBinError( h_weight.FindBin( pt ) )
-		weightTree.Fill()
-
-	f.cd()
-	weightTree.Write()
-	f.Close()
-
-def writeWeight2D( fileName, tree, h_weight, weightTreeName ):
+def writeWeight2DToFile( fileName, tree, h_weight, weightTreeName ):
+	"""Write weight for a tree in another tree in a given file.
+	This tree can be added to the original tree via 'AddFriend()'.
+	fileName: name of file to which tree is written
+	tree: tree which is weighted
+	h_weight: two dimensional histogram with weights
+	weighTreeName: name of the new tree
+	"""
 	weightTree = ROOT.TTree( weightTreeName, "Tree containing QCD weights" )
 	import numpy
 	weight = numpy.zeros( 1, dtype=float)
 	weight_error = numpy.zeros( 1, dtype=float)
-
 	weightTree.Branch( "w_qcd", weight, "w_qcd/D" )
 	weightTree.Branch( "w_qcd_error", weight_error, "w_qcd_error/D" )
 
 	for event in tree:
 		if not event.GetReadEntry()%10000:
 			print "%s / %s"%(event.GetReadEntry(), event.GetEntries() )
-		b = h_weight.FindBin( event.photon.at(0).ptJet, event.jet.size() )
+		b = h_weight.FindBin( event.photon.at(0).ptJet, event.ht )
 		weight[0] = h_weight.GetBinContent( b )
 		weight_error[0] = h_weight.GetBinError( b )
 		weightTree.Fill()
@@ -65,53 +46,98 @@ def writeWeight2D( fileName, tree, h_weight, weightTreeName ):
 	weightTree.Write()
 	f.Close()
 
-def drawDifferentWeights1D( weight2D, cutText ):
-	leg = ROOT.TLegend(.2, .6, .5, .9 )
-	leg.SetHeader("n_{Jet}")
+def drawDifferentWeights1D( weight2D ):
+	"""Draw the weights as one dimensional histograms for each y-Bin."""
 	weightHistos = []
 	for yBin in range( weight2D.GetNbinsY()+1 ):
 		h = weight2D.ProjectionX( "_px%s"%yBin, yBin, yBin+1 )
 		h.SetLineColor( yBin+1 )
 		h.SetMarkerColor( h.GetLineColor() )
 		h.SetTitle("w")
+		h.SetMarkerSize(0)
 		weightHistos.append( h )
 
 	can = ROOT.TCanvas()
 	can.SetLogy(0)
 	can.cd()
 
-	weightHistos[0].Draw()
+	weightHistos[0].Draw("hist e" )
+	weightHistos[0].SetMaximum(33)
 	for h in weightHistos[1:]:
-		h.Draw("same")
+		h.Draw("same hist e")
 
-	cutText.Draw()
 	can.SaveAs("qcd_preWeight_weights1D.pdf")
 	return
 
-def writeWeights( fileName, gControlTree, foControlTree, foSignalTree, plotStuff=None ):
-	cutText, datasetAffix, cutSaveAffix = plotStuff
+def getWeightHisto2D( gControlTree, foControlTree, datasetAffix ):
+	"""The histogram for the weights in created here."""
 
-	xlabel, xunit, xbinning = readAxisConf( "photon[0].ptJet" )
-	ylabel, yunit, ybinning = "n_{Jet}", "", [ 1.5, 2.5 ]
+	xVar = "photon[0].ptJet"
+	yVar = "ht"
+	xlabel, xunit, xbinning = readAxisConf( xVar )
+	ylabel, yunit, ybinning = readAxisConf( yVar )
 
-	weight_numerator = createHistoFromTree2D( gControlTree, "Length$(jet.pt):photon[0].ptJet", "weight", xbinning, ybinning )
-	weight_denominator = createHistoFromTree2D( foControlTree, "Length$(jet.pt):photon[0].ptJet", "weight", xbinning, ybinning )
+	weight_numerator = createHistoFromTree2D( gControlTree, yVar+":"+xVar, "weight", xbinning, ybinning )
+	weight_denominator = createHistoFromTree2D( foControlTree, yVar+":"+xVar, "weight", xbinning, ybinning )
 	weight2D = divideHistos( weight_numerator, weight_denominator )
 
-	drawDifferentWeights1D( weight2D, cutText )
+	# Set the weight and error for empty bins to one.
+	for i in range( weight2D.GetXaxis().GetNbins()+1 ):
+		for j in range( weight2D.GetYaxis().GetNbins()+1 ):
+			if not weight2D.GetBinContent( i, j ):
+				weight2D.SetBinContent( i, j, 1 )
+				weight2D.SetBinError( i, j, 1 )
+
+	# Draw the histograms
+	info = PlotCaption()
+	info.controlCut()
+
+	# Display the weight errors as 2D histograms.
+	weightErrors = weight2D.Clone( randomName() )
+	weightRelErrors = weight2D.Clone( randomName() )
+	for i in range( weight2D.GetXaxis().GetNbins()+1 ):
+		for j in range( weight2D.GetYaxis().GetNbins()+1 ):
+			weightErrors.SetBinContent( i, j, weight2D.GetBinError( i, j ) )
+			weightRelErrors.SetBinContent( i, j, weight2D.GetBinError( i, j )/weight2D.GetBinContent( i, j ) )
 
 	Styles.tdrStyle2D()
+	ROOT.gStyle.SetPaintTextFormat("4.2f");
 	can2D = ROOT.TCanvas()
 	can2D.cd()
-	for hist, name in [ (weight_numerator,"numerator"), (weight_denominator, "denominator"), (weight2D, "weight2D") ]:
-		h = appendFlowBin2D( hist, 10, 10, 0, .53 )
-		h.Draw("colz")
-		cutText.Draw()
-		can2D.SaveAs("qcd_preWeight_%s_%s_%s.pdf"%(name,datasetAffix,cutSaveAffix))
+	for hist, name in [
+			(weight_numerator,"numerator"),
+			(weight_denominator, "denominator"),
+			(weight2D, "weight2D"),
+			(weightErrors, "weightError"),
+			(weightRelErrors, "weightRelError") ]:
+		hist.Draw("colz text")
+		info.Draw()
+		can2D.SaveAs( "plots/qcd_preWeight_%s_%s.pdf"%(datasetAffix,name) )
 	Styles.tdrStyle()
 
-	writeWeight2D( fileName, foControlTree, weight2D, "foControlWeights" )
-	writeWeight2D( fileName, foSignalTree, weight2D, "foSignalWeights" )
+	# Draw the projections before the weights are applied.
+	pt = getHisto( gControlTree, xVar )
+	pt_fo = getHisto( foControlTree, xVar, color=2 )
+	ht = getHisto( gControlTree, yVar )
+	ht_fo = getHisto( foControlTree, yVar, color=2 )
+
+	can = ROOT.TCanvas()
+	can.cd()
+	x_multi = Multihisto()
+	x_multi.addHisto( pt, "#gamma", draw="hist" )
+	x_multi.addHisto( pt_fo, "#gamma_{jet}", draw="hist" )
+	x_multi.Draw()
+	info.Draw()
+	can.SaveAs( "plots/qcd_preWeight_%s_pt.pdf"%datasetAffix )
+
+	y_multi = Multihisto()
+	y_multi.addHisto( ht, "#gamma", draw="hist" )
+	y_multi.addHisto( ht_fo, "#gamma_{jet}", draw="hist" )
+	y_multi.Draw()
+	info.Draw()
+	can.SaveAs( "plots/qcd_preWeight_%s_ht.pdf"%datasetAffix )
+
+	return weight2D
 
 def clearTreeFromJets( inTree, jets, _deltaR=.3 ):
 	from splitCandidatesQCDtest import deltaR
@@ -129,83 +155,33 @@ def clearTreeFromJets( inTree, jets, _deltaR=.3 ):
 	#newTree.SetMaxVirtualSize(int(1e7))
 	return newTree
 
-def qcdClosure( fileName, opts, cuts ):
-	# process cut string for readability
-	cutSaveAffix = "%s_%s_%s_%s_%s"%(cuts["chIso"], cuts["nIsoRel"], cuts["nIso"], cuts["pIsoRel"], cuts["pIso"])
-	cutText = ROOT.TPaveText(0,.95, 1, .99, "ndc" )
-	cutText.AddText( "#sigma_{i#etai#eta}<0.014  Iso^{#pm}<%s  Iso^{0}<%s+%sp_{T}  Iso^{#gamma}<%s+%sp_{T}"%(cuts["chIso"],cuts["nIso"],cuts["nIsoRel"],cuts["pIso"],cuts["pIsoRel"]) )
-	cutText.SetFillColor(0)
-	cutText.SetLineWidth(0)
-	cutText.SetLineColor(0)
-	cutText.SetShadowColor(0)
-	import re
-	datasetAffix = re.match(".*slim(.*)_V.*", fileName ).groups()[0]
+def addErrorAndDivide( h_fo, h_fo_error ):
+	import math
+	h_new = h_fo_error.Clone( randomName() )
+	for bin in range( h_fo_error.GetNbinsX()+1 ):
+		if h_fo.GetBinContent(bin):
+			h_new.SetBinError( bin, math.sqrt( h_fo_error.GetBinError(bin)**2 + h_fo.GetBinError(bin)**2 )/h_fo.GetBinContent(bin) )
+		h_new.SetBinContent( bin, 1 )
+	return h_new
 
-	# Apply the cuts and divide in control and signal region
-	signalCut = "met > 100"
-	controlCut = "met <= 100"
-	foCut = "Min$(photon.pt) > 80" \
-			+"&& Max$(photon.sigmaIetaIeta) < 0.014" \
-			+"&& Max$(photon.hadTowOverEm) < 0.05" \
-			+"&& Max$(photon.chargedIso) < 15" \
-			+"&& Max$(photon.neutralIso-0.04*photon.pt)<3.5" \
-			+"&& Max$(photon.photonIso-0.005*photon.pt) < 1.3" \
-			+"&& ( Min$(photon.chargedIso)>2.6 || Min$(photon.sigmaIetaIeta)>0.012 )" \
-			+"&& @photon.size()>0"
+def drawClosure( plot, gSignalTree, foSignalTree, can, info, datasetAffix, additionalInfo="" ):
 
-	foCut = "Max$(photon.hadTowOverEm) < 0.05" \
-			+"&& Max$(photon.chargedIso) < %s"%cuts["chIso"] \
-			+"&& Max$(photon.neutralIso- %s *photon.pt)< %s "%(cuts["nIsoRel"], cuts["nIso"]) \
-			+"&& Max$(photon.photonIso- %s *photon.pt) < %s "%(cuts["pIsoRel"], cuts["pIso"]) \
-			+"&& @photon.size()>0" # +"&& ( Min$(photon.chargedIso)>2.6 || Min$(photon.sigmaIetaIeta)>0.012)"
-
-	gSignalTree = readTree( fileName, "photonTree").CopyTree( signalCut )
-	gControlTree = readTree( fileName, "photonTree").CopyTree( controlCut )
-	foSignalTree = readTree( fileName, "photonJetTree").CopyTree( signalCut+"&&"+foCut )
-	foControlTree = readTree( fileName, "photonJetTree").CopyTree( controlCut+"&&"+foCut )
-
-	# Clean jets from fake object
-	jets = ROOT.std.vector("tree::Jet")()
-	foControlTree = clearTreeFromJets( foControlTree, jets )
-	foSignalTree = clearTreeFromJets( foSignalTree, jets )
-
-	writeWeights( fileName, gControlTree, foControlTree, foSignalTree, [cutText, datasetAffix, cutSaveAffix] )
-
-	foSignalTree.AddFriend( "foSignalWeights", fileName )
-	foControlTree.AddFriend( "foControlWeights", fileName )
-
-	plots = [ "met", "ht", "photon[0].ptJet", "Length$(jet.pt)" ]
-
-	can = ROOT.TCanvas()
-	can.cd()
-	for plot in plots:
 		# The first attempt to get the histogram is only to get the minimal
 		# and maximal value on the x-axis, for not predefined binning
 		h_gamma = getHisto( gSignalTree, plot )
 		h_fo = getHisto( foSignalTree, plot, cut="1" )
 		xMin, xMax = getXMinXMax( [ h_gamma, h_fo ] )
 
-		# for integers, adjust nBins and shift by 0.5
-		if "Length$(" in plot or "nVertex" == plot:
-			xMin -= .5
-			xMax += .5
-			nBins = int(xMax-xMin)
-		else:
-			nBins = 20
-
-		# there is a muon with 7000 GeV, which destroys the automatic binning
-		if plot == "muon.pt":
-			xMax = 200
-
-		h_gamma = getHisto( gSignalTree, plot, color=1, nBins=nBins, firstBin=xMin,lastBin=xMax )
-		h_fo = getHisto( foSignalTree, plot, cut="1", weight="weight*w_qcd", color=46, nBins=nBins, firstBin=xMin,lastBin=xMax )
-		h_fo_error = getQCDErrorHisto( foSignalTree, plot, cut="1",nBins=nBins, firstBin=xMin, lastBin=xMax )
-		h_fo_error.SetFillColor(2)
+		h_gamma = getHisto( gSignalTree, plot, color=1, firstBin=xMin,lastBin=xMax )
+		h_fo = getHisto( foSignalTree, plot, cut="1", weight="weight*w_qcd", color=46, firstBin=xMin,lastBin=xMax )
+		h_fo_error = getQCDErrorHisto( foSignalTree, plot, cut="1", firstBin=xMin, lastBin=xMax )
+		h_fo_error.SetFillColor( h_fo.GetLineColor() )
+		h_fo_error.SetLineColor( h_fo_error.GetLineColor() )
 		h_fo_error.SetFillStyle(3254)
 		h_fo_error.SetMarkerSize(0)
 
 		muhisto = Multihisto()
-		muhisto.leg.SetHeader( datasetAffix )
+		muhisto.leg.SetHeader( datasetToLatex( datasetAffix ) )
 		muhisto.addHisto( h_gamma, "#gamma", draw="hist e0" )
 		muhisto.addHisto( h_fo, "#gamma_{jet}#upointw", draw="hist e0")
 		muhisto.addHisto( h_fo_error, "#sigma_{w}", draw="e2")
@@ -213,31 +189,95 @@ def qcdClosure( fileName, opts, cuts ):
 		hPad = ROOT.TPad("hPad", "Histogram", 0, 0.2, 1, 1)
 		hPad.cd()
 		muhisto.Draw()
-		cutText.Draw()
 
 		ratioPad = ROOT.TPad("ratioPad", "Ratio", 0, 0, 1, 0.2)
 		ratioPad.cd()
-		ratioPad.SetLogy(0)
-		ratioGraph = ratios.RatioGraph(h_fo, h_gamma)
-		ratioGraph.draw(ROOT.gPad, yMin=0.5, yMax=1.5, adaptiveBinning=False, errors="yx")
+		ratioGraph = ratios.RatioGraph( h_gamma, h_fo )
+		ratioGraph.draw(ROOT.gPad, yMin=0.3, yMax=3, adaptiveBinning=False, errors="yx")
 		ratioGraph.graph.Draw("same p e0") # draw nice points
-		ratioGraph.hAxis.SetYTitle( "#gamma_{pred}/#gamma")
+		ratioGraph.hAxis.SetYTitle( "#gamma/#gamma_{pred}")
+
+		h2 = addErrorAndDivide( h_fo, h_fo_error )
+		h2.Draw("same e2")
+
 		can.cd()
 		hPad.Draw()
 		ratioPad.Draw()
-		SaveAs(can, "plots","qcd_%s_%s_afterWeighting_%s"%(datasetAffix, plot,cutSaveAffix))
+		info.Draw()
+		SaveAs(can, "plots","qcd_afterWeighting_%s_%s"%(datasetAffix+additionalInfo, plot) )
 		ROOT.SetOwnership( hPad, False )
 		ROOT.SetOwnership( ratioPad, False )
 
+def qcdClosure( fileName, opts, cuts ):
+	try:
+		datasetAffix = re.match(".*slim(.*)_V.*", fileName ).groups()[0]
+	except:
+		try:
+			datasetAffix = re.match(".*slim(.*)\.root", fileName ).groups()[0]
+		except:
+			datasetAffix = fileName
+
+	# Apply the cuts and divide in control and signal region
+	signalCut = "met > 100"
+	controlCut = "met <= 100"
+	foCut = "Max$(photon.hadTowOverEm) < 0.05" \
+			+"&& Max$(photon.chargedIso) < %s"%cuts["chIso"] \
+			+"&& Max$(photon.neutralIso- %s *photon.pt)< %s "%(cuts["nIsoRel"], cuts["nIso"]) \
+			+"&& Max$(photon.photonIso- %s *photon.pt) < %s "%(cuts["pIsoRel"], cuts["pIso"]) \
+			+"&& @photon.size()>0" # +"&& ( Min$(photon.chargedIso)>2.6 || Min$(photon.sigmaIetaIeta)>0.012)"
+
+	if True:
+		foCutValentina = "Max$(photon.hadTowOverEm) < 0.05" \
+			+"&& Max$(photon.chargedIso) < 15" \
+			+"&& Max$(photon.neutralIso- 0.04 *photon.pt)<3.5" \
+			+"&& Max$(photon.photonIso- 0.005 *photon.pt) < 1.3 " \
+			+"&& ( Min$(photon.chargedIso)>2.6 || Min$(photon.sigmaIetaIeta)>0.012)" \
+			+"&& @photon.size()>0"
+		foCut = foCutValentina
+
+	gTree = readTree( fileName, "photonTree" )
+	foTree = readTree( fileName, "photonJetTree" ).CopyTree( foCut )
+	gControlTree = readTree( fileName, "photonTree").CopyTree( controlCut )
+	gSignalTree = readTree( fileName, "photonTree").CopyTree( signalCut )
+	foControlTree = readTree( fileName, "photonJetTree").CopyTree( controlCut+"&&"+foCut )
+	foSignalTree = readTree( fileName, "photonJetTree").CopyTree( signalCut+"&&"+foCut )
+
+	# Clean jets from fake object
+	jets = ROOT.std.vector("tree::Jet")()
+	foControlTree = clearTreeFromJets( foControlTree, jets )
+	foSignalTree = clearTreeFromJets( foSignalTree, jets )
+
+	weights = getWeightHisto2D( gControlTree, foControlTree, datasetAffix )
+	writeWeight2DToFile( fileName, foSignalTree, weights, "foSignalWeights" )
+	foSignalTree.AddFriend( "foSignalWeights", fileName )
+	writeWeight2DToFile( fileName, foTree, weights, "foWeights" )
+	foTree.AddFriend( "foWeights", fileName )
+	writeWeight2DToFile( fileName, foControlTree, weights, "foControlWeights" )
+	foControlTree.AddFriend( "foControlWeights", fileName )
+
+	plots = [ "met", "ht", "photon[0].ptJet", "Length$(jet.pt)" ]
+
+	infoControl = PlotCaption()
+	infoControl.controlCut()
+	infoSignal = PlotCaption()
+	infoSignal.signalCut()
+	info = PlotCaption()
+	can = ROOT.TCanvas()
+	can.cd()
+	for plot in plots:
+		drawClosure( plot, gSignalTree, foSignalTree, can, infoSignal, datasetAffix, "_signal" )
+		drawClosure( plot, gControlTree, foControlTree, can, infoControl, datasetAffix, "_control" )
+		drawClosure( plot, gTree, foTree, can, info, datasetAffix )
+
 	# Delete the trees from memory, important for many iterations.
-	for tree in [ gSignalTree, gControlTree ]:
+	ROOT.SetOwnership( foSignalTree, False )
+	ROOT.SetOwnership( foControlTree, False )
+	for tree in [ gSignalTree, gControlTree, foSignalTree, foControlTree ]:
 		tree.Delete()
 		del tree
-	del foSignalTree
-	del foControlTree
-
 
 def drange( start, stop, step ):
+	"""Similar to 'range' function, but works with floating point steps as well."""
 	r = start
 	while r < stop:
 		yield r
@@ -252,15 +292,15 @@ if __name__ == "__main__":
 	opts = arguments.parse_args()
 
 	for inName in opts.input:
-		cuts = { "chIso":  2.6,
+		cuts = { "chIso":  4.6,
 				"nIsoRel": 0.04,
-				"nIso":    3.5,
+				"nIso":    4.5,
 				"pIsoRel": 0.005,
 				"pIso":    1.3 }
 
-		for chIso in drange( 2.6, 7.2, 0.4 ):
+		qcdClosure( inName, opts, cuts )
+		for chIso in drange( 2.6, 8.2, 0.4 ):
 			cuts["chIso"] = chIso
-			qcdClosure( inName, opts, cuts )
 		#for nIsoRel in drange( .005, 0.024, 0.001 ):
 		#	cuts["pIsoRel"] = nIsoRel
 		#	for nIso in drange( 1.3, 13.5, .5 ):

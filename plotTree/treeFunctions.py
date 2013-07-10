@@ -1,3 +1,51 @@
+def datasetToLatex( fileNamePart ):
+	sets = { "AllQCD": "QCD(+#gamma)",
+			"TTbar": "t#bar{t}",
+			"WJet": "W"
+			}
+	for part, label in sets.iteritems():
+		if part in fileNamePart:
+			return label
+	return fileNamePart
+
+class PlotCaption:
+	"""Creates the superscription for each plot, eg
+	'19fb^{-1} sqrt{s)=8TeV #geq1#gamma #geq2jets'
+	"""
+	def __init__( self, x0=.96, y0=.96, analysisInfo=True, option="ndc" ):
+		import ROOT
+		self.x0 = x0
+		self.text = ROOT.TLatex( x0, y0, "" )
+		self.text.SetTextSize(0.03)
+		self.text.SetNDC()
+		if analysisInfo:
+			self.addAnalysisInfo()
+
+	def addAnalysisInfo( self, lumi=19800, e=8, defaultcuts="#geq1#gamma,#geq2jets" ):
+		self.text.SetText( self.text.GetX(), self.text.GetY(), "%.1ffb^{-1} #sqrt{s}=%sTeV %s"%( lumi/1000., e, defaultcuts ) )
+
+	def appendEnd( self, string ):
+		newText = self.text.GetTitle() + string
+		self.text.Clear()
+		self.text.SetText( self.text.GetX(), self.text.GetY(), newText )
+
+	def appendFront( self, string ):
+		newText = string + self.text.GetTitle()
+		self.text.Clear()
+		self.text.SetText( self.text.GetX(), self.text.GetY(), newText )
+
+	def controlCut( self ):
+		self.appendEnd(",#slash{E}_{T}<100GeV")
+
+	def signalCut( self ):
+		self.appendEnd(",#slash{E}_{T}#geq100GeV")
+
+	def Draw( self ):
+		import ROOT
+		shiftNDC = self.text.GetXsize() / ( ROOT.gPad.GetX2() - ROOT.gPad.GetX1() )
+		self.text.SetX( self.x0-shiftNDC )
+		self.text.Draw()
+
 def randomName():
 	"""
 	Generate a random string. This function is useful to give ROOT objects
@@ -176,6 +224,12 @@ def getHisto( tree, plot, cut="1", overflow=0, weight="weight", color=1, nBins=2
 	cut: cutstring applied to the tree
 	overflow: size of the overflow bin, if overflow>0
 	"""
+	if firstBin and lastBin:
+		if "Length$(" in plot or "nVertex" == plot:
+			firstBin -= .5
+			lastBin += .5
+			nBins = int(xMax-xMin)
+
 	label, unit, binning = readAxisConf( plot )
 	if binning:
 		histo = createHistoFromTree( tree, plot, "%s*(%s)"%(weight, cut), nBins=binning)
@@ -190,6 +244,29 @@ def getHisto( tree, plot, cut="1", overflow=0, weight="weight", color=1, nBins=2
 
 	histo.SetTitle( getHistoTitle( histo, plot, label, unit, binning ) )
 	return histo
+
+def getQCDErrorHisto( tree, plot, cut="1", overflow=0, nBins=20, firstBin=None, lastBin=None ):
+	"""Applies w_qcd +- w_qcd_error for qcd error propagation.
+	The returned histo's content is the mean, the error are the shifts up and down.
+	"""
+	label, unit, binning = readAxisConf( plot )
+	if binning:
+		histoUp = createHistoFromTree( tree, plot, "(weight*(w_qcd+w_qcd_error))*(%s)"%(cut), nBins=binning)
+		histoDown = createHistoFromTree( tree, plot, "(weight*(w_qcd-w_qcd_error))*(%s)"%(cut), nBins=binning)
+	else:
+		histoUp = createHistoFromTree( tree, plot, "(weight*(w_qcd+w_qcd_error))*(%s)"%(cut), nBins=nBins, firstBin=firstBin, lastBin=lastBin )
+		histoDown = createHistoFromTree( tree, plot, "(weight*(w_qcd-w_qcd_error))*(%s)"%(cut), nBins=nBins, firstBin=firstBin, lastBin=lastBin )
+	if overflow > 0:
+		histoUp = appendOverflowBin(histoUp, overflow)
+		histoDown = appendOverflowBin(histoDown, overflow)
+
+	outHisto = histoUp.Clone( randomName() )
+	for bin in range( histoUp.GetNbinsX()+1 ):
+		up = histoUp.GetBinContent(bin)
+		down = histoDown.GetBinContent(bin)
+		outHisto.SetBinContent( bin, (up+down)/2 )
+		outHisto.SetBinError( bin, (up-down)/2 )
+	return outHisto
 
 def getAxisTitle( plot ):
 	objectReplacement = {
@@ -233,33 +310,7 @@ def getAxisTitle( plot ):
 def getHistoTitle( histo, plot, label, unit, binning ):
 	ytitle = "Entries"
 	if not label:
-		import re
-		objVarExpr = "([a-zA-Z]+)\[{0,1}(\d*)\]{0,1}\.([a-zA-Z]+)" # matches eg photon.pt
-		if "Length$(" in plot:
-			obj, nObj, var = re.match( "Length\$\(%s\)"%objVarExpr, plot ).groups()
-			label = "N_{%s}"%obj
-
-		elif "." in plot:
-			obj, nObj, var = re.match( objVarExpr, plot ).groups()
-			var = var.replace("phi","#phi")
-			var = var.replace("eta","#eta")
-			var = var.replace("pt","p_{T ")
-			var = var.replace("sigmaIetaIeta","#sigma_{i#etai#eta")
-			var = var.replace("hadTowOverEm","H/E")
-			var = var.replace("chargedIso", "Iso^{#pm}")
-			var = var.replace("neutralIso", "Iso^{0}")
-			var = var.replace("photonIso", "Iso^{#gamma}")
-			if "_{" not in var:
-				var += "_{"
-			obj = obj.replace("gamma","#gamma")
-			obj = obj.replace("electron","e")
-			obj = obj.replace("muon", "#mu")
-			if nObj:
-				label = "%s%s.%s}"%(var,int(nObj)+1,obj)
-			else:
-				label = "%s%s}"%(var,obj)
-		else:
-			label = plot
+		label = getAxisTitle( plot )
 	if binning:
 		ytitle+= " / Bin"
 		if unit:
@@ -271,52 +322,6 @@ def getHistoTitle( histo, plot, label, unit, binning ):
 			label+= " [%s]"%unit
 			ytitle+= " %s"%unit
 	return ";%s;%s"%( label, ytitle )
-
-
-def getQCDErrorHisto( tree, plot, cut="1", overflow=0, nBins=20, firstBin=None, lastBin=None ):
-	"""Applies w_qcd +- w_qcd_error for qcd error propagation.
-	The returned histo's content is the mean, the error are the shifts up and down.
-	"""
-	label, unit, binning = readAxisConf( plot )
-	if binning:
-		histoUp = createHistoFromTree( tree, plot, "(weight*(w_qcd+w_qcd_error))*(%s)"%(cut), nBins=binning)
-		histoDown = createHistoFromTree( tree, plot, "(weight*(w_qcd-w_qcd_error))*(%s)"%(cut), nBins=binning)
-	else:
-		histoUp = createHistoFromTree( tree, plot, "(weight*(w_qcd+w_qcd_error))*(%s)"%(cut), nBins=nBins, firstBin=firstBin, lastBin=lastBin )
-		histoDown = createHistoFromTree( tree, plot, "(weight*(w_qcd-w_qcd_error))*(%s)"%(cut), nBins=nBins, firstBin=firstBin, lastBin=lastBin )
-	if overflow > 0:
-		histoUp = appendOverflowBin(histoUp, overflow)
-		histoDown = appendOverflowBin(histoDown, overflow)
-
-	outHisto = histoUp.Clone( randomName() )
-	for bin in range( histoUp.GetNbinsX()+1 ):
-		up = histoUp.GetBinContent(bin)
-		down = histoDown.GetBinContent(bin)
-		outHisto.SetBinContent( bin, (up+down)/2 )
-		outHisto.SetBinError( bin, (up-down)/2 )
-	return outHisto
-
-def extractHisto( dataset, plot, overflow=0 ):
-	label, unit, binning = readAxisConf( plot )
-	histo = createHistoFromTree( dataset.tree, plot, "weight*(%s)"%(dataset.additionalCut), nBins=binning)
-	if overflow > 0:
-		histo = appendOverflowBin(histo, overflow)
-
-	histo.SetLineColor( dataset.color )
-	histo.SetMarkerColor( dataset.color )
-
-	ytitle = "Entries"
-	if binning:
-		ytitle+= " / Bin"
-		if unit:
-			label+= " [%s]"%unit
-	else:
-		ytitle+= " / %s"%histo.GetBinWidth(1)
-		if unit:
-			label+= " [%s]"%unit
-			ytitle+= " %s"%unit
-	histo.SetTitle(";%s;%s"%(label, ytitle))
-	return histo
 
 def myLegend( x1, y1, x2=0,y2=0 ):
 	import ROOT
