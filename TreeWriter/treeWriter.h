@@ -71,4 +71,7 @@ class TreeWriter {
 		float ht;
 		int nVertex;
 		double weight;
+		unsigned int runNumber;
+		unsigned int eventNumber;
+		unsigned int luminosityBlockNumber;
 };

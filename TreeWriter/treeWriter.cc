@@ -168,17 +168,13 @@ bool looseJetId( const susy::PFJet& jet ) {
 	 * for more information.
 	 */
 	double energy = jet.momentum.E();
-	if (
-			jet.neutralHadronEnergy / energy < 0.99
+	return jet.neutralHadronEnergy / energy < 0.99
 			&& jet.neutralEmEnergy / energy < 0.99
 			&& jet.nConstituents > 1
 			&& ( std::abs(jet.momentum.Eta())>=2.4
 				|| ( jet.chargedHadronEnergy / energy > 0
 					&& jet.chargedMultiplicity > 0
-					&& jet.chargedEmEnergy < 0.99 ) ) )
-		return true;
-	else
-		return false;
+					&& jet.chargedEmEnergy < 0.99 ) );
 }
 
 float getPtFromMatchedJet( const susy::Photon& myPhoton, const susy::PFJetCollection& jetColl, int loggingVerbosity = 0 ) {
@@ -417,6 +413,9 @@ void TreeWriter::Loop() {
 	tree->Branch("ht", &ht, "ht/F");
 	tree->Branch("nVertex", &nVertex, "nVertex/I");
 	tree->Branch("weight", &weight, "weight/D");
+	tree->Branch("runNumber", &runNumber, "runNumber/i");
+	tree->Branch("eventNumber", &eventNumber, "eventNumber/i");
+	tree->Branch("luminosityBlockNumber", &luminosityBlockNumber, "luminosityBlockNumber/i");
 	tree->Branch("genElectron", &genElectron);
 	tree->Branch("genPhoton", &genPhoton);
 
@@ -429,6 +428,10 @@ void TreeWriter::Loop() {
 
 		if ( event->isRealData )
 			if ( !passTrigger() || !isGoodLumi() || !event->passMetFilters() ) continue;
+
+		runNumber = event->runNumber;
+		eventNumber = event->eventNumber;
+		luminosityBlockNumber = event->luminosityBlockNumber;
 
 		photon.clear();
 		jet.clear();
@@ -534,7 +537,7 @@ void TreeWriter::Loop() {
 		for(std::vector<susy::PFJet>::iterator it = jetVector.begin();
 				it != jetVector.end(); ++it) {
 
-			if( !looseJetId( *it ) ) continue
+			if( !looseJetId( *it ) ) continue;
 
 			// compute H_T with uncorrected ak5PFJets, to have larger agreement
 			//  with trigger
