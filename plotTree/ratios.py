@@ -167,7 +167,12 @@ class RatioGraph:
             yErrors.append(ratio.errorY)
             widths.append(ratio.errorX)
 
-
+        if not xs and not ys:
+            print "Errors empty"
+            xs = [0]
+            ys = [0]
+            widths = [0]
+            yErrors = [0]
 
         # what did I mean with this?
         if "x" in errors and "y" in errors:

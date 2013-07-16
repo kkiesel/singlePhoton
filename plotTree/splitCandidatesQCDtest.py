@@ -164,7 +164,7 @@ def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1, gen
 	for event in tree:
 		if not event.GetReadEntry()%100000:
 			print '{0}%\r'.format(100*event.GetReadEntry()/event.GetEntries())
-		if event.GetReadEntry()%100: ## warning: take only each x-th event!
+		if event.GetReadEntry()%1: ## warning: take only each x-th event!
 			continue
 		if event.GetReadEntry() > processNEvents:
 			break
@@ -183,18 +183,21 @@ def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1, gen
 			# cuts for every object to reject spikes
 			if gamma.r9 < 1 \
 			and gamma.sigmaIetaIeta > 0.001 \
+			and gamma.sigmaIetaIeta < 0.014 \
+			and gamma.hadTowOverEm < 0.10 \
 			and abs(gamma.eta) < 1.4442 \
 			and gamma.pt > 80:
 
 				# gen matching
-				matchGenPhoton = False
-				for trueGamma in event.genPhoton:
-					absDeltaPt = 2*abs( trueGamma.pt - gamma.pt ) / ( trueGamma.pt + gamma.pt )
-					DeltaR = deltaR( gamma, trueGamma )
-					if DeltaR < 0.3 and absDeltaPt < .2:
-						matchGenPhoton = True
-				if matchGenPhoton:
-					gamma.isGenPhoton(True)
+				if genMatching:
+					matchGenPhoton = False
+					for trueGamma in event.genPhoton:
+						absDeltaPt = 2*abs( trueGamma.pt - gamma.pt ) / ( trueGamma.pt + gamma.pt )
+						DeltaR = deltaR( gamma, trueGamma )
+						if DeltaR < 0.3 and absDeltaPt < .2:
+							matchGenPhoton = True
+					if matchGenPhoton:
+						gamma.isGenPhoton(True)
 
 				# look for gamma and electrons
 				if gamma.hadTowOverEm < 0.05 \
@@ -234,7 +237,7 @@ def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1, gen
 	# write everything to output file
 	photonTree.Write()
 	photonJetTree.Write()
-	#photonElectronTree.Write()
+	photonElectronTree.Write()
 	if genMatching:
 		genElectronTree.Write()
 		draw_histogram_dict( histograms, shortName )
@@ -254,7 +257,7 @@ if __name__ == "__main__":
 	# set limit for number of events for testing reason
 	processNEvents = 10000 if opts.test else -1
 
-	integratedLumi = 19300 #pb
+	integratedLumi = 19800 #pb
 
 	datasetConfigName = "dataset.cfg"
 	datasetConf = ConfigParser.SafeConfigParser()
