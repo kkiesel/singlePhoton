@@ -10,6 +10,7 @@
 #include "TTree.h"
 #include "TChain.h"
 #include "TH1F.h"
+#include "TH2F.h"
 #include "TPRegexp.h"
 #include "TArrayI.h"
 
@@ -38,11 +39,13 @@ class TreeWriter {
 		TFile* outFile;
 		TTree* tree;
 		TH1F* eventNumbers;
+		TH2F* matchingHisto;
 
 	private:
 		bool passTrigger();
 		bool isGoodLumi() const;
 		float getPileUpWeight() const;
+		float getPtFromMatchedJet( const susy::Photon& myPhoton ) const;
 
 		int processNEvents; // number of events to be processed
 		unsigned int reportEvery;
