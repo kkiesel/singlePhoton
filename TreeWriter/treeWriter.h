@@ -42,6 +42,8 @@ class TreeWriter {
 	private:
 		bool passTrigger();
 		bool isGoodLumi() const;
+		float getPileUpWeight() const;
+
 		int processNEvents; // number of events to be processed
 		unsigned int reportEvery;
 		unsigned int loggingVerbosity;

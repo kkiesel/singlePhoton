@@ -136,8 +136,11 @@ bool isVetoElectron( const susy::Electron& electron, const susy::Event& event, c
 		std::max(electron.neutralHadronIso+electron.photonIso -
 		effectiveAreaElectron(electron.momentum.Eta())*event.rho25, (float)0. ))
 		/ electron.momentum.Pt();
-	float d0 = d0correction( electron, event );
-	float dZ = std::abs( dZcorrection( electron, event ) );
+	//float d0 = d0correction( electron, event );
+	//float dZ = std::abs( dZcorrection( electron, event ) );
+	susy::Track track = event.tracks[electron.gsfTrackIndex];
+	float d0 = track.d0();
+	float dZ = track.vertex.Z();
 	bool isElectron = false;
 	float eta = std::abs(electron.momentum.Eta());
 	isElectron  = (
@@ -223,6 +226,22 @@ float getPtFromMatchedJet( const susy::Photon& myPhoton, const susy::PFJetCollec
 		}
 	}
 	return pt;
+}
+
+bool goodVertex( susy::Vertex& vtx ) {
+	return (!vtx.isFake() &&
+		vtx.ndof > 4 &&
+		std::abs((vtx.position).z()) < 24.0 &&
+		std::abs((vtx.position).Perp()) < 2.0 );
+}
+
+bool goodVertexInCollection( std::vector<susy::Vertex>& vertexVector ) {
+	for( std::vector<susy::Vertex>::iterator vtx = vertexVector.begin();
+			vtx != vertexVector.end(); ++vtx ) {
+		if( goodVertex( *vtx ) )
+			return true;
+	}
+	return false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -380,6 +399,22 @@ bool TreeWriter::isGoodLumi() const {
 	return goodLumi;
 }
 
+float TreeWriter::getPileUpWeight() const {
+	float thisWeight = 1;
+	if (pileupHisto == 0) {
+		thisWeight = 1.;
+	} else {
+		float trueNumInteractions = -1;
+		for( susy::PUSummaryInfoCollection::const_iterator iBX = event->pu.begin();
+				iBX != event->pu.end() && trueNumInteractions < 0; ++iBX) {
+			if (iBX->BX == 0)
+				trueNumInteractions = iBX->trueNumInteractions;
+		}
+		thisWeight = pileupHisto->GetBinContent( pileupHisto->FindBin( trueNumInteractions ) );
+	}
+	return thisWeight;
+}
+
 void TreeWriter::Loop() {
 	/**
 	 * \brief Loops over input chain and fills tree
@@ -420,18 +455,15 @@ void TreeWriter::Loop() {
 	tree->Branch("genPhoton", &genPhoton);
 
 	for (long jentry=0; jentry < processNEvents; ++jentry) {
-		if ( loggingVerbosity>1 || jentry%reportEvery==0 )
-			std::cout << jentry << " / " << processNEvents << std :: endl;
+		if ( loggingVerbosity>1 || jentry%reportEvery==0 ) std::cout << jentry << " / " << processNEvents << std::endl;
 		inputTree->LoadTree( jentry );
 		//event->getEntry(jentry);
 		inputTree->GetEntry(jentry);
 
 		if ( event->isRealData )
 			if ( !passTrigger() || !isGoodLumi() || !event->passMetFilters() ) continue;
-
-		runNumber = event->runNumber;
-		eventNumber = event->eventNumber;
-		luminosityBlockNumber = event->luminosityBlockNumber;
+		if( !goodVertexInCollection( event->vertices ) )
+			continue;
 
 		photon.clear();
 		jet.clear();
@@ -440,19 +472,10 @@ void TreeWriter::Loop() {
 		genElectron.clear();
 		genPhoton.clear();
 		ht = 0;
-
-		// weights
-		if (pileupHisto == 0) {
-			weight = 1.;
-		} else {
-			float trueNumInteractions = -1;
-			for( susy::PUSummaryInfoCollection::const_iterator iBX = event->pu.begin();
-					iBX != event->pu.end() && trueNumInteractions < 0; ++iBX) {
-				if (iBX->BX == 0)
-					trueNumInteractions = iBX->trueNumInteractions;
-			}
-			weight = pileupHisto->GetBinContent( pileupHisto->FindBin( trueNumInteractions ) );
-		}
+		runNumber = event->runNumber;
+		eventNumber = event->eventNumber;
+		luminosityBlockNumber = event->luminosityBlockNumber;
+		weight = getPileUpWeight();
 
 		// get ak5 jets
 		std::vector<susy::PFJet> jetVector = event->pfJets["ak5"];
@@ -462,7 +485,7 @@ void TreeWriter::Loop() {
 
 		for(std::vector<susy::Photon>::iterator it = photonVector.begin();
 				it != photonVector.end(); ++it ) {
-			if( !(it->isEE() || it->isEB()) && it->momentum.Pt()<20 && it->isEBEtaGap() && it->isEBPhiGap() && it->isEERingGap() && it->isEEDeeGap() && it->isEBEEGap() )
+			if( it->momentum.Pt()<20 )
 				continue;
 			tree::Photon thisphoton;
 
@@ -470,22 +493,26 @@ void TreeWriter::Loop() {
 			thisphoton.neutralIso = neutralHadronIso_corrected(*it, event->rho25);
 			thisphoton.photonIso = photonIso_corrected(*it, event->rho25);
 
-			bool loose_photon_barrel = it->isEB()
+			// For 20 < pt < 80 only photons and photons with pixelseed are
+			// needed for fake-rate studies.
+			float eta = std::abs( it->momentum.Eta() );
+			bool loose_photon_barrel = eta < 1.4442
 				&& it->hadTowOverEm<0.05
 				&& it->sigmaIetaIeta<0.012
 				&& thisphoton.chargedIso<2.6
 				&& thisphoton.neutralIso<3.5+0.04*thisphoton.pt
 				&& thisphoton.photonIso<1.3+0.005*thisphoton.pt;
 
-			bool loose_photon_endcap = it->isEE()
+			bool loose_photon_endcap = 1.5660 < eta && eta < 2.5
 				&& it->hadTowOverEm<0.05
 				&& it->sigmaIetaIeta<0.034
 				&& thisphoton.chargedIso<2.3
 				&& thisphoton.neutralIso<2.9+0.04*thisphoton.pt;
 
-			thisphoton.ptJet = getPtFromMatchedJet( *it, jetVector, loggingVerbosity );
-			if(!(loose_photon_endcap || loose_photon_barrel || thisphoton.ptJet > 75 ) )
+			if( !(loose_photon_endcap || loose_photon_barrel || it->momentum.Pt() > 80 ) )
 				continue;
+
+			thisphoton.ptJet = getPtFromMatchedJet( *it, jetVector, loggingVerbosity );
 			thisphoton.pt = it->momentum.Pt();
 			thisphoton.eta = it->momentum.Eta();
 			thisphoton.phi = it->momentum.Phi();
@@ -538,11 +565,7 @@ void TreeWriter::Loop() {
 				it != jetVector.end(); ++it) {
 
 			if( !looseJetId( *it ) ) continue;
-
-			// compute H_T with uncorrected ak5PFJets, to have larger agreement
-			//  with trigger
-			if( std::abs( it->momentum.Eta() ) < 3 && it->momentum.Pt() > 40 )
-				ht += it->momentum.Pt();
+			if( !it->passPuJetIdLoose( 0 ) ) continue; // has to be changed for sure
 
 			// scale with JEC
 			float scale = 1.;
@@ -552,8 +575,11 @@ void TreeWriter::Loop() {
 				scale = it->jecScaleFactors.find("L1FastL2L3")->second;
 			TLorentzVector corrP4 = scale * it->momentum;
 
-			if(std::abs(corrP4.Eta()) > 2.6 ) continue;
-			if(corrP4.Pt() < 30 ) continue;
+			if( std::abs( corrP4.Eta() ) < 3 && corrP4.Pt() > 40 )
+				ht += corrP4.Pt();
+
+			if( std::abs(corrP4.Eta()) > 2.6 ) continue;
+			if( corrP4.Pt() < 30 ) continue;
 			if( isAdjacentToLepton( *it, electron ) ||  isAdjacentToLepton( *it, muon ) ) continue;
 			tree::Jet thisjet;
 			thisjet.pt = corrP4.Pt();
@@ -583,8 +609,11 @@ void TreeWriter::Loop() {
 		if( loggingVerbosity > 1 )
 			std::cout << "Found " << jet.size() << " jets" << std::endl;
 
-		// H_T cut
-		if( ht < 450)
+		// The H_T cut is not efficient. This is due to the fact that H_T will
+		// be calculated as sum over photonCleandJets + photonLikeObject. Since
+		// we don't know which one will be the photonLikeObject jet, we are save
+		// with using the largest photonPt + sum over all jets
+		if( ht + photon.at(0).pt < 450)
 			continue;
 
 		// met
