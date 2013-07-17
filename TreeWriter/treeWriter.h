@@ -11,6 +11,7 @@
 #include "TChain.h"
 #include "TH1F.h"
 #include "TH2F.h"
+#include "TH3I.h"
 #include "TPRegexp.h"
 #include "TArrayI.h"
 
@@ -21,7 +22,6 @@ class TreeWriter {
 	public :
 		TreeWriter(std::string inputName, std::string outputName, int loggingVerbosity_);
 		TreeWriter(TChain* inputName, std::string outputName, int loggingVerbosity_);
-		void Init( std::string outputName, int loggingVerbosity_ );
 		virtual ~TreeWriter();
 		virtual void Loop();
 		bool isData();
@@ -32,42 +32,46 @@ class TreeWriter {
 		void SetTriggerPaths( std::vector<const char*> const & tp ) { triggerNames = tp; }
 		void PileUpWeightFile( std::string const & pileupFileName );
 		void IncludeAJson( TString const & _fileName );
+		void UseAdditionalFOCut( bool v = true ) { useAdditionalFOCut = v; }
+
+	private:
+		void Init( std::string outputName, int loggingVerbosity_ );
+		void SetBranches( TTree& tree );
+		bool passTrigger();
+		bool isGoodLumi() const;
+		float getPileUpWeight() const;
+		float getPtFromMatchedJet( const susy::Photon& myPhoton, bool fillHisto ) const;
 
 		TChain* inputTree;
 		susy::Event* event;
 
+		// Saved objects
 		TFile* outFile;
-		TTree* tree;
+		TTree* photonTree;
+		TTree* photonElectronTree;
+		TTree* photonJetTree;
 		TH1F* eventNumbers;
 		TH2F* matchingHisto;
-
-	private:
-		bool passTrigger();
-		bool isGoodLumi() const;
-		float getPileUpWeight() const;
-		float getPtFromMatchedJet( const susy::Photon& myPhoton ) const;
 
 		int processNEvents; // number of events to be processed
 		unsigned int reportEvery;
 		unsigned int loggingVerbosity;
-		// 0: no output
-		// 1: only steps are shown
-		// 2: object multiplicity shown
-		// 3: detailed object info shown
+		bool useAdditionalFOCut;
 
 		// important dataset information
 		TH1F* pileupHisto;
 		std::map<unsigned, std::set<unsigned> > goodLumiList;
 		std::vector<const char*> triggerNames;
 
-
 		// variables which will be stored in the tree
-		std::vector<tree::Photon> photon;
-		std::vector<tree::Jet> jet;
-		std::vector<tree::Particle> electron;
-		std::vector<tree::Particle> muon;
-		std::vector<tree::Particle> genElectron;
-		std::vector<tree::Particle> genPhoton;
+		std::vector<tree::Photon> photons;
+		std::vector<tree::Photon> photonElectrons;
+		std::vector<tree::Photon> photonJets;
+		std::vector<tree::Jet> jets;
+		std::vector<tree::Particle> electrons;
+		std::vector<tree::Particle> muons;
+		std::vector<tree::Particle> genElectrons;
+		std::vector<tree::Particle> genPhotons;
 
 		float met;
 		float met_phi;
