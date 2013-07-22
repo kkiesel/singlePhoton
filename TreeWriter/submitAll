@@ -12,6 +12,14 @@ datasets=(
 # srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/GVJets_V01/
 # srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/WGamma_V01/
 # srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/ZGamma_V01/
+#srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/QCD_HT-250To500_TuneZ2star_8TeV-madgraph-pythia6/susyMC_QCD_250-500_V02/f278a418b8539fca8b5777b718a2a1aa/
+#srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/QCD_HT-500To1000_TuneZ2star_8TeV-madgraph-pythia6/susyMC_QCD_500-1000_V02/f278a418b8539fca8b5777b718a2a1aa/
+#srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/QCD_HT-1000ToInf_TuneZ2star_8TeV-madgraph-pythia6/susyMC_QCD_1000-inf_V02/f278a418b8539fca8b5777b718a2a1aa/
+#srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/GJets_HT-400ToInf_8TeV-madgraph_v2/susyMC_GJets_V02/f278a418b8539fca8b5777b718a2a1aa/
+#srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/WGToLNuG_TuneZ2star_8TeV-madgraph-tauola/susyMC_WGamma_V02/f278a418b8539fca8b5777b718a2a1aa/
+#srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/WJetsToLNu_TuneZ2Star_8TeV-madgraph-tarball/susyMC_WJets_V02/f278a418b8539fca8b5777b718a2a1aa/
+#srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/GVJets_Incl_8TeV-madgraph/susyMC_GVJets_V02/f278a418b8539fca8b5777b718a2a1aa/
+#srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/ZG_Inclusive_8TeV-madgraph_v2/susyMC_ZGamma_V02/f278a418b8539fca8b5777b718a2a1aa/
 )
 # settings
 version="18a"

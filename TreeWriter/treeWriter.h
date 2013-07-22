@@ -38,9 +38,12 @@ class TreeWriter {
 		void Init( std::string outputName, int loggingVerbosity_ );
 		void SetBranches( TTree& tree );
 		bool passTrigger();
+		bool passRecommendedMetFilters() const;
 		bool isGoodLumi() const;
 		float getPileUpWeight() const;
 		float getPtFromMatchedJet( const susy::Photon& myPhoton, bool fillHisto ) const;
+		float getHt( const tree::Photon& photon ) const;
+		std::vector<tree::Jet> getJets( const std::vector<tree::Photon>& excludedPhotons ) const;
 
 		TChain* inputTree;
 		susy::Event* event;
