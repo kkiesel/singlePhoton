@@ -137,6 +137,8 @@ def tdrStyle():
 	#tdrStyle.SetHistMinimumZero(kTRUE)
 
 	tdrStyle.cd()
+
+	ROOT.gROOT.SetBatch()
 	return tdrStyle
 
 

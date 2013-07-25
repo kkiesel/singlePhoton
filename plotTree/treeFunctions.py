@@ -1,5 +1,6 @@
 def datasetToLatex( fileNamePart ):
-	sets = { "AllQCD": "QCD(+#gamma)",
+	sets = { "AllQCD": "(#gamma+)QCD",
+			"GJets": "#gamma+QCD",
 			"TTbar": "t#bar{t}",
 			"WJet": "W"
 			}
@@ -224,11 +225,11 @@ def getHisto( tree, plot, cut="1", overflow=0, weight="weight", color=1, nBins=2
 	cut: cutstring applied to the tree
 	overflow: size of the overflow bin, if overflow>0
 	"""
-	if firstBin and lastBin:
+	if firstBin != None and lastBin != None:
 		if "Length$(" in plot or "nVertex" == plot:
 			firstBin -= .5
 			lastBin += .5
-			nBins = int(xMax-xMin)
+			nBins = int(lastBin-firstBin)
 
 	label, unit, binning = readAxisConf( plot )
 	if binning:

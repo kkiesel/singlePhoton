@@ -246,13 +246,19 @@ class RatioGraph:
 
     def draw(self, pad, yMin=0.0, yMax=2.0, adaptiveBinning=True, errors="yx"):
         pad.cd()
+        self.graph = self.getGraph(adaptiveBinning, errors)
+        if yMin==None and yMax==None:
+            yMin = ROOT.TMath.MinElement( self.graph.GetN(), self.graph.GetY() )
+            yMax = ROOT.TMath.MaxElement( self.graph.GetN(), self.graph.GetY() )
+            yMin = min( max(0,yMin), .5 )
+            yMax = min( max(1.5,yMax), 50 )
 
         # axis
         nBinsX = 20
         nBinsY = 10
         self.hAxis = ROOT.TH2F("hAxis", "", nBinsX, self.xMin, self.xMax, nBinsY, yMin, yMax)
         self.hAxis.Draw("AXIS")
-        self.hAxis.GetYaxis().SetNdivisions(int(yMax), 0, 2)
+        self.hAxis.GetYaxis().SetNdivisions(2, 0, 2)
         self.hAxis.SetTitleOffset(0.3, "Y")
         self.hAxis.SetTitleSize(0.15, "Y")
         self.hAxis.SetYTitle("Ratio")
@@ -270,7 +276,6 @@ class RatioGraph:
 
         self.hAxis.Draw("SAMEAXIS")
 
-        self.graph = self.getGraph(adaptiveBinning, errors)
         self.graph.Draw("SAMEZ 0")
 
         pad.Update()

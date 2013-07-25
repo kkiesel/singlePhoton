@@ -14,6 +14,7 @@
 #include "TH3I.h"
 #include "TPRegexp.h"
 #include "TArrayI.h"
+#include "TLorentzVector.h"
 
 #include "SusyEvent.h"
 #include "TreeObjects.h"
@@ -55,6 +56,10 @@ class TreeWriter {
 		TTree* photonJetTree;
 		TH1F* eventNumbers;
 		TH2F* matchingHisto;
+		TH2F* matchingHistoPtJ;
+		TH2F* matchingHistoPtG;
+		TH2F* matchingHistoEta;
+		TH2F* matchingHistoPhi;
 
 		int processNEvents; // number of events to be processed
 		unsigned int reportEvery;
@@ -81,7 +86,7 @@ class TreeWriter {
 		float type1met;
 		float type1met_phi;
 		float ht;
-		int nVertex;
+		unsigned int nVertex;
 		double weight;
 		unsigned int runNumber;
 		unsigned int eventNumber;

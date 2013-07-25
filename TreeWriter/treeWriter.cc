@@ -1,19 +1,5 @@
 #include "treeWriter.h"
 
-float deltaPhi( float phi1, float phi2) {
-	/** Delta Phi is computed for zylindical coordinates in the CMS system.
-	 */
-	float result = phi1 - phi2;
-	while (result > M_PI) result -= 2*M_PI;
-	while (result <= -M_PI) result += 2*M_PI;
-	return result;
-}
-
-float deltaR( const susy::PFJet& v1, const tree::Particle& v2 ) {
-	// deltaR  = sqrt ( deltaEta^2 + deltaPhi^2 )
-	return sqrt(pow(v1.momentum.Eta() - v2.eta, 2) + pow(deltaPhi(v1.momentum.Phi(),v2.phi), 2) );
-}
-
 float effectiveAreaElectron( float eta ) {
 	/** Returns the effective area for the isolation criteria for electrons.
 	 * See https://twiki.cern.ch/twiki/bin/view/CMS/EgammaEARhoCorrection
@@ -94,12 +80,13 @@ bool isAdjacentToParticles( const susy::PFJet& jet, const std::vector<Particle>&
 	 *
 	 * Returns true if a particle is found in a certain radius near the jet.
 	 */
-	bool foundParticle = false;
+	TLorentzVector a;
 	for( typename std::vector<Particle>::const_iterator particle = particles.begin(); particle != particles.end(); ++particle) {
-		if (deltaR(jet, *particle ) < deltaR_)
-			foundParticle = true;
+		a.SetPtEtaPhiE( 1,particle->eta, particle->phi,1  );
+		if ( jet.momentum.DeltaR( a ) < deltaR_)
+			return true;
 	}
-	return foundParticle;
+	return false;
 }
 
 bool isVetoElectron( const susy::Electron& electron, const susy::Event& event, const int loggingVerbosity ) {
@@ -120,7 +107,7 @@ bool isVetoElectron( const susy::Electron& electron, const susy::Event& event, c
 	bool isElectron = false;
 	float eta = std::abs(electron.momentum.Eta());
 	isElectron  = (
-		eta < 1.442
+		eta < susy::etaGapBegin
 			&& ( fabs(electron.deltaEtaSuperClusterTrackAtVtx) < 0.007
 				|| fabs(electron.deltaPhiSuperClusterTrackAtVtx) < 0.8
 				|| electron.sigmaIetaIeta < 0.01
@@ -128,7 +115,7 @@ bool isVetoElectron( const susy::Electron& electron, const susy::Event& event, c
 				|| d0 < 0.04
 				|| dZ < 0.2
 				|| iso < 0.15 )
-		)||( (1.566 < eta && eta < 2.5)
+		)||( ( susy::etaGapEnd < eta && eta < susy::etaMax )
 			&& ( fabs(electron.deltaEtaSuperClusterTrackAtVtx) < 0.01
 				|| fabs(electron.deltaPhiSuperClusterTrackAtVtx) < 0.7
 				|| electron.sigmaIetaIeta < 0.03
@@ -157,19 +144,22 @@ bool looseJetId( const susy::PFJet& jet ) {
 }
 
 bool goodVertex( susy::Vertex& vtx ) {
+	/** Definition of a good vertex
+	 */
 	return (!vtx.isFake() &&
 		vtx.ndof > 4 &&
 		std::abs((vtx.position).z()) < 24.0 &&
 		std::abs((vtx.position).Perp()) < 2.0 );
 }
 
-bool goodVertexInCollection( std::vector<susy::Vertex>& vertexVector ) {
+unsigned int numberOfGoodVertexInCollection( std::vector<susy::Vertex>& vertexVector ) {
+	unsigned int number = 0;
 	for( std::vector<susy::Vertex>::iterator vtx = vertexVector.begin();
 			vtx != vertexVector.end(); ++vtx ) {
 		if( goodVertex( *vtx ) )
-			return true;
+			number++;
 	}
-	return false;
+	return number;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -210,6 +200,11 @@ TreeWriter::~TreeWriter() {
 	delete photonTree;
 	delete photonElectronTree;
 	delete photonJetTree;
+	delete matchingHisto;
+	delete matchingHistoPtJ;
+	delete matchingHistoPtG;
+	delete matchingHistoEta;
+	delete matchingHistoPhi;
 }
 
 void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
@@ -226,7 +221,11 @@ void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
 	// Here the number of proceeded events will be stored. For plotting, simply use L*sigma/eventNumber
 	eventNumbers = new TH1F("eventNumbers", "Histogram containing number of generated events", 1, 0, 1);
 	eventNumbers->GetXaxis()->SetBinLabel(1,"Number of generated events");
-	matchingHisto = new TH2F("matchingPhotonJet", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 1000, 0, 3, 1000, 0, 4 );
+	matchingHisto = new TH2F("matchingPhotonJet", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
+	matchingHistoPtG = new TH2F("matchingPhotonJetPtG", "photon-jet matching;#DeltaR;p_{T, #gamma}", 100, 0, 1, 100, 0, 300 );
+	matchingHistoPtJ = new TH2F("matchingPhotonJetPtJ", "photon-jet matching;#DeltaR;p_{T, jet}", 100, 0, 1, 100, 0, 300 );
+	matchingHistoEta = new TH2F("matchingPhotonJetEta", "photon-jet matching;#Delta#eta;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
+	matchingHistoPhi = new TH2F("matchingPhotonJetPhi", "photon-jet matching;#Delta#phi;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
 
 	// open the output file
 	if (loggingVerbosity_>0)
@@ -245,7 +244,6 @@ void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
 }
 
 bool TreeWriter::isData() {
-	//event->getEntry(jentry);
 	event->getEntry(1);
 	return event->isRealData;
 }
@@ -386,8 +384,13 @@ float TreeWriter::getPtFromMatchedJet( const susy::Photon& myPhoton, bool fillHi
 		TLorentzVector corrP4 = scale * it->momentum;
 		float deltaR_ = myPhoton.momentum.DeltaR( corrP4 );
 		float eRel = corrP4.Pt() / myPhoton.momentum.Pt();
-		if( fillHisto )
+		if( fillHisto ) {
 			matchingHisto->Fill( deltaR_, eRel );
+			matchingHistoPtG->Fill( deltaR_, myPhoton.momentum.Pt() );
+			matchingHistoPtJ->Fill( deltaR_, corrP4.Pt() );
+			matchingHistoEta->Fill( std::abs(myPhoton.momentum.Eta()-corrP4.Eta()), eRel );
+			matchingHistoPhi->Fill( myPhoton.momentum.DeltaPhi(corrP4), eRel );
+		}
 		if (deltaR_ > 0.3 || eRel <= 0.95 ) continue;
 		if( loggingVerbosity > 2 )
 			std::cout << " pT_jet / pT_gamma = " << eRel << std::endl;
@@ -570,7 +573,10 @@ void TreeWriter::Loop() {
 		if ( event->isRealData )
 			if ( !isGoodLumi() || !passTrigger() ) continue;
 		if( !passRecommendedMetFilters() ) continue;
-		if( !goodVertexInCollection( event->vertices ) ) continue;
+
+		// vertices
+		nVertex = numberOfGoodVertexInCollection( event->vertices );
+		if( !nVertex ) continue;
 
 		photons.clear();
 		photonJets.clear();
@@ -688,9 +694,6 @@ void TreeWriter::Loop() {
 		if( loggingVerbosity > 2 )
 			std::cout << " type1met = " << type1met << std::endl;
 
-		// vertices
-		nVertex = event->vertices.size();
-
 		tree::Particle thisGenParticle;
 		for( std::vector<susy::Particle>::iterator it = event->genParticles.begin(); it != event->genParticles.end(); ++it ) {
 			// status 3: particles in matrix element
@@ -732,10 +735,15 @@ void TreeWriter::Loop() {
 
 	outFile->cd();
 	eventNumbers->Write();
-	matchingHisto->Write();
 	photonTree->Write();
 	photonElectronTree->Write();
 	photonJetTree->Write();
+	matchingHisto->Write();
+	matchingHistoPtJ->Write();
+	matchingHistoPtG->Write();
+	matchingHistoEta->Write();
+	matchingHistoPhi->Write();
+
 	outFile->Write();
 	outFile->Close();
 }
