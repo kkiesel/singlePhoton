@@ -51,6 +51,8 @@ class Multihisto:
 		else:
 			self.histos.append( (singleHisto, draw) )
 			if label:
+				if "p" in draw:
+					self.legendOption = "pl"
 				if "hist" in draw:
 					self.legendOption = "l"
 				if draw == "e2":
