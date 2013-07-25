@@ -14,6 +14,7 @@
 #include "TH3I.h"
 #include "TPRegexp.h"
 #include "TArrayI.h"
+#include "TLorentzVector.h"
 
 #include "SusyEvent.h"
 #include "TreeObjects.h"
@@ -81,7 +82,7 @@ class TreeWriter {
 		float type1met;
 		float type1met_phi;
 		float ht;
-		int nVertex;
+		unsigned int nVertex;
 		double weight;
 		unsigned int runNumber;
 		unsigned int eventNumber;
