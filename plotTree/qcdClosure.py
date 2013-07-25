@@ -11,7 +11,6 @@ import ratios
 import Styles
 
 Styles.tdrStyle()
-ROOT.gROOT.SetBatch()
 ROOT.gSystem.Load("libTreeObjects.so")
 
 # to use user defined help message, sys.arv has to be sent to python and not
@@ -82,11 +81,12 @@ def getWeightHisto2D( gControlTree, foControlTree, datasetAffix ):
 	weight2D = divideHistos( weight_numerator, weight_denominator )
 
 	# Set the weight and error for empty bins to one.
-	for i in range( weight2D.GetXaxis().GetNbins()+1 ):
+	"""for i in range( weight2D.GetXaxis().GetNbins()+1 ):
 		for j in range( weight2D.GetYaxis().GetNbins()+1 ):
 			if not weight2D.GetBinContent( i, j ):
 				weight2D.SetBinContent( i, j, 1 )
 				weight2D.SetBinError( i, j, 1 )
+	"""
 
 	# Draw the histograms
 	info = PlotCaption()
@@ -98,7 +98,8 @@ def getWeightHisto2D( gControlTree, foControlTree, datasetAffix ):
 	for i in range( weight2D.GetXaxis().GetNbins()+1 ):
 		for j in range( weight2D.GetYaxis().GetNbins()+1 ):
 			weightErrors.SetBinContent( i, j, weight2D.GetBinError( i, j ) )
-			weightRelErrors.SetBinContent( i, j, weight2D.GetBinError( i, j )/weight2D.GetBinContent( i, j ) )
+			if weight2D.GetBinContent( i, j ):
+				weightRelErrors.SetBinContent( i, j, weight2D.GetBinError( i, j )/weight2D.GetBinContent( i, j ) )
 
 	Styles.tdrStyle2D()
 	ROOT.gStyle.SetPaintTextFormat("4.2f");
@@ -164,6 +165,50 @@ def addErrorAndDivide( h_fo, h_fo_error ):
 		h_new.SetBinContent( bin, 1 )
 	return h_new
 
+def drawBeforeClosure( plot, gSignalTree, foSignalTree, can, info, datasetAffix, additionalInfo="" ):
+
+		# The first attempt to get the histogram is only to get the minimal
+		# and maximal value on the x-axis, for not predefined binning
+		h_gamma = getHisto( gSignalTree, plot )
+		h_fo = getHisto( foSignalTree, plot, cut="1" )
+		xMin, xMax = getXMinXMax( [ h_gamma, h_fo ] )
+
+		h_gamma = getHisto( gSignalTree, plot, color=1, firstBin=xMin,lastBin=xMax )
+		h_fo = getHisto( foSignalTree, plot, cut="1", color=46, firstBin=xMin,lastBin=xMax )
+
+		if plot == "met" and additionalInfo=="":
+			print "fo, met < 100: ", h_fo.Integral(0,h_fo.FindBin(100),"width")
+			print "gamma, met < 100: ", h_gamma.Integral(0,h_gamma.FindBin(100),"width")
+			print "fo, met > 100: ", h_fo.Integral(h_fo.FindBin(100),h_fo.GetNbinsX()+1,"width")
+			print "gamma, met > 100: ", h_gamma.Integral(h_gamma.FindBin(100),h_gamma.GetNbinsX()+1,"width")
+
+
+		muhisto = Multihisto()
+		muhisto.leg.SetHeader( datasetToLatex( datasetAffix ) )
+		muhisto.addHisto( h_gamma, "#gamma", draw="hist e0" )
+		muhisto.addHisto( h_fo, "#gamma_{jet}", draw="hist e0")
+
+		hPad = ROOT.TPad("hPad", "Histogram", 0, 0.2, 1, 1)
+		hPad.cd()
+		muhisto.Draw()
+
+		ROOT.TGaxis.SetMaxDigits(4)
+		ratioPad = ROOT.TPad("ratioPad", "Ratio", 0, 0, 1, 0.2)
+		ratioPad.cd()
+		ratioPad.SetLogy( False )
+		ratioGraph = ratios.RatioGraph( h_gamma, h_fo )
+		ratioGraph.draw(ROOT.gPad, yMin=None, yMax=None, adaptiveBinning=False, errors="yx")
+		ratioGraph.graph.Draw("same p e0") # draw nice points
+		ratioGraph.hAxis.SetYTitle( "#gamma/#gamma_{pred}")
+
+		can.cd()
+		hPad.Draw()
+		ratioPad.Draw()
+		info.Draw()
+		SaveAs(can, "plots","qcd_preWeight_%s_%s"%(datasetAffix+additionalInfo, plot) )
+		ROOT.SetOwnership( hPad, False )
+		ROOT.SetOwnership( ratioPad, False )
+
 def drawClosure( plot, gSignalTree, foSignalTree, can, info, datasetAffix, additionalInfo="" ):
 
 		# The first attempt to get the histogram is only to get the minimal
@@ -192,8 +237,9 @@ def drawClosure( plot, gSignalTree, foSignalTree, can, info, datasetAffix, addit
 
 		ratioPad = ROOT.TPad("ratioPad", "Ratio", 0, 0, 1, 0.2)
 		ratioPad.cd()
+		ratioPad.SetLogy( False )
 		ratioGraph = ratios.RatioGraph( h_gamma, h_fo )
-		ratioGraph.draw(ROOT.gPad, yMin=0.3, yMax=3, adaptiveBinning=False, errors="yx")
+		ratioGraph.draw(ROOT.gPad, yMin=0, yMax=2, adaptiveBinning=False, errors="yx")
 		ratioGraph.graph.Draw("same p e0") # draw nice points
 		ratioGraph.hAxis.SetYTitle( "#gamma/#gamma_{pred}")
 
@@ -235,10 +281,10 @@ def qcdClosure( fileName, opts, cuts ):
 			+"&& @photon.size()>0"
 		foCut = foCutValentina
 
-	gTree = readTree( fileName, "photonTree" )
-	foTree = readTree( fileName, "photonJetTree" ).CopyTree( foCut )
+	gTree = readTree( fileName, "photonTree" ).CopyTree("1")
 	gControlTree = readTree( fileName, "photonTree").CopyTree( controlCut )
 	gSignalTree = readTree( fileName, "photonTree").CopyTree( signalCut )
+	foTree = readTree( fileName, "photonJetTree" ).CopyTree( foCut )
 	foControlTree = readTree( fileName, "photonJetTree").CopyTree( controlCut+"&&"+foCut )
 	foSignalTree = readTree( fileName, "photonJetTree").CopyTree( signalCut+"&&"+foCut )
 
@@ -246,6 +292,7 @@ def qcdClosure( fileName, opts, cuts ):
 	jets = ROOT.std.vector("tree::Jet")()
 	foControlTree = clearTreeFromJets( foControlTree, jets )
 	foSignalTree = clearTreeFromJets( foSignalTree, jets )
+	foTree = clearTreeFromJets( foTree, jets )
 
 	weights = getWeightHisto2D( gControlTree, foControlTree, datasetAffix )
 	writeWeight2DToFile( fileName, foSignalTree, weights, "foSignalWeights" )
@@ -268,6 +315,12 @@ def qcdClosure( fileName, opts, cuts ):
 		drawClosure( plot, gSignalTree, foSignalTree, can, infoSignal, datasetAffix, "_signal" )
 		drawClosure( plot, gControlTree, foControlTree, can, infoControl, datasetAffix, "_control" )
 		drawClosure( plot, gTree, foTree, can, info, datasetAffix )
+
+	for plot in plots:
+		drawBeforeClosure( plot, gSignalTree, foSignalTree, can, infoSignal, datasetAffix, "_signal" )
+		drawBeforeClosure( plot, gControlTree, foControlTree, can, infoControl, datasetAffix, "_control" )
+		drawBeforeClosure( plot, gTree, foTree, can, info, datasetAffix )
+
 
 	# Delete the trees from memory, important for many iterations.
 	ROOT.SetOwnership( foSignalTree, False )
