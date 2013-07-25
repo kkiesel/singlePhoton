@@ -56,6 +56,10 @@ class TreeWriter {
 		TTree* photonJetTree;
 		TH1F* eventNumbers;
 		TH2F* matchingHisto;
+		TH2F* matchingHistoPtJ;
+		TH2F* matchingHistoPtG;
+		TH2F* matchingHistoEta;
+		TH2F* matchingHistoPhi;
 
 		int processNEvents; // number of events to be processed
 		unsigned int reportEvery;

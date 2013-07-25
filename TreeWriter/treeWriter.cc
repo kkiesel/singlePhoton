@@ -200,6 +200,11 @@ TreeWriter::~TreeWriter() {
 	delete photonTree;
 	delete photonElectronTree;
 	delete photonJetTree;
+	delete matchingHisto;
+	delete matchingHistoPtJ;
+	delete matchingHistoPtG;
+	delete matchingHistoEta;
+	delete matchingHistoPhi;
 }
 
 void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
@@ -216,7 +221,11 @@ void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
 	// Here the number of proceeded events will be stored. For plotting, simply use L*sigma/eventNumber
 	eventNumbers = new TH1F("eventNumbers", "Histogram containing number of generated events", 1, 0, 1);
 	eventNumbers->GetXaxis()->SetBinLabel(1,"Number of generated events");
-	matchingHisto = new TH2F("matchingPhotonJet", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 1000, 0, 3, 1000, 0, 4 );
+	matchingHisto = new TH2F("matchingPhotonJet", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
+	matchingHistoPtG = new TH2F("matchingPhotonJetPtG", "photon-jet matching;#DeltaR;p_{T, #gamma}", 100, 0, 1, 100, 0, 300 );
+	matchingHistoPtJ = new TH2F("matchingPhotonJetPtJ", "photon-jet matching;#DeltaR;p_{T, jet}", 100, 0, 1, 100, 0, 300 );
+	matchingHistoEta = new TH2F("matchingPhotonJetEta", "photon-jet matching;#Delta#eta;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
+	matchingHistoPhi = new TH2F("matchingPhotonJetPhi", "photon-jet matching;#Delta#phi;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
 
 	// open the output file
 	if (loggingVerbosity_>0)
@@ -235,7 +244,6 @@ void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
 }
 
 bool TreeWriter::isData() {
-	//event->getEntry(jentry);
 	event->getEntry(1);
 	return event->isRealData;
 }
@@ -376,8 +384,13 @@ float TreeWriter::getPtFromMatchedJet( const susy::Photon& myPhoton, bool fillHi
 		TLorentzVector corrP4 = scale * it->momentum;
 		float deltaR_ = myPhoton.momentum.DeltaR( corrP4 );
 		float eRel = corrP4.Pt() / myPhoton.momentum.Pt();
-		if( fillHisto )
+		if( fillHisto ) {
 			matchingHisto->Fill( deltaR_, eRel );
+			matchingHistoPtG->Fill( deltaR_, myPhoton.momentum.Pt() );
+			matchingHistoPtJ->Fill( deltaR_, corrP4.Pt() );
+			matchingHistoEta->Fill( std::abs(myPhoton.momentum.Eta()-corrP4.Eta()), eRel );
+			matchingHistoPhi->Fill( myPhoton.momentum.DeltaPhi(corrP4), eRel );
+		}
 		if (deltaR_ > 0.3 || eRel <= 0.95 ) continue;
 		if( loggingVerbosity > 2 )
 			std::cout << " pT_jet / pT_gamma = " << eRel << std::endl;
@@ -722,10 +735,15 @@ void TreeWriter::Loop() {
 
 	outFile->cd();
 	eventNumbers->Write();
-	matchingHisto->Write();
 	photonTree->Write();
 	photonElectronTree->Write();
 	photonJetTree->Write();
+	matchingHisto->Write();
+	matchingHistoPtJ->Write();
+	matchingHistoPtG->Write();
+	matchingHistoEta->Write();
+	matchingHistoPhi->Write();
+
 	outFile->Write();
 	outFile->Close();
 }
