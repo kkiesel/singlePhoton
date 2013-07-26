@@ -12,17 +12,25 @@ datasets=(
 # srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/GVJets_V01/
 # srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/WGamma_V01/
 # srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/ZGamma_V01/
-#srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/QCD_HT-250To500_TuneZ2star_8TeV-madgraph-pythia6/susyMC_QCD_250-500_V02/f278a418b8539fca8b5777b718a2a1aa/
-#srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/QCD_HT-500To1000_TuneZ2star_8TeV-madgraph-pythia6/susyMC_QCD_500-1000_V02/f278a418b8539fca8b5777b718a2a1aa/
-#srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/QCD_HT-1000ToInf_TuneZ2star_8TeV-madgraph-pythia6/susyMC_QCD_1000-inf_V02/f278a418b8539fca8b5777b718a2a1aa/
-#srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/GJets_HT-400ToInf_8TeV-madgraph_v2/susyMC_GJets_V02/f278a418b8539fca8b5777b718a2a1aa/
-#srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/WGToLNuG_TuneZ2star_8TeV-madgraph-tauola/susyMC_WGamma_V02/f278a418b8539fca8b5777b718a2a1aa/
-#srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/WJetsToLNu_TuneZ2Star_8TeV-madgraph-tarball/susyMC_WJets_V02/f278a418b8539fca8b5777b718a2a1aa/
-#srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/GVJets_Incl_8TeV-madgraph/susyMC_GVJets_V02/f278a418b8539fca8b5777b718a2a1aa/
-#srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/ZG_Inclusive_8TeV-madgraph_v2/susyMC_ZGamma_V02/f278a418b8539fca8b5777b718a2a1aa/
+
+#### begin of cmssw538_v0/1 nTuples, which will be V02
+# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/GJets_200_400_V02/
+ srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/GJets_V02/
+ srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/QCD_250-500_V02/
+ srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/QCD_500-1000_V02/
+ srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/QCD_1000-inf_V02/
+# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/WJets_V02/
+# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/TTJets_V02/
+# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/WGamma_V02/
+# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/ZGamma_V02/
+# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/GVJets_V02/
+## srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/PhotonHadA_V02/ # not done yet
+# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/PhotonHadB_V02/
+# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/PhotonHadC_V02/
+# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/PhotonHadD_V02/
 )
 # settings
-version="18a"
+version="00"
 outputFolder=/scratch/hh/dust/naf/cms/user/kiesel
 files_per_job=20
 
@@ -42,8 +50,6 @@ for dataset in "${datasets[@]}"; do
     files+=( $(srmls -offset 1000 -count 1999 $dataset|grep root|awk '{print $2 }') )
     number_of_jobs=$(expr ${#files[@]} / $files_per_job + 1 )
 
-    # just for testing purpurse
-    #TMPDIR=/tmp
 
 
     for (( job=1; job<=$number_of_jobs; job++ )); do
