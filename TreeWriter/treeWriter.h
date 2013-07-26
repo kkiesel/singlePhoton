@@ -42,7 +42,7 @@ class TreeWriter {
 		bool passRecommendedMetFilters() const;
 		bool isGoodLumi() const;
 		float getPileUpWeight() const;
-		float getPtFromMatchedJet( const susy::Photon& myPhoton, bool fillHisto ) const;
+		float getPtFromMatchedJet( const susy::Photon& myPhoton, bool isPhoton );
 		float getHtHLT() const;
 		float getSt( float ptCut, const std::vector<tree::Photon>& _photons ) const;
 		std::vector<tree::Jet> getJets( const std::vector<tree::Photon>& excludedPhotons ) const;
@@ -56,13 +56,7 @@ class TreeWriter {
 		TTree* photonElectronTree;
 		TTree* photonJetTree;
 		TH1F* eventNumbers;
-		TH2F* matchingHisto;
-		TH2F* matchingHistoG;
-		TH2F* matchingHistoFO;
-		TH2F* matchingHistoPtJ;
-		TH2F* matchingHistoPtG;
-		TH2F* matchingHistoEta;
-		TH2F* matchingHistoPhi;
+		std::map< std::string, TH2F* > hist2D;
 
 		int processNEvents; // number of events to be processed
 		unsigned int reportEvery;

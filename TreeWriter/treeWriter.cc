@@ -7,6 +7,7 @@ float effectiveAreaElectron( float eta ) {
 	 */
 	eta = fabs( eta );
 	float ea;
+
 	if( eta < 1.0 ) ea = 0.13;
 	else if( eta < 1.479 ) ea = 0.14;
 	else if( eta < 2.0 ) ea = 0.07;
@@ -14,6 +15,7 @@ float effectiveAreaElectron( float eta ) {
 	else if( eta < 2.3 ) ea = 0.11;
 	else if( eta < 2.4 ) ea = 0.11;
 	else ea = 0.14;
+
 	return ea;
 }
 
@@ -200,13 +202,9 @@ TreeWriter::~TreeWriter() {
 	delete photonTree;
 	delete photonElectronTree;
 	delete photonJetTree;
-	delete matchingHisto;
-	delete matchingHistoG;
-	delete matchingHistoFO;
-	delete matchingHistoPtJ;
-	delete matchingHistoPtG;
-	delete matchingHistoEta;
-	delete matchingHistoPhi;
+	for( std::map<std::string, TH2F*>::iterator it = hist2D.begin();
+			it!= hist2D.end(); ++it )
+		delete it->second;
 }
 
 void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
@@ -223,13 +221,11 @@ void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
 	// Here the number of proceeded events will be stored. For plotting, simply use L*sigma/eventNumber
 	eventNumbers = new TH1F("eventNumbers", "Histogram containing number of generated events", 1, 0, 1);
 	eventNumbers->GetXaxis()->SetBinLabel(1,"Number of generated events");
-	matchingHisto = new TH2F("matchingPhotonJet", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
-	matchingHistoG = new TH2F("matchingPhotonJetG", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
-	matchingHistoFO = new TH2F("matchingPhotonJetFO", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
-	matchingHistoPtG = new TH2F("matchingPhotonJetPtG", "photon-jet matching;#DeltaR;p_{T, #gamma}", 100, 0, 1, 100, 0, 300 );
-	matchingHistoPtJ = new TH2F("matchingPhotonJetPtJ", "photon-jet matching;#DeltaR;p_{T, jet}", 100, 0, 1, 100, 0, 300 );
-	matchingHistoEta = new TH2F("matchingPhotonJetEta", "photon-jet matching;#Delta#eta;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
-	matchingHistoPhi = new TH2F("matchingPhotonJetPhi", "photon-jet matching;#Delta#phi;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
+	hist2D["dRdPt"] = new TH2F("matchingPhotonJet", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
+	hist2D["dRPtGamma"] = new TH2F("matchingPhotonJetG", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
+	hist2D["dRPtFO"] = new TH2F("matchingPhotonJetFO", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
+	hist2D["dRGammaPt"] = new TH2F("matchingPhotonJetPtG", "photon-jet matching;#DeltaR;p_{T, #gamma}", 100, 0, 1, 100, 0, 300 );
+	hist2D["dRJetPt"] = new TH2F("matchingPhotonJetPtJ", "photon-jet matching;#DeltaR;p_{T, jet}", 100, 0, 1, 100, 0, 300 );
 
 	// open the output file
 	if (loggingVerbosity_>0)
@@ -365,7 +361,7 @@ float TreeWriter::getPileUpWeight() const {
 	return thisWeight;
 }
 
-float TreeWriter::getPtFromMatchedJet( const susy::Photon& myPhoton, bool fillHisto=true ) const {
+float TreeWriter::getPtFromMatchedJet( const susy::Photon& myPhoton, bool isPhoton=true ) {
 	/**
 	 * \brief Takes jet p_T as photon p_T
 	 *
@@ -388,15 +384,13 @@ float TreeWriter::getPtFromMatchedJet( const susy::Photon& myPhoton, bool fillHi
 		TLorentzVector corrP4 = scale * it->momentum;
 		float deltaR_ = myPhoton.momentum.DeltaR( corrP4 );
 		float eRel = corrP4.Pt() / myPhoton.momentum.Pt();
-			matchingHisto->Fill( deltaR_, eRel );
-			matchingHistoPtG->Fill( deltaR_, myPhoton.momentum.Pt() );
-			matchingHistoPtJ->Fill( deltaR_, corrP4.Pt() );
-			matchingHistoEta->Fill( std::abs(myPhoton.momentum.Eta()-corrP4.Eta()), eRel );
-			matchingHistoPhi->Fill( myPhoton.momentum.DeltaPhi(corrP4), eRel );
-		if( fillHisto )
-			matchingHistoG->Fill( deltaR_, eRel );
+		hist2D["dRdPt"]->Fill( deltaR_, eRel );
+		hist2D["dRGammaPt"]->Fill( deltaR_, myPhoton.momentum.Pt() );
+		hist2D["dRJetPt"]->Fill( deltaR_, corrP4.Pt() );
+		if( isPhoton )
+			hist2D["dRPtGamma"]->Fill( deltaR_, eRel );
 		else
-			matchingHistoFO->Fill( deltaR_, eRel );
+			hist2D["dRPtFO"]->Fill( deltaR_, eRel );
 
 		if (deltaR_ > 0.3 || eRel <= 0.95 ) continue;
 		if( loggingVerbosity > 2 )
@@ -543,7 +537,7 @@ void TreeWriter::SetBranches( TTree& tree ) {
 	tree.Branch("type0met", &type0met, "type0met/F");
 	tree.Branch("type1met", &type1met, "type1met/F");
 	tree.Branch("htHLT", &htHLT, "htHLT/F");
-	tree.Branch("st30", &st80, "st80");
+	tree.Branch("st30", &st30, "st30");
 	tree.Branch("st80", &st80, "st80");
 	tree.Branch("nVertex", &nVertex, "nVertex/I");
 	tree.Branch("weight", &weight, "weight/D");
@@ -773,14 +767,10 @@ void TreeWriter::Loop() {
 	photonTree->Write();
 	photonElectronTree->Write();
 	photonJetTree->Write();
-	matchingHisto->Write();
-	matchingHistoG->Write();
-	matchingHistoFO->Write();
-	matchingHistoPtJ->Write();
-	matchingHistoPtG->Write();
-	matchingHistoEta->Write();
-	matchingHistoPhi->Write();
 
+	for( std::map<std::string, TH2F*>::iterator it = hist2D.begin();
+			it!= hist2D.end(); ++it )
+		it->second->Write();
 	outFile->Write();
 	outFile->Close();
 }
