@@ -43,7 +43,8 @@ class TreeWriter {
 		bool isGoodLumi() const;
 		float getPileUpWeight() const;
 		float getPtFromMatchedJet( const susy::Photon& myPhoton, bool fillHisto ) const;
-		float getHt( const tree::Photon& photon ) const;
+		float getHtHLT() const;
+		float getSt( float ptCut, const std::vector<tree::Photon>& _photons ) const;
 		std::vector<tree::Jet> getJets( const std::vector<tree::Photon>& excludedPhotons ) const;
 
 		TChain* inputTree;
@@ -56,6 +57,8 @@ class TreeWriter {
 		TTree* photonJetTree;
 		TH1F* eventNumbers;
 		TH2F* matchingHisto;
+		TH2F* matchingHistoG;
+		TH2F* matchingHistoFO;
 		TH2F* matchingHistoPtJ;
 		TH2F* matchingHistoPtG;
 		TH2F* matchingHistoEta;
@@ -82,10 +85,11 @@ class TreeWriter {
 		std::vector<tree::Particle> genPhotons;
 
 		float met;
-		float met_phi;
 		float type1met;
-		float type1met_phi;
-		float ht;
+		float type0met;
+		float htHLT;
+		float st30;
+		float st80;
 		unsigned int nVertex;
 		double weight;
 		unsigned int runNumber;
