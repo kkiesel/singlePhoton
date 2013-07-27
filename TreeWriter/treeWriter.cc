@@ -222,12 +222,16 @@ void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
 	eventNumbers = new TH1F("eventNumbers", "Histogram containing number of generated events", 1, 0, 1);
 	eventNumbers->GetXaxis()->SetBinLabel(1,"Number of generated events");
 	hist2D["dRdPt"] = new TH2F("matchingPhotonJet", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
-	hist2D["dRPtGamma"] = new TH2F("matchingPhotonJetG", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
-	hist2D["dRPtFO"] = new TH2F("matchingPhotonJetFO", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
-	hist2D["dRGammaPt"] = new TH2F("matchingPhotonJetPtG", "photon-jet matching;#DeltaR;p_{T, #gamma}", 100, 0, 1, 100, 0, 300 );
-	hist2D["dRJetPt"] = new TH2F("matchingPhotonJetPtJ", "photon-jet matching;#DeltaR;p_{T, jet}", 100, 0, 1, 100, 0, 300 );
-	hist2D["ptPhotonJetSmall"] = new TH2F("matchingPhotonJetPtPhotonJetSmall", "photon-jet matching;p_{T, #gamma};p_{T, jet}", 100, 0, 300, 100, 0, 300 );
-	hist2D["ptPhotonJetLarge"] = new TH2F("matchingPhotonJetPtPhotonJetLarge", "photon-jet matching;p_{T, #gamma};p_{T, jet}", 100, 0, 300, 100, 0, 300 );
+	hist2D["dRPtGamma"] = new TH2F("matchingPhotonJet", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
+	hist2D["dRPtFO"] = new TH2F("matchingPhotonJet", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
+	hist2D["dRGammaPt"] = new TH2F("matchingPhotonJet", "photon-jet matching;#DeltaR;p_{T, #gamma}", 100, 0, 1, 100, 0, 300 );
+	hist2D["dRJetPt"] = new TH2F("matchingPhotonJet", "photon-jet matching;#DeltaR;p_{T, jet}", 100, 0, 1, 100, 0, 300 );
+	hist2D["ptPhotonJetSmall"] = new TH2F("matchingPhotonJet", "photon-jet matching;p_{T, #gamma};p_{T, jet}", 100, 0, 300, 100, 0, 300 );
+	hist2D["ptPhotonJetLarge"] = new TH2F("matchingPhotonJet", "photon-jet matching;p_{T, #gamma};p_{T, jet}", 100, 0, 300, 100, 0, 300 );
+	for( std::map<std::string, TH2F*>::iterator it = hist2D.begin();
+			it!= hist2D.end(); ++it )
+		it->second->SetName( (it->second->GetName() + it->first).c_str() );
+
 
 	// open the output file
 	if (loggingVerbosity_>0)
