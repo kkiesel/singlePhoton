@@ -226,6 +226,8 @@ void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
 	hist2D["dRPtFO"] = new TH2F("matchingPhotonJetFO", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
 	hist2D["dRGammaPt"] = new TH2F("matchingPhotonJetPtG", "photon-jet matching;#DeltaR;p_{T, #gamma}", 100, 0, 1, 100, 0, 300 );
 	hist2D["dRJetPt"] = new TH2F("matchingPhotonJetPtJ", "photon-jet matching;#DeltaR;p_{T, jet}", 100, 0, 1, 100, 0, 300 );
+	hist2D["ptPhotonJetSmall"] = new TH2F("matchingPhotonJetPtPhotonJetSmall", "photon-jet matching;p_{T, #gamma};p_{T, jet}", 100, 0, 300, 100, 0, 300 );
+	hist2D["ptPhotonJetLarge"] = new TH2F("matchingPhotonJetPtPhotonJetLarge", "photon-jet matching;p_{T, #gamma};p_{T, jet}", 100, 0, 300, 100, 0, 300 );
 
 	// open the output file
 	if (loggingVerbosity_>0)
@@ -391,6 +393,10 @@ float TreeWriter::getPtFromMatchedJet( const susy::Photon& myPhoton, bool isPhot
 			hist2D["dRPtGamma"]->Fill( deltaR_, eRel );
 		else
 			hist2D["dRPtFO"]->Fill( deltaR_, eRel );
+		if( deltaR_ < 0.1 )
+			hist2D["ptPhotonJetSmall"]->Fill( myPhoton.momentum.Pt(), corrP4.Pt() );
+		else if( deltaR_ < .35 )
+			hist2D["ptPhotonJetLarge"]->Fill( myPhoton.momentum.Pt(), corrP4.Pt() );
 
 		if (deltaR_ > 0.3 || eRel <= 0.95 ) continue;
 		if( loggingVerbosity > 2 )
