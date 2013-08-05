@@ -11,7 +11,6 @@
 #include "TChain.h"
 #include "TH1F.h"
 #include "TH2F.h"
-#include "TH3I.h"
 #include "TPRegexp.h"
 #include "TArrayI.h"
 #include "TLorentzVector.h"
@@ -44,6 +43,7 @@ class TreeWriter {
 		float getPileUpWeight() const;
 		float getPtFromMatchedJet( const susy::Photon& myPhoton, bool isPhoton );
 		float getHtHLT() const;
+		float getHt( const tree::Photon& photon ) const;
 		float getSt( float ptCut, const std::vector<tree::Photon>& _photons ) const;
 		std::vector<tree::Jet> getJets( const std::vector<tree::Photon>& excludedPhotons ) const;
 
@@ -82,6 +82,7 @@ class TreeWriter {
 		float type1met;
 		float type0met;
 		float htHLT;
+		float ht;
 		float st30;
 		float st80;
 		unsigned int nVertex;
