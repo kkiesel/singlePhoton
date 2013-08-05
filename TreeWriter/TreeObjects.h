@@ -4,6 +4,11 @@
 namespace tree {
 // In this namespace classes for the trees are defined.
 
+enum genParticles{
+	genPhoton,
+	genElectron
+};
+
 class Particle {
 	public:
 		float pt, eta, phi;
@@ -11,6 +16,8 @@ class Particle {
 
 class Photon : public Particle {
 	public:
+		bool isGen( genParticles id ) const;
+		void setGen( genParticles id );
 		float ptJet() const;
 		float _ptJet;
 		float r9, sigmaIetaIeta, hadTowOverEm;
