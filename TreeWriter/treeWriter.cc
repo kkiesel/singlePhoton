@@ -513,6 +513,34 @@ float TreeWriter::getSt( float ptCut, const std::vector<tree::Photon>& _photons 
 	return returnedHt;
 }
 
+float TreeWriter::getHt( const tree::Photon& photon ) const {
+// ht
+float returnedHt = 0;
+std::vector<susy::PFJet> jetVector = event->pfJets["ak5"];
+for(std::vector<susy::PFJet>::iterator it = jetVector.begin();
+it != jetVector.end(); ++it) {
+
+if( !looseJetId( *it ) ) continue;
+if( !it->passPuJetIdLoose( 0 ) ) continue; // has to be changed for sure
+
+// scale with JEC
+float scale = 1.;
+if(it->jecScaleFactors.count("L1FastL2L3") == 0)
+std::cout << "ERROR: JEC is not available for this jet" << std::endl;
+else
+scale = it->jecScaleFactors.find("L1FastL2L3")->second;
+TLorentzVector corrP4 = scale * it->momentum;
+
+if( corrP4.Pt() < 40 || corrP4.Eta() > 3. )
+continue;
+
+returnedHt += corrP4.Pt();
+if( photon._ptJet == 0 )
+returnedHt += photon.pt;
+}
+return returnedHt;
+}
+
 float TreeWriter::getHtHLT() const {
 	// ht
 	float returnedHt = 0;
@@ -547,6 +575,7 @@ void TreeWriter::SetBranches( TTree& tree ) {
 	tree.Branch("type0met", &type0met, "type0met/F");
 	tree.Branch("type1met", &type1met, "type1met/F");
 	tree.Branch("htHLT", &htHLT, "htHLT/F");
+	tree.Branch("ht", &ht, "ht/F");
 	tree.Branch("st30", &st30, "st30");
 	tree.Branch("st80", &st80, "st80");
 	tree.Branch("nVertex", &nVertex, "nVertex/I");
@@ -600,8 +629,8 @@ void TreeWriter::Loop() {
 			<< nentries << " events. " << std::endl;
 
 	photonTree->Branch( "photons", &photons );
-	photonElectronTree->Branch( "photonElectrons", &photonElectrons );
-	photonJetTree->Branch( "photonJets", &photonJets );
+	photonElectronTree->Branch( "photons", &photonElectrons );
+	photonJetTree->Branch( "photons", &photonJets );
 	SetBranches( *photonTree );
 	SetBranches( *photonElectronTree );
 	SetBranches( *photonJetTree );
@@ -758,14 +787,17 @@ void TreeWriter::Loop() {
 
 		if( photons.size() ) {
 			jets = getJets( photons );
+			ht = getHt( photons.at(0) );
 			if( jets.size() < 2 ) continue;
 			photonTree->Fill();
 		} else if( photonElectrons.size() ) {
 			jets = getJets( photonElectrons );
+			ht = getHt( photonElectrons.at(0) );
 			if( jets.size() < 2 ) continue;
 			photonElectronTree->Fill();
 		} else if( photonJets.size() ) {
 			jets = getJets( photonJets );
+			ht = getHt( photonJets.at(0) );
 			if( jets.size() < 2) continue;
 			photonJetTree->Fill();
 		}
