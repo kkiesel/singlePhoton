@@ -62,6 +62,7 @@ class TreeWriter {
 		unsigned int reportEvery;
 		unsigned int loggingVerbosity;
 		bool useAdditionalFOCut;
+		std::vector<unsigned int> jetIndicesWithPhotonMatch;
 
 		// important dataset information
 		TH1F* pileupHisto;
