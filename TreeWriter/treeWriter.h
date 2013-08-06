@@ -45,8 +45,8 @@ class TreeWriter {
 		float getPtFromMatchedJet( const susy::Photon& myPhoton, bool isPhoton );
 		float getHtHLT() const;
 		float getHt( const tree::Photon& photon ) const;
-		float getSt( float ptCut, const std::vector<tree::Photon>& _photons ) const;
-		std::vector<tree::Jet> getJets( const std::vector<tree::Photon>& excludedPhotons ) const;
+		float getSt( float ptCut ) const;
+		std::vector<tree::Jet> getJets() const;
 
 		TChain* inputTree;
 		susy::Event* event;

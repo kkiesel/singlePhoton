@@ -428,7 +428,7 @@ float TreeWriter::getPtFromMatchedJet( const susy::Photon& myPhoton, bool isPhot
 	}
 }
 
-std::vector<tree::Jet> TreeWriter::getJets( const std::vector<tree::Photon>& excludedPhotons ) const {
+std::vector<tree::Jet> TreeWriter::getJets() const {
 	tree::Jet jetToTree;
 	std::vector<tree::Jet> returnedJets;
 
@@ -444,7 +444,9 @@ std::vector<tree::Jet> TreeWriter::getJets( const std::vector<tree::Photon>& exc
 		if( corrP4.Pt() < 30 ) continue;
 		if( isAdjacentToParticles<tree::Particle>( *it, electrons ) ) continue;
 		if( isAdjacentToParticles<tree::Particle>( *it, muons ) ) continue;
-		if( isAdjacentToParticles<tree::Photon>( *it, excludedPhotons ) ) continue;
+		if( isAdjacentToParticles<tree::Photon>( *it, photons ) ) continue;
+		if( isAdjacentToParticles<tree::Photon>( *it, photonElectrons ) ) continue;
+		if( isAdjacentToParticles<tree::Photon>( *it, photonJets ) ) continue;
 
 		jetToTree.pt = corrP4.Pt();
 		jetToTree.eta = corrP4.Eta();
@@ -470,7 +472,7 @@ std::vector<tree::Jet> TreeWriter::getJets( const std::vector<tree::Photon>& exc
 	return returnedJets;
 }
 
-float TreeWriter::getSt( float ptCut, const std::vector<tree::Photon>& _photons ) const {
+float TreeWriter::getSt( float ptCut ) const {
 	// ht
 	float returnedHt = 0;
 	std::vector<susy::PFJet> jetVector = event->pfJets["ak5"];
@@ -493,9 +495,14 @@ float TreeWriter::getSt( float ptCut, const std::vector<tree::Photon>& _photons 
 		returnedHt += corrP4.Pt();
 	}
 
-	for(std::vector<tree::Photon>::const_iterator it = _photons.begin();
-			it != _photons.end(); ++it) {
-
+	for(std::vector<tree::Photon>::const_iterator it = photons.begin();
+			it != photons.end(); ++it) {
+		if( it->pt < ptCut || std::abs(it->eta) > susy::etaGapBegin )
+			continue;
+		returnedHt += it->pt;
+	}
+	for(std::vector<tree::Photon>::const_iterator it = photonJets.begin();
+			it != photonJets.end(); ++it) {
 		if( it->pt < ptCut || std::abs(it->eta) > susy::etaGapBegin )
 			continue;
 		returnedHt += it->pt;
@@ -767,21 +774,19 @@ void TreeWriter::Loop() {
 			std::cout << " met = " << met << std::endl;
 
 		htHLT = getHtHLT();
-		st30 = getSt( 30., photons );
-		st80 = getSt( 80., photons );
+		jets = getJets();
+		st30 = getSt(30);
+		st80 = getSt(80);
 
 		if( photons.size() ) {
-			jets = getJets( photons );
 			ht = getHt( photons.at(0) );
 			//if( jets.size() < 2 ) continue;
 			photonTree->Fill();
 		} else if( photonElectrons.size() ) {
-			jets = getJets( photonElectrons );
 			ht = getHt( photonElectrons.at(0) );
 			//if( jets.size() < 2 ) continue;
 			photonElectronTree->Fill();
 		} else if( photonJets.size() ) {
-			jets = getJets( photonJets );
 			ht = getHt( photonJets.at(0) );
 			//if( jets.size() < 2) continue;
 			photonJetTree->Fill();
