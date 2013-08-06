@@ -11,6 +11,7 @@
 #include "TChain.h"
 #include "TH1F.h"
 #include "TH2F.h"
+#include "TH3I.h"
 #include "TPRegexp.h"
 #include "TArrayI.h"
 #include "TLorentzVector.h"
@@ -56,6 +57,7 @@ class TreeWriter {
 		TTree* photonElectronTree;
 		TTree* photonJetTree;
 		TH1F* eventNumbers;
+		TH3I* nPhotons;
 		std::map< std::string, TH2F* > hist2D;
 
 		int processNEvents; // number of events to be processed

@@ -232,11 +232,14 @@ void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
 	// Here the number of proceeded events will be stored. For plotting, simply use L*sigma/eventNumber
 	eventNumbers = new TH1F("eventNumbers", "Histogram containing number of generated events", 1, 0, 1);
 	eventNumbers->GetXaxis()->SetBinLabel(1,"Number of generated events");
+	nPhotons = new TH3I("nPhotons", ";#gamma;#gamma_{jet};#gamma_{e}", 5, -.5, 4.5, 5, -.5, 4.5, 5, -.5, 4.5 );
 	hist2D["dRPtGamma"] = new TH2F("matchingPhotonJet", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
-	hist2D["dRPt"] = new TH2F("matchingPhotonJet", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
+	hist2D["dRPtFO"] = new TH2F("matchingPhotonJet", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
 	for( std::map<std::string, TH2F*>::iterator it = hist2D.begin();
-			it!= hist2D.end(); ++it )
+			it!= hist2D.end(); ++it ) {
 		it->second->SetName( (it->second->GetName() + it->first).c_str() );
+		it->second->Sumw2();
+	}
 
 
 	// open the output file
@@ -393,7 +396,7 @@ float TreeWriter::getPtFromMatchedJet( const susy::Photon& myPhoton, bool isPhot
 		if( isPhoton )
 			hist2D["dRPtGamma"]->Fill( deltaR_, eRel );
 		else
-			hist2D["dRPt"]->Fill( deltaR_, eRel );
+			hist2D["dRPtFO"]->Fill( deltaR_, eRel );
 
 		if (deltaR_ > 0.3 || eRel <= 0.95 ) continue;
 		if( loggingVerbosity > 2 )
@@ -727,6 +730,7 @@ void TreeWriter::Loop() {
 			std::cout << "Found " << photons.size() << " photons, "
 					<< photonJets.size() << " photon_{jets} and "
 					<< photonElectrons.size() << " photon electrons." << std::endl;
+		nPhotons->Fill( photons.size(), photonJets.size(), photonElectrons.size() );
 
 		// electrons
 		std::vector<susy::Electron> eVector = event->electrons["gsfElectrons"];
@@ -763,25 +767,23 @@ void TreeWriter::Loop() {
 			std::cout << " met = " << met << std::endl;
 
 		htHLT = getHtHLT();
-		if( htHLT < 450 ) continue;
-
 		st30 = getSt( 30., photons );
 		st80 = getSt( 80., photons );
 
 		if( photons.size() ) {
 			jets = getJets( photons );
 			ht = getHt( photons.at(0) );
-			if( jets.size() < 2 ) continue;
+			//if( jets.size() < 2 ) continue;
 			photonTree->Fill();
 		} else if( photonElectrons.size() ) {
 			jets = getJets( photonElectrons );
 			ht = getHt( photonElectrons.at(0) );
-			if( jets.size() < 2 ) continue;
+			//if( jets.size() < 2 ) continue;
 			photonElectronTree->Fill();
 		} else if( photonJets.size() ) {
 			jets = getJets( photonJets );
 			ht = getHt( photonJets.at(0) );
-			if( jets.size() < 2) continue;
+			//if( jets.size() < 2) continue;
 			photonJetTree->Fill();
 		}
 
@@ -789,6 +791,7 @@ void TreeWriter::Loop() {
 
 	outFile->cd();
 	eventNumbers->Write();
+	nPhotons->Write();
 	photonTree->Write();
 	photonElectronTree->Write();
 	photonJetTree->Write();
