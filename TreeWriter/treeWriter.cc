@@ -232,9 +232,11 @@ void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
 	// Here the number of proceeded events will be stored. For plotting, simply use L*sigma/eventNumber
 	eventNumbers = new TH1F("eventNumbers", "Histogram containing number of generated events", 1, 0, 1);
 	eventNumbers->GetXaxis()->SetBinLabel(1,"Number of generated events");
-	nPhotons = new TH3I("nPhotons", ";#gamma;#gamma_{jet};#gamma_{e}", 5, -.5, 4.5, 5, -.5, 4.5, 5, -.5, 4.5 );
+	nPhotons = new TH3I("nPhotons", ";#gamma;#gamma_{jet};#gamma_{e}", 4, -.5, 3.5, 4, -.5, 3.5, 4, -.5, 3.5 );
 	hist2D["dRPtGamma"] = new TH2F("matchingPhotonJet", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
 	hist2D["dRPtFO"] = new TH2F("matchingPhotonJet", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
+	hist2D["metSigma"] = new TH2F("", ";met;#sigma_{i#etai#eta}", 100, 0, 400, 100, 0, 0.022 );
+	hist2D["metChIso"] = new TH2F("", ";met;ch iso", 100, 0, 400, 100, 0, 15 );
 	for( std::map<std::string, TH2F*>::iterator it = hist2D.begin();
 			it!= hist2D.end(); ++it ) {
 		it->second->SetName( (it->second->GetName() + it->first).c_str() );
@@ -695,6 +697,8 @@ void TreeWriter::Loop() {
 				photonToTree.setGen( tree::genPhoton );
 			if( matchLorentzToGenVector( it->momentum, genElectrons ) )
 				photonToTree.setGen( tree::genElectron );
+			hist2D["metChIso"]->Fill( event->metMap["pfMet"].met(), photonToTree.chargedIso );
+			hist2D["metSigma"]->Fill( event->metMap["pfMet"].met(), photonToTree.sigmaIetaIeta );
 
 			//photon definition barrel
 			bool isPhotonOrElectron = eta < susy::etaGapBegin
