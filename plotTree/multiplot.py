@@ -3,37 +3,6 @@ import ConfigParser
 import os.path
 from treeFunctions import *
 
-datasetConf = ConfigParser.SafeConfigParser()
-datasetConf.read( "dataset.cfg" )
-
-integratedLumi = 19300 #pb
-
-class Dataset:
-	def __init__( self, filename, treeName, cut="1", label=None, color=None ):
-		self.tree = readTree( filename, treeName )
-		self.additionalCut = cut
-		self.label = label
-
-		for configName in datasetConf.sections():
-			if filename.count( configName ):
-				self.datasetLabel = datasetConf.get( configName, "label" )
-				self.color = datasetConf.get( configName, "color" )
-
-		if color:
-			self.color = color
-
-class Plot:
-	def __init__( self ):
-		pass
-	# binning, etc
-
-class SingleHisto:
-	def __init__( self, name, histo, label=False ):
-		self.histo = histo
-		self.label = label
-		self.name = name
-
-
 class Multihisto:
 	def __init__( self ):
 		self.histos = []
