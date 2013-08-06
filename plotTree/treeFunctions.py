@@ -250,6 +250,12 @@ def getQCDErrorHisto( tree, plot, cut="1", overflow=0, nBins=20, firstBin=None, 
 	"""Applies w_qcd +- w_qcd_error for qcd error propagation.
 	The returned histo's content is the mean, the error are the shifts up and down.
 	"""
+	if firstBin != None and lastBin != None:
+		if "Length$(" in plot or "nVertex" == plot:
+			firstBin -= .5
+			lastBin += .5
+			nBins = int(lastBin-firstBin)
+
 	label, unit, binning = readAxisConf( plot )
 	if binning:
 		histoUp = createHistoFromTree( tree, plot, "(weight*(w_qcd+w_qcd_error))*(%s)"%(cut), nBins=binning)
@@ -271,9 +277,9 @@ def getQCDErrorHisto( tree, plot, cut="1", overflow=0, nBins=20, firstBin=None, 
 
 def getAxisTitle( plot ):
 	objectReplacement = {
-			"photon": "#gamma",
-			"electron": "e",
-			"muon": "#mu"
+			"photons": "#gamma",
+			"electrons": "e",
+			"muons": "#mu"
 		}
 	variableReplacement = {
 			"phi":"#phi",
