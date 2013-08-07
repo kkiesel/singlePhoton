@@ -232,11 +232,12 @@ void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
 	// Here the number of proceeded events will be stored. For plotting, simply use L*sigma/eventNumber
 	eventNumbers = new TH1F("eventNumbers", "Histogram containing number of generated events", 1, 0, 1);
 	eventNumbers->GetXaxis()->SetBinLabel(1,"Number of generated events");
-	nPhotons = new TH3I("nPhotons", ";#gamma;#gamma_{jet};#gamma_{e}", 4, -.5, 3.5, 4, -.5, 3.5, 4, -.5, 3.5 );
+	unsigned int nBins = 3;
+	nPhotons = new TH3I("nPhotons", ";#gamma;#gamma_{jet};#gamma_{e}", nBins, -.5, -.5+nBins, nBins, -.5, -.5+nBins, nBins, -.5, -.5+nBins );
 	hist2D["dRPtGamma"] = new TH2F("matchingPhotonJet", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
 	hist2D["dRPtFO"] = new TH2F("matchingPhotonJet", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
-	hist2D["metSigma"] = new TH2F("", ";met;#sigma_{i#etai#eta}", 100, 0, 400, 100, 0, 0.022 );
-	hist2D["metChIso"] = new TH2F("", ";met;ch iso", 100, 0, 400, 100, 0, 15 );
+	hist2D["metSigma"] = new TH2F("", ";met;#sigma_{i#etai#eta}", 1000, 0, 400, 1000, 0, 0.022 );
+	hist2D["metChIso"] = new TH2F("", ";met;ch iso", 1000, 0, 400, 1500, 0, 15 );
 	for( std::map<std::string, TH2F*>::iterator it = hist2D.begin();
 			it!= hist2D.end(); ++it ) {
 		it->second->SetName( (it->second->GetName() + it->first).c_str() );
@@ -697,8 +698,16 @@ void TreeWriter::Loop() {
 				photonToTree.setGen( tree::genPhoton );
 			if( matchLorentzToGenVector( it->momentum, genElectrons ) )
 				photonToTree.setGen( tree::genElectron );
-			hist2D["metChIso"]->Fill( event->metMap["pfMet"].met(), photonToTree.chargedIso );
-			hist2D["metSigma"]->Fill( event->metMap["pfMet"].met(), photonToTree.sigmaIetaIeta );
+			if( photonToTree.chargedIso < 0 )
+				std::cout << "chargedIso = " << photonToTree.chargedIso << std::endl;
+			else if( photonToTree.chargedIso != 0 )
+				hist2D["metChIso"]->Fill( event->metMap["pfMet"].met(), photonToTree.chargedIso );
+			if( photonToTree.sigmaIetaIeta < 0 )
+				std::cout << "sigmaIetaIeta = " << photonToTree.sigmaIetaIeta << std::endl;
+			else
+				hist2D["metSigma"]->Fill( event->metMap["pfMet"].met(), photonToTree.sigmaIetaIeta );
+			if( it->sigmaIetaIeta <= 0.006 || it->sigmaIphiIphi <= 0.001 )
+				continue; // spike rejection
 
 			//photon definition barrel
 			bool isPhotonOrElectron = eta < susy::etaGapBegin
@@ -710,8 +719,8 @@ void TreeWriter::Loop() {
 
 			bool additionalFOCut = eta < susy::etaGapBegin
 				&& it->hadTowOverEm<0.05
-				&& it->sigmaIetaIeta<0.014
-				&& photonToTree.chargedIso<14
+				&& it->sigmaIetaIeta<0.012
+				&& photonToTree.chargedIso<15
 				&& photonToTree.neutralIso<3.5+0.04*photonToTree.pt
 				&& photonToTree.photonIso<1.3+0.005*photonToTree.pt
 				&& ( it->sigmaIetaIeta >=0.012 || photonToTree.chargedIso>=2.6 );
