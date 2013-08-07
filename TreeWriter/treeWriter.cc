@@ -791,18 +791,31 @@ void TreeWriter::Loop() {
 		st30 = getSt(30);
 		st80 = getSt(80);
 
-		if( photons.size() ) {
+		bool isPhotonEvent = false;
+		bool isPhotonJetEvent = false;
+		if( photons.size() && photonJets.size() ) {
+			if( photons.at(0).pt > photonJets.at(0).pt )
+				isPhotonEvent = true;
+			else
+				isPhotonJetEvent = true;
+		} else if( photons.size() )
+			isPhotonEvent = true;
+		else if( photonJets.size() )
+			isPhotonJetEvent = true;
+
+		if( isPhotonEvent ) {
 			ht = getHt( photons.at(0) );
-			//if( jets.size() < 2 ) continue;
 			photonTree->Fill();
-		} else if( photonElectrons.size() ) {
-			ht = getHt( photonElectrons.at(0) );
-			//if( jets.size() < 2 ) continue;
-			photonElectronTree->Fill();
-		} else if( photonJets.size() ) {
+		}
+		if( isPhotonJetEvent) {
 			ht = getHt( photonJets.at(0) );
-			//if( jets.size() < 2) continue;
 			photonJetTree->Fill();
+		}
+		if( isPhotonJetEvent && isPhotonEvent )
+			std::cout << "error, cant be photonjet and photon event at once" << std::endl;
+		if( !isPhotonJetEvent && !isPhotonEvent && photonElectrons.size() ) {
+			ht = getHt( photonElectrons.at(0) );
+			photonElectronTree->Fill();
 		}
 
 	} // for jentry
