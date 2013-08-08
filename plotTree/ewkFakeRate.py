@@ -49,8 +49,13 @@ def plotNewFakeRate( fileName, opts ):
 	datasetAffix = re.match(".*slim([^_]*)_.*", fileName ).groups()[0]
 
 	commonCut = ""
-	h_gamma = extractHisto( Dataset( fileName, "photonTree", commonCut+" photon.isGenElectron()",color=1 ), opts.plot, 20 )
-	h_e = extractHisto( Dataset( fileName, "photonElectronTree", commonCut+" photon.isGenElectron()",color=2 ), opts.plot, 20 )
+	gTree = readTree( fileName, "photonTree" )
+	eTree = readTree( fileName, "photonElectronTree" )
+	h_gamma = getHisto( gTree, opts.plot, commonCut+" photon.isGenElectron()", color=1 )
+	h_e = getHisto( eTree, opts.plot, commonCut+" photon.isGenElectron()", color=1 )
+
+	#h_gamma = extractHisto( Dataset( fileName, "photonTree", commonCut+" photon.isGenElectron()",color=1 ), opts.plot, 20 )
+	#h_e = extractHisto( Dataset( fileName, "photonElectronTree", commonCut+" photon.isGenElectron()",color=2 ), opts.plot, 20 )
 
 	fakeRate = divideHistos( h_gamma, addHistos( [h_gamma, h_e] ) )
 	fakeRate.GetYaxis().SetTitle("f_{e#rightarrow#gamma}")
