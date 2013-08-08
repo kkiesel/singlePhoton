@@ -17,6 +17,9 @@ ROOT.gSystem.Load("libTreeObjects.so")
 # to TApplication
 ROOT.PyConfig.IgnoreCommandLineOptions = True
 
+# variable to reweight
+reweightVar = "ht"
+
 def writeWeight2DToFile( fileName, tree, h_weight, weightTreeName ):
 	"""Write weight for a tree in another tree in a given file.
 	This tree can be added to the original tree via 'AddFriend()'.
@@ -35,7 +38,7 @@ def writeWeight2DToFile( fileName, tree, h_weight, weightTreeName ):
 	for event in tree:
 		if not event.GetReadEntry()%10000:
 			print "%s / %s"%(event.GetReadEntry(), event.GetEntries() )
-		b = h_weight.FindBin( event.photons.at(0).ptJet(), event.ht )
+		b = h_weight.FindBin( event.photons.at(0).ptJet(), eval("event.%s"%reweightVar) )
 		weight[0] = h_weight.GetBinContent( b )
 		weight_error[0] = h_weight.GetBinError( b )
 		weightTree.Fill()
@@ -49,7 +52,7 @@ def getWeightHisto2D( gControlTree, foControlTree, datasetAffix ):
 	"""The histogram for the weights in created here."""
 
 	xVar = "photons[0].ptJet()"
-	yVar = "ht"
+	yVar = reweightVar
 	xlabel, xunit, xbinning = readAxisConf( xVar )
 	ylabel, yunit, ybinning = readAxisConf( yVar )
 
@@ -89,7 +92,7 @@ def getWeightHisto2D( gControlTree, foControlTree, datasetAffix ):
 			(weightRelErrors, "weightRelError") ]:
 		hist.Draw("colz text")
 		info.Draw()
-		can2D.SaveAs( "plots/qcd_preWeight_%s_%s.pdf"%(datasetAffix,name) )
+		can2D.SaveAs( "plots/qcd_preWeight_%s_%s_%s.pdf"%(datasetAffix,name,yVar) )
 	Styles.tdrStyle()
 
 	return weight2D
@@ -136,7 +139,7 @@ def drawBeforeClosure( plot, gTree, foTree, cut, can, info, datasetAffix, additi
 		hPad.Draw()
 		ratioPad.Draw()
 		info.Draw()
-		SaveAs(can, "plots","qcd_preWeight_%s_%s"%(datasetAffix+additionalInfo, plot) )
+		SaveAs(can, "plots","qcd_preWeight_%s_%s_%s"%(datasetAffix+additionalInfo, plot,reweightVar) )
 		ROOT.SetOwnership( hPad, False )
 		ROOT.SetOwnership( ratioPad, False )
 
@@ -181,18 +184,15 @@ def drawClosure( plot, gTree, foTree, cut, can, info, datasetAffix, additionalIn
 		hPad.Draw()
 		ratioPad.Draw()
 		info.Draw()
-		SaveAs(can, "plots","qcd_afterWeighting_%s_%s"%(datasetAffix+additionalInfo, plot) )
+		SaveAs(can, "plots","qcd_afterWeighting_%s_%s_%s"%(datasetAffix+additionalInfo, plot,reweightVar) )
 		ROOT.SetOwnership( hPad, False )
 		ROOT.SetOwnership( ratioPad, False )
 
 def qcdClosure( fileName, opts ):
 	try:
-		datasetAffix = re.match(".*slim(.*)_V.*", fileName ).groups()[0]
+		datasetAffix = re.match(".*slim(.*)_V.*", fileName ).groups()[-1]
 	except:
-		try:
-			datasetAffix = re.match(".*slim(.*)\.root", fileName ).groups()[0]
-		except:
-			datasetAffix = fileName
+		datasetAffix = fileName
 
 	signalCut = "met>=100"
 	controlCut = "!(%s)"%signalCut
@@ -200,11 +200,7 @@ def qcdClosure( fileName, opts ):
 	gTree = readTree( fileName, "photonTree" )
 	foTree = readTree( fileName, "photonJetTree" )
 
-	weights = getWeightHisto2D( gTree, foTree, datasetAffix )
-	writeWeight2DToFile( fileName, foTree, weights, "foWeights" )
-	foTree.AddFriend( "foWeights", fileName )
-
-	plots = [ "met" ]#, "ht", "htHLT", "st80", "st30","photons[0].ptJet()","Length$(jets.pt)" ]
+	plots = [ "met" , "ht", "htHLT", "st80", "st30","photons[0].ptJet()","Length$(jets.pt)" ]
 
 	# Definition of labels
 	infoControl = PlotCaption()
@@ -220,10 +216,19 @@ def qcdClosure( fileName, opts ):
 		drawBeforeClosure( plot, gTree, foTree, signalCut, can, infoSignal, datasetAffix, "_signal" )
 		drawBeforeClosure( plot, gTree, foTree, controlCut, can, infoControl, datasetAffix, "_control" )
 		drawBeforeClosure( plot, gTree, foTree, "1", can, info, datasetAffix )
+
+	commonCut = "htHLT > 500"
+	gTree = gTree.CopyTree( commonCut )
+	foTree = foTree.CopyTree( commonCut )
+
+	weights = getWeightHisto2D( gTree, foTree, datasetAffix )
+	writeWeight2DToFile( fileName, foTree, weights, "foWeights" )
+	foTree.AddFriend( "foWeights", fileName )
+
+	for plot in plots:
 		drawClosure( plot, gTree, foTree, signalCut, can, infoSignal, datasetAffix, "_signal" )
 		drawClosure( plot, gTree, foTree, controlCut, can, infoControl, datasetAffix, "_control" )
 		drawClosure( plot, gTree, foTree, "1", can, info, datasetAffix )
-
 
 	# Delete the trees from memory, important for many iterations.
 	# The trees have to be deleted by hand to avoid segmentation violations.
