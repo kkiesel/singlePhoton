@@ -690,6 +690,7 @@ void TreeWriter::Loop() {
 			photonToTree.phi = it->momentum.Phi();
 			photonToTree.r9 = it->r9;
 			photonToTree.sigmaIetaIeta = it->sigmaIetaIeta;
+			photonToTree.sigmaIphiIphi = it->sigmaIphiIphi;
 			photonToTree.hadTowOverEm = it->hadTowOverEm;
 			photonToTree.pixelseed = it->nPixelSeeds;
 			photonToTree.conversionSafeVeto = it->passelectronveto;
@@ -698,18 +699,11 @@ void TreeWriter::Loop() {
 				photonToTree.setGen( tree::genPhoton );
 			if( matchLorentzToGenVector( it->momentum, genElectrons ) )
 				photonToTree.setGen( tree::genElectron );
-			if( photonToTree.chargedIso < 0 )
-				std::cout << "chargedIso = " << photonToTree.chargedIso << std::endl;
-			else if( photonToTree.chargedIso != 0 )
-				hist2D["metChIso"]->Fill( event->metMap["pfMet"].met(), photonToTree.chargedIso );
-			if( photonToTree.sigmaIetaIeta < 0 )
-				std::cout << "sigmaIetaIeta = " << photonToTree.sigmaIetaIeta << std::endl;
-			else
-				hist2D["metSigma"]->Fill( event->metMap["pfMet"].met(), photonToTree.sigmaIetaIeta );
-			if( it->sigmaIetaIeta <= 0.006 || it->sigmaIphiIphi <= 0.001 )
-				continue; // spike rejection
+			hist2D["metChIso"]->Fill( event->metMap["pfMet"].met(), photonToTree.chargedIso );
+			hist2D["metSigma"]->Fill( event->metMap["pfMet"].met(), photonToTree.sigmaIetaIeta );
 
 			//photon definition barrel
+			/*
 			bool isPhotonOrElectron = eta < susy::etaGapBegin
 				&& it->hadTowOverEm<0.05
 				&& it->sigmaIetaIeta<0.012
@@ -724,21 +718,14 @@ void TreeWriter::Loop() {
 				&& photonToTree.neutralIso<3.5+0.04*photonToTree.pt
 				&& photonToTree.photonIso<1.3+0.005*photonToTree.pt
 				&& ( it->sigmaIetaIeta >=0.012 || photonToTree.chargedIso>=2.6 );
+			*/
 
 			if(photonToTree.isGen( tree::genPhoton ))
 				photonToTree._ptJet = getPtFromMatchedJet( *it );
 			else
 				photonToTree._ptJet = getPtFromMatchedJet( *it, false );
 
-			if( isPhotonOrElectron ) {
-				if( photonToTree.pixelseed ) {
-					photonElectrons.push_back( photonToTree );
-				} else {
-					photons.push_back( photonToTree );
-				}
-			} else if ( !useAdditionalFOCut || additionalFOCut ) {
-				photonJets.push_back( photonToTree );
-			}
+			photons.push_back( photonToTree );
 
 			if( loggingVerbosity > 2 )
 				std::cout << " p_T, gamma = " << photonToTree.pt << std::endl;
@@ -791,7 +778,7 @@ void TreeWriter::Loop() {
 		st30 = getSt(30);
 		st80 = getSt(80);
 
-		bool isPhotonEvent = false;
+		/*bool isPhotonEvent = false;
 		bool isPhotonJetEvent = false;
 		if( photons.size() && photonJets.size() ) {
 			if( photons.at(0).pt > photonJets.at(0).pt )
@@ -816,6 +803,11 @@ void TreeWriter::Loop() {
 		if( !isPhotonJetEvent && !isPhotonEvent && photonElectrons.size() ) {
 			ht = getHt( photonElectrons.at(0) );
 			photonElectronTree->Fill();
+		}
+		*/
+		if( photons.size() ) {
+			ht = getHt( photons.at(0) );
+			photonTree->Fill();
 		}
 
 	} // for jentry
