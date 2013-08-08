@@ -236,8 +236,8 @@ void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
 	nPhotons = new TH3I("nPhotons", ";#gamma;#gamma_{jet};#gamma_{e}", nBins, -.5, -.5+nBins, nBins, -.5, -.5+nBins, nBins, -.5, -.5+nBins );
 	hist2D["dRPtGamma"] = new TH2F("matchingPhotonJet", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
 	hist2D["dRPtFO"] = new TH2F("matchingPhotonJet", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
-	hist2D["metSigma"] = new TH2F("", ";met;#sigma_{i#etai#eta}", 1000, 0, 400, 1000, 0, 0.022 );
-	hist2D["metChIso"] = new TH2F("", ";met;ch iso", 1000, 0, 400, 1500, 0, 15 );
+	hist2D["metSigma"] = new TH2F("", ";met;#sigma_{i#etai#eta}", 50, 0, 500, 440, 0, 0.022 );
+	hist2D["metChIso"] = new TH2F("", ";met;ch iso", 50, 0, 500, 150, 0, 15 );
 	for( std::map<std::string, TH2F*>::iterator it = hist2D.begin();
 			it!= hist2D.end(); ++it ) {
 		it->second->SetName( (it->second->GetName() + it->first).c_str() );
