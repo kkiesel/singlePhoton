@@ -20,6 +20,7 @@ class Photon : public Particle {
 		void setGen( genParticles id );
 		float ptJet() const;
 		float _ptJet;
+		float sigmaIphiIphi;
 		float r9, sigmaIetaIeta, hadTowOverEm;
 		float chargedIso, neutralIso, photonIso;
 		bool conversionSafeVeto;
