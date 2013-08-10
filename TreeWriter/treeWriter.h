@@ -32,7 +32,7 @@ class TreeWriter {
 		void SetLoggingVerbosity(unsigned int logVerb) { loggingVerbosity = logVerb; }
 		void SetTriggerPaths( std::vector<const char*> const & tp ) { triggerNames = tp; }
 		void PileUpWeightFile( std::string const & pileupFileName );
-		void IncludeAJson( TString const & _fileName );
+		int IncludeAJson( TString const & _fileName );
 		void SplitTree( bool v = true ) { splitting = v; }
 		void setPhotonPtThreshold( float th ) { photonPtThreshold = th; }
 

@@ -268,14 +268,15 @@ bool TreeWriter::isData() {
 	return event->isRealData;
 }
 
-void TreeWriter::IncludeAJson(TString const& _fileName) {
+int TreeWriter::IncludeAJson(TString const& _fileName) {
 	/** Read a Json file which contains good runNumbers and Lumi-sections.
 	 * The content will be stored in the class variable 'goodLumiList'.
 	 */
 	ifstream inputFile(_fileName);
 	if(!inputFile.is_open()){
-		std::cerr << "Cannot open JSON file " << _fileName << std::endl;
-		return;
+		if( loggingVerbosity > 1 )
+			std::cerr << "Cannot open JSON file " << _fileName << std::endl;
+		return 1;
 	}
 
 	std::string line;
@@ -310,6 +311,7 @@ void TreeWriter::IncludeAJson(TString const& _fileName) {
 	}
 	if( loggingVerbosity > 1 )
 		std::cout << "JSON file for filtering included." << std::endl;
+	return 0;
 }
 
 void TreeWriter::PileUpWeightFile( std::string const & pileupFileName ) {
