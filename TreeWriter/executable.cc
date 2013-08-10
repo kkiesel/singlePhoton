@@ -21,13 +21,18 @@ int main( int argc, char** argv ) {
 	tw->SetProcessNEvents(-1);
 	tw->SetReportEvents(20000);
 
-	// cant study FO definition afterwards
-	tw->UseAdditionalFOCut();
+	tw->SplitTree( false );
+	tw->setPhotonPtThreshold( 80 );
 
 	if( isData ) {
 		std::cout << "Process data." << std::endl;
-		//tw->IncludeAJson( "../../Cert_190456-208686_8TeV_22Jan2013ReReco_Collisions12_JSON.txt" );
-		tw->IncludeAJson( "/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions12/8TeV/Reprocessing/Cert_190456-208686_8TeV_22Jan2013ReReco_Collisions12_JSON.txt" );
+
+		// try json of afs first, else try out reading local one
+		if( tw->IncludeAJson( "/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions12/8TeV/Reprocessing/Cert_190456-208686_8TeV_22Jan2013ReReco_Collisions12_JSON.txt" ) )
+			if( tw->IncludeAJson( "../../Cert_190456-208686_8TeV_22Jan2013ReReco_Collisions12_JSON.txt" ) ) {
+				std::cout << "Can't read either of the two json files, abort." << std::endl;
+				return 1;
+			}
 		std::vector<const char*> triggerNames;
 		triggerNames.push_back( "HLT_Photon70_CaloIdXL_PFHT400_v" );
 		triggerNames.push_back( "HLT_Photon70_CaloIdXL_PFNoPUHT400_v" );

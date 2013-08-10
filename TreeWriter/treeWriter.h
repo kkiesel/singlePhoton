@@ -32,8 +32,9 @@ class TreeWriter {
 		void SetLoggingVerbosity(unsigned int logVerb) { loggingVerbosity = logVerb; }
 		void SetTriggerPaths( std::vector<const char*> const & tp ) { triggerNames = tp; }
 		void PileUpWeightFile( std::string const & pileupFileName );
-		void IncludeAJson( TString const & _fileName );
-		void UseAdditionalFOCut( bool v = true ) { useAdditionalFOCut = v; }
+		int IncludeAJson( TString const & _fileName );
+		void SplitTree( bool v = true ) { splitting = v; }
+		void setPhotonPtThreshold( float th ) { photonPtThreshold = th; }
 
 	private:
 		void Init( std::string outputName, int loggingVerbosity_ );
@@ -46,7 +47,7 @@ class TreeWriter {
 		float getHtHLT() const;
 		float getHt( const tree::Photon& photon ) const;
 		float getSt( float ptCut ) const;
-		std::vector<tree::Jet> getJets() const;
+		std::vector<tree::Jet> getJets( bool clean ) const;
 
 		TChain* inputTree;
 		susy::Event* event;
@@ -63,7 +64,8 @@ class TreeWriter {
 		int processNEvents; // number of events to be processed
 		unsigned int reportEvery;
 		unsigned int loggingVerbosity;
-		bool useAdditionalFOCut;
+		bool splitting;
+		float photonPtThreshold;
 		std::vector<unsigned int> jetIndicesWithPhotonMatch;
 
 		// important dataset information
@@ -93,4 +95,5 @@ class TreeWriter {
 		unsigned int runNumber;
 		unsigned int eventNumber;
 		unsigned int luminosityBlockNumber;
+		float ptHat;
 };

@@ -258,7 +258,9 @@ void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
 	reportEvery = 1000;
 	loggingVerbosity = loggingVerbosity_;
 	pileupHisto = 0;
-	useAdditionalFOCut = false;
+	splitting = false;
+	ptHat = 0;
+	photonPtThreshold = 80;
 }
 
 bool TreeWriter::isData() {
@@ -266,14 +268,15 @@ bool TreeWriter::isData() {
 	return event->isRealData;
 }
 
-void TreeWriter::IncludeAJson(TString const& _fileName) {
+int TreeWriter::IncludeAJson(TString const& _fileName) {
 	/** Read a Json file which contains good runNumbers and Lumi-sections.
 	 * The content will be stored in the class variable 'goodLumiList'.
 	 */
 	ifstream inputFile(_fileName);
 	if(!inputFile.is_open()){
-		std::cerr << "Cannot open JSON file " << _fileName << std::endl;
-		return;
+		if( loggingVerbosity > 1 )
+			std::cerr << "Cannot open JSON file " << _fileName << std::endl;
+		return 1;
 	}
 
 	std::string line;
@@ -308,6 +311,7 @@ void TreeWriter::IncludeAJson(TString const& _fileName) {
 	}
 	if( loggingVerbosity > 1 )
 		std::cout << "JSON file for filtering included." << std::endl;
+	return 0;
 }
 
 void TreeWriter::PileUpWeightFile( std::string const & pileupFileName ) {
@@ -431,7 +435,7 @@ float TreeWriter::getPtFromMatchedJet( const susy::Photon& myPhoton, bool isPhot
 	}
 }
 
-std::vector<tree::Jet> TreeWriter::getJets() const {
+std::vector<tree::Jet> TreeWriter::getJets( bool clean ) const {
 	tree::Jet jetToTree;
 	std::vector<tree::Jet> returnedJets;
 
@@ -447,9 +451,11 @@ std::vector<tree::Jet> TreeWriter::getJets() const {
 		if( corrP4.Pt() < 30 ) continue;
 		if( isAdjacentToParticles<tree::Particle>( *it, electrons ) ) continue;
 		if( isAdjacentToParticles<tree::Particle>( *it, muons ) ) continue;
-		if( isAdjacentToParticles<tree::Photon>( *it, photons ) ) continue;
-		if( isAdjacentToParticles<tree::Photon>( *it, photonElectrons ) ) continue;
-		if( isAdjacentToParticles<tree::Photon>( *it, photonJets ) ) continue;
+		if( clean ) {
+			if( isAdjacentToParticles<tree::Photon>( *it, photons ) ) continue;
+			if( isAdjacentToParticles<tree::Photon>( *it, photonElectrons ) ) continue;
+			if( isAdjacentToParticles<tree::Photon>( *it, photonJets ) ) continue;
+		}
 
 		jetToTree.pt = corrP4.Pt();
 		jetToTree.eta = corrP4.Eta();
@@ -571,6 +577,7 @@ void TreeWriter::SetBranches( TTree& tree ) {
 	tree.Branch("runNumber", &runNumber, "runNumber/i");
 	tree.Branch("eventNumber", &eventNumber, "eventNumber/i");
 	tree.Branch("luminosityBlockNumber", &luminosityBlockNumber, "luminosityBlockNumber/i");
+	tree.Branch("ptHat", &ptHat, "ptHat/F" );
 	tree.Branch("genElectrons", &genElectrons);
 	tree.Branch("genPhotons", &genPhotons);
 }
@@ -680,7 +687,7 @@ void TreeWriter::Loop() {
 		for(std::vector<susy::Photon>::iterator it = photonVector.begin();
 				it != photonVector.end(); ++it ) {
 			float eta = std::abs( it->momentum.Eta() );
-			if( it->momentum.Pt() < 80 || eta >= susy::etaGapBegin )
+			if( it->momentum.Pt() < photonPtThreshold || eta >= susy::etaGapBegin )
 				continue;
 			photonToTree.chargedIso = chargedHadronIso_corrected(*it, event->rho25);
 			photonToTree.neutralIso = neutralHadronIso_corrected(*it, event->rho25);
@@ -699,33 +706,41 @@ void TreeWriter::Loop() {
 				photonToTree.setGen( tree::genPhoton );
 			if( matchLorentzToGenVector( it->momentum, genElectrons ) )
 				photonToTree.setGen( tree::genElectron );
-			hist2D["metChIso"]->Fill( event->metMap["pfMet"].met(), photonToTree.chargedIso );
-			hist2D["metSigma"]->Fill( event->metMap["pfMet"].met(), photonToTree.sigmaIetaIeta );
-
-			//photon definition barrel
-			/*
-			bool isPhotonOrElectron = eta < susy::etaGapBegin
-				&& it->hadTowOverEm<0.05
-				&& it->sigmaIetaIeta<0.012
-				&& photonToTree.chargedIso<2.6
-				&& photonToTree.neutralIso<3.5+0.04*photonToTree.pt
-				&& photonToTree.photonIso<1.3+0.005*photonToTree.pt;
-
-			bool additionalFOCut = eta < susy::etaGapBegin
-				&& it->hadTowOverEm<0.05
-				&& it->sigmaIetaIeta<0.012
-				&& photonToTree.chargedIso<15
-				&& photonToTree.neutralIso<3.5+0.04*photonToTree.pt
-				&& photonToTree.photonIso<1.3+0.005*photonToTree.pt
-				&& ( it->sigmaIetaIeta >=0.012 || photonToTree.chargedIso>=2.6 );
-			*/
-
 			if(photonToTree.isGen( tree::genPhoton ))
 				photonToTree._ptJet = getPtFromMatchedJet( *it );
 			else
 				photonToTree._ptJet = getPtFromMatchedJet( *it, false );
 
-			photons.push_back( photonToTree );
+			hist2D["metChIso"]->Fill( event->metMap["pfMet"].met(), photonToTree.chargedIso );
+			hist2D["metSigma"]->Fill( event->metMap["pfMet"].met(), photonToTree.sigmaIetaIeta );
+			if( splitting ) {
+
+				//photon definition barrel
+				bool isPhotonOrElectron = eta < susy::etaGapBegin
+					&& it->hadTowOverEm<0.05
+					&& it->sigmaIetaIeta<0.012
+					&& photonToTree.chargedIso<2.6
+					&& photonToTree.neutralIso<3.5+0.04*photonToTree.pt
+					&& photonToTree.photonIso<1.3+0.005*photonToTree.pt;
+
+				bool isPhotonJet = eta < susy::etaGapBegin
+					&& it->hadTowOverEm<0.05
+					&& it->sigmaIetaIeta<0.012
+					&& photonToTree.chargedIso<15
+					&& photonToTree.neutralIso<3.5+0.04*photonToTree.pt
+					&& photonToTree.photonIso<1.3+0.005*photonToTree.pt
+					&& photonToTree.chargedIso>=2.6;
+
+					if( isPhotonOrElectron ) {
+						if( photonToTree.pixelseed )
+							photonElectrons.push_back( photonToTree );
+						else
+							photons.push_back( photonToTree );
+					} else if ( isPhotonJet )
+						photonJets.push_back( photonToTree );
+
+			} else // no splitting, put everything in the vector 'photons'
+				photons.push_back( photonToTree );
 
 			if( loggingVerbosity > 2 )
 				std::cout << " p_T, gamma = " << photonToTree.pt << std::endl;
@@ -774,50 +789,59 @@ void TreeWriter::Loop() {
 			std::cout << " met = " << met << std::endl;
 
 		htHLT = getHtHLT();
-		jets = getJets();
-		st30 = getSt(30);
-		st80 = getSt(80);
+		if ( !event->isRealData )
+			ptHat = event->gridParams.at("ptHat");
+		if( splitting ) {
+			jets = getJets( true );
+			st30 = getSt(30);
+			st80 = getSt(80);
 
-		/*bool isPhotonEvent = false;
-		bool isPhotonJetEvent = false;
-		if( photons.size() && photonJets.size() ) {
-			if( photons.at(0).pt > photonJets.at(0).pt )
+			bool isPhotonEvent = false;
+			bool isPhotonJetEvent = false;
+			if( photons.size() && photonJets.size() ) {
+				if( photons.at(0).pt > photonJets.at(0).pt )
+					isPhotonEvent = true;
+				else
+					isPhotonJetEvent = true;
+			} else if( photons.size() )
 				isPhotonEvent = true;
-			else
+			else if( photonJets.size() )
 				isPhotonJetEvent = true;
-		} else if( photons.size() )
-			isPhotonEvent = true;
-		else if( photonJets.size() )
-			isPhotonJetEvent = true;
 
-		if( isPhotonEvent ) {
-			ht = getHt( photons.at(0) );
-			photonTree->Fill();
-		}
-		if( isPhotonJetEvent) {
-			ht = getHt( photonJets.at(0) );
-			photonJetTree->Fill();
-		}
-		if( isPhotonJetEvent && isPhotonEvent )
-			std::cout << "error, cant be photonjet and photon event at once" << std::endl;
-		if( !isPhotonJetEvent && !isPhotonEvent && photonElectrons.size() ) {
-			ht = getHt( photonElectrons.at(0) );
-			photonElectronTree->Fill();
-		}
-		*/
-		if( photons.size() ) {
-			ht = getHt( photons.at(0) );
-			photonTree->Fill();
+			if( isPhotonEvent ) {
+				ht = getHt( photons.at(0) );
+				photonTree->Fill();
+			}
+			if( isPhotonJetEvent) {
+				ht = getHt( photonJets.at(0) );
+				photonJetTree->Fill();
+			}
+			if( isPhotonJetEvent && isPhotonEvent )
+				std::cout << "error, cant be photonjet and photon event at once" << std::endl;
+			if( !isPhotonJetEvent && !isPhotonEvent && photonElectrons.size() ) {
+				ht = getHt( photonElectrons.at(0) );
+				photonElectronTree->Fill();
+			}
+		} else { // no splitting
+			ht = 0;
+			st30 = 0;
+			st80 = 0;
+			jets = getJets( false );
+
+			if( photons.size() && htHLT > 400 )
+				photonTree->Fill();
 		}
 
 	} // for jentry
 
 	outFile->cd();
-	eventNumbers->Write();
-	nPhotons->Write();
 	photonTree->Write();
-	photonElectronTree->Write();
-	photonJetTree->Write();
+	if( splitting ) {
+		photonElectronTree->Write();
+		photonJetTree->Write();
+		nPhotons->Write();
+	}
+	eventNumbers->Write();
 
 	for( std::map<std::string, TH2F*>::iterator it = hist2D.begin();
 			it!= hist2D.end(); ++it )

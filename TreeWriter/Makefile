@@ -26,7 +26,7 @@ lib%.so: %.h %_LinkDef.h
 	@if [ -d $(CMSSW_BASE)/lib/$(SCRAM_ARCH) -a "$(CMSSW_BASE)" != "" ]; then\
 		cp $@ $(CMSSW_BASE)/lib/$(SCRAM_ARCH);\
 	else\
-		echo "\n###\nPlease copy the library manually to $(root-config --libdir)!\n###\n";\
+		echo -e "\n#############################################\n### Please copy the library manually to $(root-config --libdir)! ### \n#############################################\n";\
 	fi
 
 clean:
