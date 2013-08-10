@@ -565,21 +565,21 @@ void TreeWriter::SetBranches( TTree& tree ) {
 	tree.Branch("jets", &jets);
 	tree.Branch("electrons", &electrons);
 	tree.Branch("muons", &muons);
+	tree.Branch("genPhotons", &genPhotons);
+	tree.Branch("genElectrons", &genElectrons);
 	tree.Branch("met", &met, "met/F");
 	tree.Branch("type0met", &type0met, "type0met/F");
 	tree.Branch("type1met", &type1met, "type1met/F");
 	tree.Branch("htHLT", &htHLT, "htHLT/F");
 	tree.Branch("ht", &ht, "ht/F");
-	tree.Branch("st30", &st30, "st30");
-	tree.Branch("st80", &st80, "st80");
+	tree.Branch("st30", &st30, "st30/F");
+	tree.Branch("st80", &st80, "st80/F");
+	tree.Branch("weight", &weight, "weight/F");
+	tree.Branch("ptHat", &ptHat, "ptHat/F" );
 	tree.Branch("nVertex", &nVertex, "nVertex/I");
-	tree.Branch("weight", &weight, "weight/D");
 	tree.Branch("runNumber", &runNumber, "runNumber/i");
 	tree.Branch("eventNumber", &eventNumber, "eventNumber/i");
 	tree.Branch("luminosityBlockNumber", &luminosityBlockNumber, "luminosityBlockNumber/i");
-	tree.Branch("ptHat", &ptHat, "ptHat/F" );
-	tree.Branch("genElectrons", &genElectrons);
-	tree.Branch("genPhotons", &genPhotons);
 }
 
 bool TreeWriter::passRecommendedMetFilters() const {
