@@ -828,7 +828,7 @@ void TreeWriter::Loop() {
 			st80 = 0;
 			jets = getJets( false );
 
-			if( photons.size() && htHLT > 400 )
+			if( photons.size() )
 				photonTree->Fill();
 		}
 
@@ -846,7 +846,6 @@ void TreeWriter::Loop() {
 	for( std::map<std::string, TH2F*>::iterator it = hist2D.begin();
 			it!= hist2D.end(); ++it )
 		it->second->Write();
-	outFile->Write();
 	outFile->Close();
 }
 
