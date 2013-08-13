@@ -1,3 +1,14 @@
+def rebin2D( oldHist, xList, yList ):
+	import array
+	newHist = ROOT.TH2F( oldHist.GetName()+randomName(), "%s;%s;%s"%(oldHist.GetTitle(),oldHist.GetXaxis().GetTitle(),oldHist.GetYaxis().GetTitle()), \
+			len(xList)-1, array.array('d', xList), \
+			len(yList)-1, array.array('d', yList) )
+	newHist.Sumw2()
+	for i in range(oldHist.GetNbinsX()+2):
+		for j in range(oldHist.GetNbinsY()+2):
+			newHist.Fill( oldHist.GetXaxis().GetBinCenter(i), oldHist.GetYaxis().GetBinCenter(j), oldHist.GetBinContent(i,j) )
+	return newHist
+
 def datasetToLatex( fileNamePart ):
 	sets = { "AllQCD": "(#gamma+)QCD",
 			"GJets": "#gamma+QCD",
