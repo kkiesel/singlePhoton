@@ -51,8 +51,8 @@ def plotNewFakeRate( fileName, opts ):
 	commonCut = ""
 	gTree = readTree( fileName, "photonTree" )
 	eTree = readTree( fileName, "photonElectronTree" )
-	h_gamma = getHisto( gTree, opts.plot, commonCut+" photon.isGenElectron()", color=1 )
-	h_e = getHisto( eTree, opts.plot, commonCut+" photon.isGenElectron()", color=1 )
+	h_gamma = getHisto( gTree, opts.plot, commonCut+" !photons.isGen(1)", color=1 )
+	h_e = getHisto( eTree, opts.plot, commonCut+" !photons.isGen(1)", color=1 )
 
 	#h_gamma = extractHisto( Dataset( fileName, "photonTree", commonCut+" photon.isGenElectron()",color=1 ), opts.plot, 20 )
 	#h_e = extractHisto( Dataset( fileName, "photonElectronTree", commonCut+" photon.isGenElectron()",color=2 ), opts.plot, 20 )
@@ -81,7 +81,7 @@ def plotNewFakeRate( fileName, opts ):
 
 if __name__ == "__main__":
 	arguments = argparse.ArgumentParser( description="Simple EWK" )
-	arguments.add_argument( "--plot", default="photon.pt" )
+	arguments.add_argument( "--plot", default="photons.pt" )
 	arguments.add_argument( "--input", default=["WJets_V01.12_tree.root"], nargs="+" )
 	arguments.add_argument( "--savePrefix", default="new" )
 	opts = arguments.parse_args()
