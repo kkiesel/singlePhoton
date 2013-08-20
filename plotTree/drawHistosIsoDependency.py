@@ -29,7 +29,7 @@ def split2Din1DMultihist( h2D, axis, uFlow, oFlow ):
 			binRange = binRange[1:]
 		if not oFlow:
 			binRange = binRange[:-1]
-		for yBin in binRange:
+		for iColor, yBin in enumerate(binRange):
 			h = h2D.ProjectionX( "_px%s"%yBin, yBin, yBin )
 			if yBin == 0:
 				title = "       %s < %s"%(variable, h2D.GetYaxis().GetBinUpEdge(yBin))
@@ -38,7 +38,9 @@ def split2Din1DMultihist( h2D, axis, uFlow, oFlow ):
 			else:
 				title = "%s #leq %s"%(h2D.GetYaxis().GetBinLowEdge(yBin),variable )
 
-			h.SetLineColor( style.GetColorPalette(int(1.*yBin/(len(binRange))*(style.GetNumberOfColors()-1) ) ) )
+
+			color = style.GetColorPalette( int( 1.*iColor/(len(binRange)-1)*(style.GetNumberOfColors()-1) ) )
+			h.SetLineColor( color )
 			h.SetMarkerColor( h.GetLineColor() )
 			h.SetMarkerSize(0)
 			h.GetXaxis().SetTitle( h2D.GetXaxis().GetTitle() )
@@ -50,7 +52,7 @@ def split2Din1DMultihist( h2D, axis, uFlow, oFlow ):
 			binRange = binRange[1:]
 		if not oFlow:
 			binRange = binRange[:-1]
-		for yBin in binRange:
+		for iColor, yBin in enumerate(binRange):
 			h = h2D.ProjectionY( "_px%s"%yBin, yBin, yBin )
 			if yBin == 0:
 				title = "       %s < %s"%(variable, h2D.GetXaxis().GetBinUpEdge(yBin))
@@ -59,7 +61,8 @@ def split2Din1DMultihist( h2D, axis, uFlow, oFlow ):
 			else:
 				title = "%s #leq %s"%(h2D.GetXaxis().GetBinLowEdge(yBin),variable )
 
-			h.SetLineColor( style.GetColorPalette(int(1.*yBin/(len(binRange)-1)*(style.GetNumberOfColors()-1) ) ) )
+			color = style.GetColorPalette( int( 1.*iColor/(len(binRange)-1)*(style.GetNumberOfColors()-1) ) )
+			h.SetLineColor( color )
 			h.SetMarkerColor( h.GetLineColor() )
 			h.SetMarkerSize(0)
 			h.GetXaxis().SetTitle( h2D.GetYaxis().GetTitle() )
@@ -74,16 +77,19 @@ def drawDependency( inName, histName, rebinX, rebinY, axis="y", uFlow=True, oFlo
 	mh = split2Din1DMultihist( hist2D, axis, uFlow, oFlow )
 	for h in mh.histos:
 		if h[0].Integral():
-			h[0].Scale(1./h[0].Integral(),"width")
+			h[0].Scale(1./h[0].Integral("width"),"width")
 		h[0].GetYaxis().SetTitle("Normed Entries, divided by bin width")
 
+	mh.leg.SetX1(.5)
 	if axis == "x" and "sigma" in hist2D.GetYaxis().GetTitle():
 		mh.leg.SetY1(0.2)
 		mh.leg.SetY2(0.6)
 
-	can = ROOT.TCanvas()
+	can = ROOT.TCanvas("title", "name", 1000, 1400 )
 	mh.Draw()
 	datasetAffix = re.match("(slim)?(.*)_V.*", inName ).groups()[-1]
+	label = drawDatasetLabel( datasetAffix )
+	label.Draw()
 	can.SaveAs("plots/2Dto1D_%s_%s_%s_%s%s.pdf"%(histName,datasetAffix,axis,len(rebinX),len(rebinY)))
 
 if __name__ == "__main__":
@@ -98,17 +104,19 @@ if __name__ == "__main__":
 
 	for inName in opts.input:
 		drawDependency( inName, "metSigma", metBinning, [0.0, 0.012, 0.014 ], "y", False, False )
-		drawDependency( inName, "metSigma", metBinning, [0.001*x for x in range(0,15,2) ] )
+		drawDependency( inName, "metSigma", metBinning, [0.001*x for x in range(0,15,2) ], "y", False )
 
-		drawDependency( inName, "metChIso", metBinning, [ 0., 2.6 ], "y", False  )
+		drawDependency( inName, "metChIso", metBinning, [ 0., 2.6, 15 ], "y" , False, False )
 		drawDependency( inName, "metChIso", metBinning, [ 0, 0.5, 2,4,8,12,16, 22 ], "y", False )
 
-		drawDependency( inName, "metNeIso", metBinning, [ 0., 2.6 ], "y", False  )
-		drawDependency( inName, "metNeIso", metBinning, range(0,30, 3), "y", False )
+		drawDependency( inName, "metNeIso", metBinning, [ 3.5, 10 ], "y", True )
+		drawDependency( inName, "metNeIso", metBinning, range(0,30, 3), "y", True )
 
-		drawDependency( inName, "metPhIso", metBinning, [ 0., 2.6 ], "y", False  )
-		drawDependency( inName, "metPhIso", metBinning, range(0,30, 3), "y", False )
+		drawDependency( inName, "metPhIso", metBinning, [ 1.3, 10 ], "y", True  )
+		drawDependency( inName, "metPhIso", metBinning, range(0,30, 3), "y", True )
 
+		drawDependency( inName, "metHE", metBinning, [ 0., 0.05, 0.1 ], "y", False  )
+		drawDependency( inName, "metHE", metBinning, [0.05*x for x in range(13)], "y", False )
 
 		#drawDependency( inName, "metSigma", metBinningCompact, [ 0.001*x for x in range(16)], "x" )
 		#drawDependency( inName, "ptSigma", [80, 100, 120, 140, 160, 180, 200, 250, 300, 400, 600 ], [ 0.006, 0.012, 0.014 ] )
