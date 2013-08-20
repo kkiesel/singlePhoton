@@ -5,9 +5,9 @@ from treeFunctions import *
 
 class Multihisto:
 	def __init__( self ):
+		self.orderByIntegral = True
 		self.histos = []
 		self.histosToStack = []
-		self.stack = None
 		self.denominator = None
 		self.numerator = None
 		self.leg = myLegend(.7,.7,.95,.92)
@@ -15,6 +15,8 @@ class Multihisto:
 
 	def addHisto( self, singleHisto, label=None, toStack=False, draw="hist" ):
 		if toStack:
+			singleHisto.SetFillColor( singleHisto.GetLineColor() )
+			singleHisto.SetLineColor( 1 )
 			self.histosToStack.append( singleHisto )
 			self.leg.AddEntry( singleHisto, label, "f" )
 		else:
@@ -29,12 +31,16 @@ class Multihisto:
 				self.leg.AddEntry( singleHisto, label, self.legendOption )
 
 	def stackHistos( self ):
-		# sort histograms first
-		self.histosToStack.sort( key=lambda x: x.Integral() )
-		self.stack = ROOT.THStack()
+		if not self.histosToStack:
+			return
+		if self.orderByIntegral:
+			# sort histograms first
+			self.histosToStack.sort( key=lambda x: x.Integral() )
+		stack = ROOT.THStack()
+		stack.SetTitle( ";%s;%s"%(self.histosToStack[0].GetXaxis().GetTitle(),self.histosToStack[0].GetYaxis().GetTitle()) )
 		for h in self.histosToStack:
-			self.stack.Add( h )
-		self.histos.append( (self.stack,"hist") )
+			stack.Add( h )
+		self.histos.append( (stack,"hist") )
 
 	def GetMinimum( self ):
 		mini = 100000
