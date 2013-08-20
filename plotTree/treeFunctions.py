@@ -1,4 +1,10 @@
 def rebin2D( oldHist, xList, yList ):
+	"""Rebins a TH2F.
+	oldHist: input TH2F
+	xList: list which mark the bin edges of the new xaxis
+	yList: list which mark the bin edges of the new yaxis
+	"""
+	import ROOT
 	import array
 	newHist = ROOT.TH2F( oldHist.GetName()+randomName(), "%s;%s;%s"%(oldHist.GetTitle(),oldHist.GetXaxis().GetTitle(),oldHist.GetYaxis().GetTitle()), \
 			len(xList)-1, array.array('d', xList), \
@@ -10,6 +16,7 @@ def rebin2D( oldHist, xList, yList ):
 	return newHist
 
 def datasetToLatex( fileNamePart ):
+	"""Translates the dataset name to a TLatex name"""
 	sets = { "AllQCD": "(#gamma+)QCD",
 			"GJets": "#gamma+QCD",
 			"TTbar": "t#bar{t}",
@@ -19,6 +26,16 @@ def datasetToLatex( fileNamePart ):
 		if part in fileNamePart:
 			return label
 	return fileNamePart
+
+def drawDatasetLabel( datasetAffix ):
+	import ROOT
+	"""Draws sample info on top of the canvas."""
+	datasetLabel = ROOT.TPaveText(.4,.94,.6,1, "ndc")
+	datasetLabel.SetFillColor(0)
+	datasetLabel.SetBorderSize(0)
+	datasetLabel.AddText( datasetToLatex(datasetAffix) )
+	return datasetLabel
+
 
 class PlotCaption:
 	"""Creates the superscription for each plot, eg
