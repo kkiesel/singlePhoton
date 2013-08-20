@@ -1,13 +1,11 @@
-VERSION = 17
-SUFFIX = _V01.$(VERSION)_tree.root
+VERSION = 12
+SUFFIX = _V02.$(VERSION)_tree.root
 SAVESUFFIX = new
 
-QCDDatasets = QCD_1000_inf QCD_250_500 QCD_500_1000 GJets
-
-slimQCD:splitCandidatesQCDtest.py
-	python2 splitCandidatesQCDtest.py --input $(addsuffix $(SUFFIX), $(QCDDatasets))
-	hadd -f slimAllQCD$(SUFFIX) $(addsuffix $(SUFFIX), $(addprefix slim, $(QCDDatasets) ) )
-
+hadd:
+	hadd -f slimGJets$(SUFFIX) slimGJets_200_400$(SUFFIX) slimGJets_400_inf$(SUFFIX)
+	hadd -f slimQCD$(SUFFIX) slimQCD_250_500$(SUFFIX) slimQCD_500_1000$(SUFFIX) slimQCD_1000_inf$(SUFFIX)
+	hadd -f slimAllQCD$(SUFFIX) slimGJets$(SUFFIX) slimQCD$(SUFFIX)
 
 ewk: ewkClosure ewkFakeRate
 	@echo Done
@@ -21,3 +19,6 @@ ewkFakeRate: ewkFakeRate.py $(addsuffix $(SUFFIX), $(addprefix slim, TTJets WJet
 slim%:% splitCandidates.py
 	@python2 splitCandidates.py --input $<  --genMatching
 
+clean:
+	rm *~
+	rm *.pyc
