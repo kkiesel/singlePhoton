@@ -443,7 +443,7 @@ std::vector<tree::Jet> TreeWriter::getJets( bool clean ) const {
 	for(std::vector<susy::PFJet>::iterator it = jetVector.begin();
 			it != jetVector.end(); ++it) {
 		if( !looseJetId( *it ) ) continue;
-		if( !it->passPuJetIdLoose( susy::kPUJetIdFull ) ) continue; // has to be changed for sure
+		if( !it->passPuJetIdLoose( susy::kPUJetIdFull ) ) continue;
 
 		TLorentzVector corrP4 = it->jecScaleFactors.at("L1FastL2L3") * it->momentum;
 
@@ -489,7 +489,7 @@ float TreeWriter::getSt( float ptCut ) const {
 			it != jetVector.end(); ++it) {
 
 		if( !looseJetId( *it ) ) continue;
-		if( !it->passPuJetIdLoose( 0 ) ) continue; // has to be changed for sure
+		if( !it->passPuJetIdLoose( susy::kPUJetIdFull ) ) continue;
 		if( !(std::find( jetIndicesWithPhotonMatch.begin(),
 					jetIndicesWithPhotonMatch.end(),
 					std::distance( jetVector.begin(), it ) )
@@ -528,7 +528,7 @@ float TreeWriter::getHt( const tree::Photon& photon ) const {
 			it != jetVector.end(); ++it) {
 
 		if( !looseJetId( *it ) ) continue;
-		if( !it->passPuJetIdLoose( 0 ) ) continue; // has to be changed for sure
+		if( !it->passPuJetIdLoose( susy::kPUJetIdFull ) ) continue;
 
 		TLorentzVector corrP4 = it->jecScaleFactors.at("L1FastL2L3") * it->momentum;
 
@@ -550,7 +550,7 @@ float TreeWriter::getHtHLT() const {
 			it != jetVector.end(); ++it) {
 
 		if( !looseJetId( *it ) ) continue;
-		if( !it->passPuJetIdLoose( 0 ) ) continue; // has to be changed for sure
+		if( !it->passPuJetIdLoose( susy::kPUJetIdFull ) ) continue;
 
 		TLorentzVector corrP4 = it->jecScaleFactors.at("L1FastL2L3") * it->momentum;
 		if( corrP4.Pt() < 40 || std::abs(corrP4.Eta()) > 3. )
