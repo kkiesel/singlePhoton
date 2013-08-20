@@ -9,10 +9,7 @@ void tree::Photon::setGen( genParticles id ) {
 }
 
 float tree::Photon::ptJet() const {
-	if( _ptJet )
-		return _ptJet;
-	else
-		return pt;
+	return _ptJet ? _ptJet : pt;
 }
 
 bool tree::EtGreater(const tree::Particle p1, const tree::Particle p2) {

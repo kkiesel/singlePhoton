@@ -3,31 +3,11 @@
 import numpy
 import argparse
 import ConfigParser
-import sys
 import ROOT
+from sys import stdout
 from treeFunctions import *
 
-def deltaPhi( phi1, phi2):
-	"""Computes delta phi.
-	Due to the zylindrical form of CMS, it has be be corrected by a diffenence
-	of 2pi.
-	"""
-	import math
-	result = phi1 - phi2
-	while result > math.pi:
-		result -= 2*math.pi
-	while result <= -math.pi:
-		result += 2*math.pi
-	return result
-
-def deltaR( object1, object2 ):
-	"""Compute delta R of two objects.
-	Both objects must have eta and phi as member variables.
-	"""
-	import math
-	return math.sqrt( (object1.eta-object2.eta)**2 + (deltaPhi(object1.phi,object2.phi))**2 )
-
-def gammaSelectionClone( tree, newTreeName, type_="tree::Photon", name="photon" ):
+def gammaSelectionClone( tree, newTreeName, type_="tree::Photon", name="photons" ):
 	"""Clones a tree and get access to photon vector"""
 	newTree = tree.CloneTree(0)
 	newTree.SetName( newTreeName )
@@ -37,101 +17,98 @@ def gammaSelectionClone( tree, newTreeName, type_="tree::Photon", name="photon" 
 	newTree.SetMaxVirtualSize(int(1e7))
 	return newTree, photons
 
-def histoDefinition():
-	"""All histograms are defined here and put into an directory."""
-	from random import randint
-	histos = {}
-	histos["dEtadPhiLarge"] = ROOT.TH2F( "%x"%randint(0,100000), ";#Delta#eta;#Delta#phi", 100, -4, 4, 100, -3.3, 3.3 )
-	histos["dEtadPhiSmall"] = ROOT.TH2F( "%x"%randint(0,1000000), ";|#Delta#eta|;|#Delta#phi|", 100, 0, .012, 100, 0, .1 )
-	histos["dEtadPhiSmallPhoton"] = ROOT.TH2F( "%x"%randint(0,1000000), ";|#Delta#eta|;|#Delta#phi|", 100, 0, .012, 100, 0, .1 )
-	histos["dEtadPhiSmallElectron"] = ROOT.TH2F( "%x"%randint(0,1000000), ";|#Delta#eta|;|#Delta#phi|", 100, 0, .012, 100, 0, .1 )
-	histos["nGenEnRec"] = ROOT.TH2F( "%x"%randint(0,10000000), ";generated e;reco EM-Objects", 5, -0.5, 4.5, 5, -0.5, 4.5 )
-	histos["dPtdR"] = ROOT.TH2F( "%x"%randint(0,10000000), ";|(p_{T}-p_{T gen} )/ p_{T gen}|;#DeltaR", 100, 0, 1, 100, 0, .5 )
-	return histos
+def getHt( jets, photons, photonJets ):
+	ht = 0
+	for jet in jets:
+		ht += jet.pt
+	for photon in photons:
+		if not photon._ptJet:
+			ht += photon.pt
+	for photonJet in photonJets:
+		if not photonJet._ptJet:
+			ht += photonJet.pt
+	return ht
 
-def draw_histogram_dict( histograms, suffix="new" ):
-	"""Draw all histograms in this directory and save it as pdf."""
-	# disable open canvas
-	ROOT.gROOT.SetBatch()
-	import Styles
-	Styles.tdrStyle2D()
-	can = ROOT.TCanvas()
-	can.cd()
-	dataset = ROOT.TPaveText(.4,.9,.6,.98, "ndc")
-	dataset.SetFillColor(0)
-	dataset.SetBorderSize(0)
-	dataset.AddText( suffix )
-	for name, histo in histograms.iteritems():
-		name = name.replace(".","")
-		histo.Draw("colz")
-		dataset.Draw()
-		can.SaveAs("plots/%s_%s.pdf"%(name,suffix))
+def getMHt( jets, photons, photonJets ):
+	mht = ROOT.TVector3(0,0,0)
+	j = ROOT.TVector3()
+	for jet in jets:
+		if not nearPhoton( jet, photonJets ) and not nearPhoton( jet, photons):
+			j.SetPtEtaPhi( jet.pt, jet.eta, jet.phi )
+			mht += j
+	return mht.Pt()
 
-def generalMatching( objects1, objects2, hist, typ="electron"):
-	"""Matches for each object in objects1 an object in objects2.
-	'hists' is a dict containing ROOT.TH* objects which will be filled and returned.
-	The gen information will be storend in first list and returned.
-	"""
-	hist["nGenEnRec"].Fill( objects1.size(), objects2.size() )
-	for o1 in objects1:
-		match = False
-		minDeltaPt = sys.maxint
-		minIndex = -1
-		for i, o2 in enumerate(objects2):
-			DeltaEta = o1.eta - o2.eta
-			DeltaPhi = deltaPhi( o1.phi, o2.phi)
-			absDeltaEta = abs( DeltaEta )
-			absDeltaPhi = abs( DeltaPhi )
-			absDeltaPt = 2*abs( o1.pt - o2.pt ) / ( o1.pt + o2.pt )
-			hist["dEtadPhiLarge"].Fill( DeltaEta, DeltaPhi )
-			hist["dEtadPhiSmall"].Fill( absDeltaEta, absDeltaPhi )
-			if hasattr( o1, "pixelseed" ):
-				if o1.pixelseed:
-					hist["dEtadPhiSmallElectron"].Fill( absDeltaEta, absDeltaPhi )
-				else:
-					hist["dEtadPhiSmallPhoton"].Fill( absDeltaEta, absDeltaPhi )
+def getMHt2( jets, photons, photonJets ):
+	mht = ROOT.TVector3(0,0,0)
+	j = ROOT.TVector3()
+	for jet in jets:
+		if not nearPhoton( jet, photonJets ) and not nearPhoton( jet, photons):
+			j.SetPtEtaPhi( jet.pt, jet.eta, jet.phi )
+			mht += j
+	for jet in photons:
+		j.SetPtEtaPhi( jet.ptJet(), jet.eta, jet.phi )
+		mht += j
+	for jet in photonJets:
+		j.SetPtEtaPhi( jet.ptJet(), jet.eta, jet.phi )
+		mht += j
+	return mht.Pt()
 
-			if absDeltaEta < .01 and absDeltaPhi < .1 and absDeltaPt < .2:
-				match = True
-				if absDeltaPt < minDeltaPt:
-					minDeltaPt = absDeltaPt
-					minIndex = i
+def getHt( jets, photons, photonJets ):
+	ht = 0
+	for jet in jets:
+		ht += jet.pt
+	for photon in photons:
+		if not photon._ptJet:
+			ht += photon.pt
+	for photonJet in photonJets:
+		if not photonJet._ptJet:
+			ht += photonJet.pt
+	return ht
 
-		if match:
-			if hasattr( o1, "genInformation" ):
-				if typ == "photon":
-					o1.isGenPhoton( True )
-				elif typ == "electron":
-					o1.isGenElectron( True )
-				else:
-					print "ERROR: matching typ unknown."
-			else: # use phi variable for gen information. TODO: fix that
-				# only fill gen matching for photons matching a gen electrons.
-				# Electrons are not needed in fake rate
-				if not objects2[minIndex].pixelseed:
-					o1.phi = 5
-	return objects1, hist
+def nearPhoton( jet, vector ):
+	j = ROOT.TVector3()
+	a = ROOT.TVector3()
+	j.SetPtEtaPhi( 1, jet.eta, jet.phi )
+	for e in vector:
+		a.SetPtEtaPhi( 1, e.eta, e.phi )
+		if j.DeltaR( a ) < .3:
+			return True
+	return False
 
-def clearJets( photonLikeObj, inJets, outJets, deltaR_=.3 ):
-	""" Cleares jets which are near photonCandidates
-	photonCandidates: list containing vectors of photonCandidates
-	jets: vector of ingoing photons
-	outJets: vector, in which the passing vectors will be stored
-	deltaR_: minimal distance between jet and photon-object
-	"""
-	for jet in inJets:
-		if deltaR( jet, photonLikeObj ) > deltaR_:
-			outJets.push_back( jet )
-	return outJets
+def histoDefinitions():
+	hists = {}
+	nBins = 3
+	hists["eventSplitting"] = ROOT.TH3I("nPhotons", ";#gamma;#gamma_{jet};#gamma_{e}", nBins, -.5, -.5+nBins, nBins, -.5, -.5+nBins, nBins, -.5, -.5+nBins )
+	hists["metSigma"] = ROOT.TH2F("", ";#slash{E}_{T};#sigma_{i#etai#eta}", 50, 0, 500, 440, 0, 0.022 )
+	hists["metChIso"] = ROOT.TH2F("", ";#slash{E}_{T};Iso^{#pm}",           50, 0, 500, 300, 0, 30 )
+	hists["metNeIso"] = ROOT.TH2F("", ";#slash{E}_{T};Iso^{0}",             50, 0, 500, 300, 0, 30 )
+	hists["metPhIso"] = ROOT.TH2F("", ";#slash{E}_{T};Iso^{#gamma}",        50, 0, 500, 300, 0, 30 )
+	hists["metHE"] = ROOT.TH2F("", ";#slash{E}_{T};H/E",                    50, 0, 500, 100, 0, .5 )
 
-def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1, genMatching=False ):
+	#hists["ptSigma"] = ROOT.TH2F("", ";p_{T};#sigma_{i#etai#eta}", 100, 0, 1000, 440, 0, 0.022 )
+	#hists["ptJetSigma"] = ROOT.TH2F("", ";p_{T^{*}};#sigma_{i#etai#eta}", 100, 0, 1000, 440, 0, 0.022 )
+	#hists["ptChIso"] = ROOT.TH2F("", ";p_{T};Iso^{#pm}",           100, 0, 1000, 150, 0, 15 )
+	#hists["ptJetChIso"] = ROOT.TH2F("", ";p_{T^{*}};Iso^{#pm}",           100, 0, 1000, 150, 0, 15 )
+	#hists["htSigma"] = ROOT.TH2F("", ";H_{T};#sigma_{i#etai#eta}", 100, 0, 1000, 440, 0, 0.022 )
+	#hists["htChIso"] = ROOT.TH2F("", ";H_{T};Iso^{#pm}",           100, 0, 1000, 150, 0, 15 )
+	#hists["nvSigma"] = ROOT.TH2F("", ";vertices;#sigma_{i#etai#eta}", 30, 0.5, 30.5, 440, 0, 0.022 )
+	#hists["nvChIso"] = ROOT.TH2F("", ";vertices;Iso^{#pm}",           30, 0.5, 30.5, 150, 0, 15 )
+	#hists["metPt"] = ROOT.TH2F("", ";#slash{E}_{T};p_{T}", 50, 0, 500, 100, 0, 1000 )
+
+	for name, hist in hists.iteritems():
+		hist.SetName( name )
+		hist.Sumw2()
+
+	return hists
+
+
+
+def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1):
 	"""Key function of splitCanidates.py. The main loop and object selection is
 	defined here."""
-	print "Processing file {}".format(inputFileName)
-	if genMatching:
-		print "Match generated objects"
+	print "Processing file {} with {} configuration".format(inputFileName, shortName)
 
-	tree = readTree( inputFileName )
+	tree = readTree( inputFileName, "photonTree" )
 	eventHisto = readHisto( inputFileName )
 	if processNEvents < 0:
 		processNEvents = eventHisto.GetBinContent(1)
@@ -146,103 +123,103 @@ def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1, gen
 	photonElectronTree, photonElectrons = gammaSelectionClone( tree, "photonElectronTree" )
 
 	# variables which will be changed in addition to photons:
-	weight = numpy.zeros(1, dtype=float)
+	ROOT.gROOT.ProcessLine("struct variablesToChange { Float_t ht; Float_t weight; Float_t st30; Float_t st80; };")
+	change = ROOT.variablesToChange()
 	jets = ROOT.std.vector("tree::Jet")()
 	for tree_ in [photonTree, photonJetTree, photonElectronTree]:
-		tree_.SetBranchAddress("weight", weight )
-		tree_.SetBranchAddress("jet", jets )
+		tree_.SetBranchAddress("weight", ROOT.AddressOf( change, "weight" ) )
+		tree_.SetBranchAddress("ht", ROOT.AddressOf( change, "ht" ) )
+		tree_.SetBranchAddress("st30", ROOT.AddressOf( change, "st30" ) )
+		tree_.SetBranchAddress("st80", ROOT.AddressOf( change, "st80" ) )
+		tree_.SetBranchAddress("jets", jets )
 
-	if genMatching:
-		genElectronTree, genElectrons = gammaSelectionClone( tree, "genElectronTree", "tree::Particle","genElectron" )
-		histograms = histoDefinition()
-		genElectronTree.SetBranchAddress("weight", weight )
-		genElectronTree.SetBranchAddress("jet", jets )
-
-	# temporal vector to save objects
-	emObjects = ROOT.std.vector("tree::Photon")()
+	hists = histoDefinitions()
 
 	for event in tree:
 		if not event.GetReadEntry()%100000:
-			print '{0}%\r'.format(100*event.GetReadEntry()/event.GetEntries())
-		if event.GetReadEntry()%1: ## warning: take only each x-th event!
-			continue
+			stdout.write('\r{0} %'.format(100*event.GetReadEntry()/event.GetEntries()))
+			stdout.flush()
 		if event.GetReadEntry() > processNEvents:
 			break
 
-		weight[0] = event.weight * nExpected / processNEvents
-		jets.clear()
-		emObjects.clear()
+		change.weight = event.weight * nExpected / processNEvents
 		photons.clear()
 		photonElectrons.clear()
 		photonJets.clear()
-		if genMatching:
-			genElectrons.clear()
+		jets.clear()
 
-		for gamma in event.photon:
+		for photon in event.photons:
 
-			# cuts for every object to reject spikes
-			if gamma.r9 < 1 \
-			and gamma.sigmaIetaIeta > 0.001 \
-			and gamma.sigmaIetaIeta < 0.014 \
-			and gamma.hadTowOverEm < 0.10 \
-			and abs(gamma.eta) < 1.4442 \
-			and gamma.pt > 80:
+			if True:
 
-				# gen matching
-				if genMatching:
-					matchGenPhoton = False
-					for trueGamma in event.genPhoton:
-						absDeltaPt = 2*abs( trueGamma.pt - gamma.pt ) / ( trueGamma.pt + gamma.pt )
-						DeltaR = deltaR( gamma, trueGamma )
-						if DeltaR < 0.3 and absDeltaPt < .2:
-							matchGenPhoton = True
-					if matchGenPhoton:
-						gamma.isGenPhoton(True)
+				# filling the d2 histograms
+				if not photon.pixelseed:
+					if photon.hadTowOverEm < 0.05 and photon.sigmaIetaIeta < 0.012 and photon.chargedIso < 2.6 and photon.neutralIso < 3.5 +.04*photon.pt:
+						hists["metPhIso"].Fill( event.met, photon.photonIso-0.005*photon.pt, change.weight )
+					if photon.hadTowOverEm < 0.05 and photon.sigmaIetaIeta < 0.012 and photon.chargedIso < 2.6 and photon.photonIso < 1.3+0.005*photon.pt:
+						hists["metNeIso"].Fill( event.met, photon.neutralIso-0.04*photon.pt, change.weight )
+					if photon.hadTowOverEm < 0.05 and photon.sigmaIetaIeta < 0.012 and photon.photonIso < 1.3 +0.005*photon.pt and photon.neutralIso < 3.5 +.04*photon.pt:
+						hists["metChIso"].Fill( event.met, photon.chargedIso, change.weight )
+					if photon.hadTowOverEm < 0.05 and photon.chargedIso < 2.6 and photon.photonIso < 1.3 +0.005*photon.pt and photon.neutralIso < 3.5 +.04*photon.pt:
+						hists["metSigma"].Fill( event.met, photon.sigmaIetaIeta, change.weight )
+					if photon.sigmaIetaIeta < 0.012 and photon.chargedIso < 2.6 and photon.photonIso < 1.3 +0.005*photon.pt and photon.neutralIso < 3.5 +.04*photon.pt:
+						hists["metHE"].Fill( event.met, photon.hadTowOverEm, change.weight )
 
-				# look for gamma and electrons
-				if gamma.hadTowOverEm < 0.05 \
-				and gamma.sigmaIetaIeta < 0.012 \
-				and gamma.chargedIso < 2.6 \
-				and gamma.neutralIso < 3.5 + 0.04*gamma.pt \
-				and gamma.photonIso < 1.3 + 0.005*gamma.pt:
-					emObjects.push_back( gamma )
+				# sorting objets
+				if photon.hadTowOverEm < 0.05 \
+				and photon.sigmaIetaIeta < 0.012 \
+				and photon.chargedIso < 2.6 \
+				and photon.neutralIso < 3.5 + 0.04*photon.pt \
+				and photon.photonIso < 1.3 + 0.005*photon.pt:
+					if photon.pixelseed:
+						photonElectrons.push_back( photon )
+					else:
+						photons.push_back( photon )
+				elif photon.hadTowOverEm < 0.05 \
+				and photon.sigmaIetaIeta < 0.012 \
+				and photon.chargedIso < 15 \
+				and photon.neutralIso < 3.5+ 0.04*photon.pt \
+				and photon.photonIso < 1.3 + 0.005*photon.pt \
+				and not photon.pixelseed:
+					photonJets.push_back( photon )
 
-				elif not gamma.pixelseed:
-					photonJets.push_back( gamma )
+		change.ht = getHt( event.jets, photons, photonJets )
+		change.st30 = getMHt( event.jets, photons, photonJets )
+		change.st80 = getMHt2( event.jets, photons, photonJets )
 
-		for emObject in emObjects:
-			if emObject.pixelseed:
-				photonElectrons.push_back( emObject )
-			else:
-				photons.push_back( emObject )
 
-		minJets = 2
-		if photons.size():
-			jets = clearJets( photons[0], event.jet, jets )
-			if jets.size() >= minJets:
-				photonTree.Fill()
+		for jet in event.jets:
+			if not nearPhoton( jet, photons ) and not nearPhoton( jet, photonJets ):
+				jets.push_back( jet )
+
+		if jets.size() > 1 and change.ht >= 500:
+			if photons.size() or photonJets.size() or photonElectrons.size():
+				hists["eventSplitting"].Fill( photons.size(), photonJets.size(), photonElectrons.size(), change.weight )
 		else:
-			if photonElectrons.size():
-				jets = clearJets( photonElectrons[0], event.jet, jets )
-				if jets.size() >= minJets:
-					photonElectronTree.Fill()
-			if photonJets.size():
-				jets.clear()
-				jets = clearJets( photonJets[0], event.jet, jets, -1 ) # take all jets, deltaR = -1
-				if jets.size() >= minJets:
-					photonJetTree.Fill()
-		if genMatching and genElectrons.size() > 0:
-			genElectronTree.Fill()
+			continue
+
+		if photons.size() and not photonJets.size():
+			photonTree.Fill()
+		if photonJets.size() and not photons.size():
+			photonJetTree.Fill()
+		if photonJets.size() and photons.size():
+			if photons.at(0).pt > photonJets.at(0).pt:
+				photonTree.Fill()
+			else:
+				photonJetTree.Fill()
+		if photonElectrons.size():
+			photonElectronTree.Fill()
+	print
 
 	# write everything to output file
 	photonTree.Write()
 	photonJetTree.Write()
 	photonElectronTree.Write()
-	if genMatching:
-		genElectronTree.Write()
-		draw_histogram_dict( histograms, shortName )
-	fout.Close()
 
+	for name, hist in hists.iteritems():
+		hist.Write()
+
+	fout.Close()
 
 if __name__ == "__main__":
 	# include knowledge about objects saved in the tree
@@ -251,7 +228,6 @@ if __name__ == "__main__":
 	arguments = argparse.ArgumentParser( description="Slim tree" )
 	arguments.add_argument("--input", default=["WJets_V01.12_tree.root"], nargs="+" )
 	arguments.add_argument("--test", action="store_true" )
-	arguments.add_argument("--genMatching", action="store_true" )
 	opts = arguments.parse_args()
 
 	# set limit for number of events for testing reason
@@ -277,5 +253,5 @@ if __name__ == "__main__":
 		# N = L * sigma
 		nExpected = integratedLumi * crosssection
 
-		splitCandidates( inName, shortName, nExpected, processNEvents, opts.genMatching )
+		splitCandidates( inName, shortName, nExpected, processNEvents )
 

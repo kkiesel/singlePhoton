@@ -48,7 +48,7 @@ def writeWeight2DToFile( fileName, tree, h_weight, weightTreeName ):
 	weightTree.Write()
 	f.Close()
 
-def getWeightHisto2D( gControlTree, foControlTree, datasetAffix ):
+def getWeightHisto2D( gControlTree, foControlTree, commonCut, datasetAffix ):
 	"""The histogram for the weights in created here."""
 
 	xVar = "photons[0].ptJet()"
@@ -56,8 +56,8 @@ def getWeightHisto2D( gControlTree, foControlTree, datasetAffix ):
 	xlabel, xunit, xbinning = readAxisConf( xVar )
 	ylabel, yunit, ybinning = readAxisConf( yVar )
 
-	weight_numerator = createHistoFromTree2D( gControlTree, yVar+":"+xVar, "weight*(met<100)", xbinning, ybinning )
-	weight_denominator = createHistoFromTree2D( foControlTree, yVar+":"+xVar, "weight*(met<100)", xbinning, ybinning )
+	weight_numerator = createHistoFromTree2D( gControlTree, yVar+":"+xVar, "weight*(met<100&&%s)"%commonCut, xbinning, ybinning )
+	weight_denominator = createHistoFromTree2D( foControlTree, yVar+":"+xVar, "weight*(met<100&&%s)"%commonCut, xbinning, ybinning )
 	weight2D = divideHistos( weight_numerator, weight_denominator )
 
 	# Set the weight and error for empty bins to one.
@@ -106,7 +106,9 @@ def addErrorAndDivide( h_fo, h_fo_error ):
 		h_new.SetBinContent( bin, 1 )
 	return h_new
 
-def drawBeforeClosure( plot, gTree, foTree, cut, can, info, datasetAffix, additionalInfo="" ):
+def drawBeforeClosure( plot, gTree, foTree, cut, can, info, datasetAffix, additionalInfo="",norm=False ):
+		if plot == "met" and cut != "1":
+			return
 
 		# The first attempt to get the histogram is only to get the minimal
 		# and maximal value on the x-axis, for not predefined binning
@@ -116,6 +118,10 @@ def drawBeforeClosure( plot, gTree, foTree, cut, can, info, datasetAffix, additi
 
 		h_gamma = getHisto( gTree, plot, cut=cut, color=1, firstBin=xMin,lastBin=xMax )
 		h_fo = getHisto( foTree, plot, cut=cut, color=46, firstBin=xMin,lastBin=xMax )
+		if norm:
+			for h in [h_gamma,h_fo]:
+				h.Scale(1./h.Integral())
+				h.GetYaxis().SetTitle("Normed Entries")
 
 		muhisto = Multihisto()
 		muhisto.leg.SetHeader( datasetToLatex( datasetAffix ) )
@@ -133,7 +139,7 @@ def drawBeforeClosure( plot, gTree, foTree, cut, can, info, datasetAffix, additi
 		ratioGraph = ratios.RatioGraph( h_gamma, h_fo )
 		ratioGraph.draw(ROOT.gPad, yMin=None, yMax=None, adaptiveBinning=False, errors="yx")
 		ratioGraph.graph.Draw("same p e0") # draw nice points
-		ratioGraph.hAxis.SetYTitle( "#gamma/#gamma_{pred}")
+		ratioGraph.hAxis.SetYTitle( "#gamma/#gamma_{jet}")
 
 		can.cd()
 		hPad.Draw()
@@ -200,7 +206,8 @@ def qcdClosure( fileName, opts ):
 	gTree = readTree( fileName, "photonTree" )
 	foTree = readTree( fileName, "photonJetTree" )
 
-	plots = [ "met" , "ht", "htHLT", "st80", "st30","photons[0].ptJet()","Length$(jets.pt)" ]
+	plots = [ "met" , "ht", "photons[0].ptJet()","Length$(jets.pt)", "Length$(photons.pt)"]
+	plots = plots[3:]
 
 	# Definition of labels
 	infoControl = PlotCaption()
@@ -213,22 +220,34 @@ def qcdClosure( fileName, opts ):
 	can.cd()
 
 	for plot in plots:
-		drawBeforeClosure( plot, gTree, foTree, signalCut, can, infoSignal, datasetAffix, "_signal" )
-		drawBeforeClosure( plot, gTree, foTree, controlCut, can, infoControl, datasetAffix, "_control" )
+		if plot != "met":
+			drawBeforeClosure( plot, gTree, foTree, signalCut, can, infoSignal, datasetAffix, "_signal" )
+			drawBeforeClosure( plot, gTree, foTree, controlCut, can, infoControl, datasetAffix, "_control" )
 		drawBeforeClosure( plot, gTree, foTree, "1", can, info, datasetAffix )
+		drawBeforeClosure( plot, gTree, foTree, "1", can, info, datasetAffix, "_norm", norm=True )
 
-	commonCut = "htHLT > 500"
-	gTree = gTree.CopyTree( commonCut )
-	foTree = foTree.CopyTree( commonCut )
+	commonCut = "ht>500 && @jets.size()>1"
 
-	weights = getWeightHisto2D( gTree, foTree, datasetAffix )
+	weights = getWeightHisto2D( gTree, foTree, commonCut,  datasetAffix )
 	writeWeight2DToFile( fileName, foTree, weights, "foWeights" )
 	foTree.AddFriend( "foWeights", fileName )
 
+	# Definition of labels
+	infoControl = PlotCaption()
+	infoControl.controlCut()
+	infoSignal = PlotCaption()
+	infoSignal.signalCut()
+	info = PlotCaption()
+
+	can = ROOT.TCanvas()
+	can.cd()
+
 	for plot in plots:
-		drawClosure( plot, gTree, foTree, signalCut, can, infoSignal, datasetAffix, "_signal" )
-		drawClosure( plot, gTree, foTree, controlCut, can, infoControl, datasetAffix, "_control" )
-		drawClosure( plot, gTree, foTree, "1", can, info, datasetAffix )
+		if plot != "met":
+			drawClosure( plot, gTree, foTree, signalCut+"&&"+commonCut, can, infoSignal, datasetAffix, "_signal" )
+			drawClosure( plot, gTree, foTree, controlCut+"&&"+commonCut, can, infoControl, datasetAffix, "_control" )
+		drawClosure( plot, gTree, foTree, commonCut, can, info, datasetAffix )
+
 
 	# Delete the trees from memory, important for many iterations.
 	# The trees have to be deleted by hand to avoid segmentation violations.
