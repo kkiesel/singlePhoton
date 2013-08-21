@@ -4,15 +4,16 @@ def isValidFile( fileName ):
 	"""This function can be used for argparse to check if the file exists."""
 	import argparse
 	import os
-	if not os.path.exists( fileName ):
+	if not os.path.isfile( fileName ):
 		raise argparse.ArgumentTypeError( "File %s does not exist"%fileName )
 	else:
 		return fileName
 
-def getDatasetAbbr( fileName ):
+def getDatasetAbbr( fileName, slim=True ):
 	"""Parses the abbrevation for a sample from a root fileName."""
 	import re
-	match = re.match(".*slim(.*)_V.*_tree.root", fileName )
+	prefix = "slim" if slim else ""
+	match = re.match("%s(.*)_V.*_tree.root"%prefix, fileName.split("/")[-1] )
 	if match:
 		return match.groups()[0]
 	else:
@@ -92,6 +93,17 @@ def readAxisConf( plot, configurationFileName="axis.cfg" ):
 		binning = []
 	return label, unit, binning
 
+def getLumiWeight( datasetAbbr, nGenEvents, integratedLumi=19800, configName="dataset.cfg" ):
+	import ConfigParser
+	datasetConf = ConfigParser.SafeConfigParser()
+	datasetConf.read( configName )
+	if datasetConf.has_option( datasetAbbr, "crosssection" ):
+		crosssection = datasetConf.getfloat( datasetAbbr, "crosssection" )
+	else:
+		raise NameError( "Configuration for %s not found"%datasetAbbr )
+
+	return 1. * integratedLumi * crosssection / nGenEvents
+
 def manipulateSaveName( saveName ):
 	"""Replace some charakters, so root nor unix have problems to read them."""
 	#saveName = saveName.replace("/","VS")
@@ -101,7 +113,7 @@ def manipulateSaveName( saveName ):
 		saveName = saveName.replace( char, "" )
 	return saveName
 
-def SaveAs( can, folder, name, endings=["pdf"] ):
+def SaveAs( can, name, folder="plots", endings=["pdf"] ):
 	"""Save ROOT.TCanvas in specified folder with a cleaned plot name."""
 	for ending in endings:
 		can.SaveAs( folder+"/"+manipulateSaveName( name )+"."+ending )
