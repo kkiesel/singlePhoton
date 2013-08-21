@@ -665,8 +665,8 @@ void TreeWriter::Loop() {
 		tree::Particle thisGenParticle;
 		ptHat = 0;
 		for( std::vector<susy::Particle>::iterator it = event->genParticles.begin(); it != event->genParticles.end(); ++it ) {
-			if( it->statas == 3 )
-				ptHat += it->momentum.Pt()
+			if( it->status == 1 )
+				ptHat += it->momentum.Pt();
 			// status 3: particles in matrix element
 			// status 2: intermediate particles
 			// status 1: final particles (but can decay in geant, etc)
