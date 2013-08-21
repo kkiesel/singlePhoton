@@ -663,7 +663,10 @@ void TreeWriter::Loop() {
 
 		// genParticles
 		tree::Particle thisGenParticle;
+		ptHat = 0;
 		for( std::vector<susy::Particle>::iterator it = event->genParticles.begin(); it != event->genParticles.end(); ++it ) {
+			if( it->statas == 3 )
+				ptHat += it->momentum.Pt()
 			// status 3: particles in matrix element
 			// status 2: intermediate particles
 			// status 1: final particles (but can decay in geant, etc)
@@ -789,8 +792,6 @@ void TreeWriter::Loop() {
 			std::cout << " met = " << met << std::endl;
 
 		htHLT = getHtHLT();
-		if ( !event->isRealData )
-			ptHat = event->gridParams.at("ptHat");
 		if( splitting ) {
 			jets = getJets( true );
 			st30 = getSt(30);
