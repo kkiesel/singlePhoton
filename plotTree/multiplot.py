@@ -1,7 +1,5 @@
 import ROOT
-import ConfigParser
-import os.path
-from treeFunctions import *
+from treeFunctions import myLegend
 
 class Multihisto:
 	def __init__( self ):
