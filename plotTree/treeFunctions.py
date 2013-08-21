@@ -1,12 +1,12 @@
-# to use user defined help message, sys.arv has to be sent to python and not
-# to TApplication
 import ROOT
-ROOT.PyConfig.IgnoreCommandLineOptions = True
-
-
-
 import Styles
 import argparse
+from prettifyFunctions import *
+import ratios
+
+# To use user defined help message, sys.arv has to be sent to python and not
+# to TApplication.
+ROOT.PyConfig.IgnoreCommandLineOptions = True
 
 Styles.tdrStyle()
 ROOT.gROOT.SetBatch()
@@ -313,5 +313,4 @@ def divideHistos( numerator, denominator, bayes=False ):
 	resultHisto = numerator.Clone( randomName() )
 	resultHisto.Divide( numerator, denominator, 1,1, option )
 	return resultHisto
-
 
