@@ -1,21 +1,8 @@
 #! /usr/bin/env python2
 # -*- coding: utf-8 -*-
-import ROOT
-import argparse
-import ConfigParser
-import re
-from math import sqrt
-from multiplot import *
+
+from multiplot import Multihisto
 from treeFunctions import *
-import ratios
-import Styles
-
-Styles.tdrStyle()
-ROOT.gSystem.Load("libTreeObjects.so")
-
-# to use user defined help message, sys.arv has to be sent to python and not
-# to TApplication
-ROOT.PyConfig.IgnoreCommandLineOptions = True
 
 # variable to reweight
 reweightVar = "ht"
@@ -48,7 +35,7 @@ def writeWeight2DToFile( fileName, tree, h_weight, weightTreeName ):
 	weightTree.Write()
 	f.Close()
 
-def getWeightHisto2D( gControlTree, foControlTree, commonCut, datasetAffix ):
+def getWeightHisto2D( gControlTree, foControlTree, commonCut, datasetAbbr ):
 	"""The histogram for the weights in created here."""
 
 	xVar = "photons[0].ptJet()"
@@ -92,7 +79,7 @@ def getWeightHisto2D( gControlTree, foControlTree, commonCut, datasetAffix ):
 			(weightRelErrors, "weightRelError") ]:
 		hist.Draw("colz text")
 		info.Draw()
-		can2D.SaveAs( "plots/qcd_preWeight_%s_%s_%s.pdf"%(datasetAffix,name,yVar) )
+		SaveAs(can2D, "qcd_preWeight_%s_%s_%s"%(datasetAbbr,name,yVar) )
 	Styles.tdrStyle()
 
 	return weight2D
@@ -106,7 +93,7 @@ def addErrorAndDivide( h_fo, h_fo_error ):
 		h_new.SetBinContent( bin, 1 )
 	return h_new
 
-def drawBeforeClosure( plot, gTree, foTree, cut, can, info, datasetAffix, additionalInfo="",norm=False ):
+def drawBeforeClosure( plot, gTree, foTree, cut, can, info, datasetAbbr, additionalInfo="",norm=False ):
 		if plot == "met" and cut != "1":
 			return
 
@@ -124,7 +111,7 @@ def drawBeforeClosure( plot, gTree, foTree, cut, can, info, datasetAffix, additi
 				h.GetYaxis().SetTitle("Normed Entries")
 
 		muhisto = Multihisto()
-		muhisto.leg.SetHeader( datasetToLatex( datasetAffix ) )
+		muhisto.leg.SetHeader( datasetToLatex( datasetAbbr ) )
 		muhisto.addHisto( h_gamma, "#gamma", draw="hist e0" )
 		muhisto.addHisto( h_fo, "#gamma_{jet}", draw="hist e0")
 
@@ -145,11 +132,11 @@ def drawBeforeClosure( plot, gTree, foTree, cut, can, info, datasetAffix, additi
 		hPad.Draw()
 		ratioPad.Draw()
 		info.Draw()
-		SaveAs(can, "plots","qcd_preWeight_%s_%s_%s"%(datasetAffix+additionalInfo, plot,reweightVar) )
+		SaveAs(can, "qcd_preWeight_%s_%s_%s"%(datasetAbbr+additionalInfo, plot,reweightVar) )
 		ROOT.SetOwnership( hPad, False )
 		ROOT.SetOwnership( ratioPad, False )
 
-def drawClosure( plot, gTree, foTree, cut, can, info, datasetAffix, additionalInfo="" ):
+def drawClosure( plot, gTree, foTree, cut, can, info, datasetAbbr, additionalInfo="" ):
 
 		# The first attempt to get the histogram is only to get the minimal
 		# and maximal value on the x-axis, for not predefined binning
@@ -166,7 +153,7 @@ def drawClosure( plot, gTree, foTree, cut, can, info, datasetAffix, additionalIn
 		h_fo_error.SetMarkerSize(0)
 
 		muhisto = Multihisto()
-		muhisto.leg.SetHeader( datasetToLatex( datasetAffix ) )
+		muhisto.leg.SetHeader( datasetToLatex( datasetAbbr ) )
 		muhisto.addHisto( h_gamma, "#gamma", draw="hist e0" )
 		muhisto.addHisto( h_fo, "#gamma_{jet}#upointw", draw="hist e0")
 		muhisto.addHisto( h_fo_error, "#sigma_{w}", draw="e2")
@@ -190,15 +177,12 @@ def drawClosure( plot, gTree, foTree, cut, can, info, datasetAffix, additionalIn
 		hPad.Draw()
 		ratioPad.Draw()
 		info.Draw()
-		SaveAs(can, "plots","qcd_afterWeighting_%s_%s_%s"%(datasetAffix+additionalInfo, plot,reweightVar) )
+		SaveAs(can, "qcd_afterWeighting_%s_%s_%s"%(datasetAbbr+additionalInfo, plot,reweightVar) )
 		ROOT.SetOwnership( hPad, False )
 		ROOT.SetOwnership( ratioPad, False )
 
-def qcdClosure( fileName, opts ):
-	try:
-		datasetAffix = re.match(".*slim(.*)_V.*", fileName ).groups()[-1]
-	except:
-		datasetAffix = fileName
+def qcdClosure( fileName ):
+	datasetAbbr = getDatasetAbbr( fileName )
 
 	signalCut = "met>=100"
 	controlCut = "!(%s)"%signalCut
@@ -206,8 +190,7 @@ def qcdClosure( fileName, opts ):
 	gTree = readTree( fileName, "photonTree" )
 	foTree = readTree( fileName, "photonJetTree" )
 
-	plots = [ "met" , "ht", "photons[0].ptJet()","Length$(jets.pt)", "Length$(photons.pt)"]
-	plots = plots[3:]
+	plots = [ "met" ]# , "ht", "photons[0].ptJet()","Length$(jets.pt)", "Length$(photons.pt)"]
 
 	# Definition of labels
 	infoControl = PlotCaption()
@@ -221,14 +204,14 @@ def qcdClosure( fileName, opts ):
 
 	for plot in plots:
 		if plot != "met":
-			drawBeforeClosure( plot, gTree, foTree, signalCut, can, infoSignal, datasetAffix, "_signal" )
-			drawBeforeClosure( plot, gTree, foTree, controlCut, can, infoControl, datasetAffix, "_control" )
-		drawBeforeClosure( plot, gTree, foTree, "1", can, info, datasetAffix )
-		drawBeforeClosure( plot, gTree, foTree, "1", can, info, datasetAffix, "_norm", norm=True )
+			drawBeforeClosure( plot, gTree, foTree, signalCut, can, infoSignal, datasetAbbr, "_signal" )
+			drawBeforeClosure( plot, gTree, foTree, controlCut, can, infoControl, datasetAbbr, "_control" )
+		drawBeforeClosure( plot, gTree, foTree, "1", can, info, datasetAbbr )
+		drawBeforeClosure( plot, gTree, foTree, "1", can, info, datasetAbbr, "_norm", norm=True )
 
-	commonCut = "ht>500 && @jets.size()>1"
+	commonCut = "1"
 
-	weights = getWeightHisto2D( gTree, foTree, commonCut,  datasetAffix )
+	weights = getWeightHisto2D( gTree, foTree, commonCut,  datasetAbbr )
 	writeWeight2DToFile( fileName, foTree, weights, "foWeights" )
 	foTree.AddFriend( "foWeights", fileName )
 
@@ -244,9 +227,9 @@ def qcdClosure( fileName, opts ):
 
 	for plot in plots:
 		if plot != "met":
-			drawClosure( plot, gTree, foTree, signalCut+"&&"+commonCut, can, infoSignal, datasetAffix, "_signal" )
-			drawClosure( plot, gTree, foTree, controlCut+"&&"+commonCut, can, infoControl, datasetAffix, "_control" )
-		drawClosure( plot, gTree, foTree, commonCut, can, info, datasetAffix )
+			drawClosure( plot, gTree, foTree, signalCut+"&&"+commonCut, can, infoSignal, datasetAbbr, "_signal" )
+			drawClosure( plot, gTree, foTree, controlCut+"&&"+commonCut, can, infoControl, datasetAbbr, "_control" )
+		drawClosure( plot, gTree, foTree, commonCut, can, info, datasetAbbr )
 
 
 	# Delete the trees from memory, important for many iterations.
@@ -259,12 +242,10 @@ def qcdClosure( fileName, opts ):
 	del can
 
 if __name__ == "__main__":
-	arguments = argparse.ArgumentParser( description="Calculate weighting "
-			+"factors for QCD background estimation." )
-	arguments.add_argument("--input", default=[""], nargs="+" )
-	arguments.add_argument("--save", action="store_true", help="Save canvas as pdf.")
+	arguments = argparse.ArgumentParser()
+	arguments.add_argument("filenames", nargs="+", type=isValidFile )
 	opts = arguments.parse_args()
 
-	for inName in opts.input:
-		qcdClosure( inName, opts )
+	for inName in opts.filenames:
+		qcdClosure( inName )
 
