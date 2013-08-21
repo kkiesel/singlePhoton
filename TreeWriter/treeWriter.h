@@ -91,7 +91,7 @@ class TreeWriter {
 		float st30;
 		float st80;
 		float weight;
-		float ptHat;
+		float genHt;
 		unsigned int nVertex;
 		unsigned int runNumber;
 		unsigned int eventNumber;

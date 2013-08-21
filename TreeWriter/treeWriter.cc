@@ -259,7 +259,7 @@ void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
 	loggingVerbosity = loggingVerbosity_;
 	pileupHisto = 0;
 	splitting = false;
-	ptHat = 0;
+	genHt = 0;
 	photonPtThreshold = 80;
 }
 
@@ -575,7 +575,7 @@ void TreeWriter::SetBranches( TTree& tree ) {
 	tree.Branch("st30", &st30, "st30/F");
 	tree.Branch("st80", &st80, "st80/F");
 	tree.Branch("weight", &weight, "weight/F");
-	tree.Branch("ptHat", &ptHat, "ptHat/F" );
+	tree.Branch("genHt", &genHt, "genHt/F" );
 	tree.Branch("nVertex", &nVertex, "nVertex/I");
 	tree.Branch("runNumber", &runNumber, "runNumber/i");
 	tree.Branch("eventNumber", &eventNumber, "eventNumber/i");
@@ -663,10 +663,10 @@ void TreeWriter::Loop() {
 
 		// genParticles
 		tree::Particle thisGenParticle;
-		ptHat = 0;
+		genHt = 0;
 		for( std::vector<susy::Particle>::iterator it = event->genParticles.begin(); it != event->genParticles.end(); ++it ) {
 			if( it->status == 1 )
-				ptHat += it->momentum.Pt();
+				genHt += it->momentum.Pt();
 			// status 3: particles in matrix element
 			// status 2: intermediate particles
 			// status 1: final particles (but can decay in geant, etc)
