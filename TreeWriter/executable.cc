@@ -22,7 +22,8 @@ int main( int argc, char** argv ) {
 	tw->SetReportEvents(20000);
 
 	tw->SplitTree( false );
-	tw->setPhotonPtThreshold( 80 );
+	tw->SetPhotonPtThreshold( 80 );
+	tw->ApplyHadronicSelection( true );
 
 	if( isData ) {
 		std::cout << "Process data." << std::endl;

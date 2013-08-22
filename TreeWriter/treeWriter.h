@@ -34,7 +34,8 @@ class TreeWriter {
 		void PileUpWeightFile( std::string const & pileupFileName );
 		int IncludeAJson( TString const & _fileName );
 		void SplitTree( bool v = true ) { splitting = v; }
-		void setPhotonPtThreshold( float th ) { photonPtThreshold = th; }
+		void SetPhotonPtThreshold( float th ) { photonPtThreshold = th; }
+		void ApplyHadronicSelection( bool v ) { hadronicSelection = v; }
 
 	private:
 		void Init( std::string outputName, int loggingVerbosity_ );
@@ -65,6 +66,7 @@ class TreeWriter {
 		unsigned int reportEvery;
 		unsigned int loggingVerbosity;
 		bool splitting;
+		bool hadronicSelection;
 		float photonPtThreshold;
 		std::vector<unsigned int> jetIndicesWithPhotonMatch;
 
