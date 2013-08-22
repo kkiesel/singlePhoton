@@ -1,9 +1,5 @@
 #! /usr/bin/env python2
 # -*- coding: utf-8 -*-
-import numpy
-import argparse
-import ConfigParser
-import ROOT
 from sys import stdout
 from treeFunctions import *
 
@@ -78,11 +74,11 @@ def nearPhoton( jet, vector ):
 def histoDefinitions():
 	hists = {}
 	nBins = 3
-	hists["eventSplitting"] = ROOT.TH3I("nPhotons", ";#gamma;#gamma_{jet};#gamma_{e}", nBins, -.5, -.5+nBins, nBins, -.5, -.5+nBins, nBins, -.5, -.5+nBins )
+	hists["eventSplitting"] = ROOT.TH3I("", ";#gamma;#gamma_{jet};#gamma_{e}", nBins, -.5, -.5+nBins, nBins, -.5, -.5+nBins, nBins, -.5, -.5+nBins )
 	hists["metSigma"] = ROOT.TH2F("", ";#slash{E}_{T};#sigma_{i#etai#eta}", 50, 0, 500, 440, 0, 0.022 )
 	hists["metChIso"] = ROOT.TH2F("", ";#slash{E}_{T};Iso^{#pm}",           50, 0, 500, 300, 0, 30 )
-	hists["metNeIso"] = ROOT.TH2F("", ";#slash{E}_{T};Iso^{0}",             50, 0, 500, 300, 0, 30 )
-	hists["metPhIso"] = ROOT.TH2F("", ";#slash{E}_{T};Iso^{#gamma}",        50, 0, 500, 300, 0, 30 )
+	hists["metNeIso"] = ROOT.TH2F("", ";#slash{E}_{T};Iso^{0}-.04p_{T}",             50, 0, 500, 300, 0, 30 )
+	hists["metPhIso"] = ROOT.TH2F("", ";#slash{E}_{T};Iso^{#gamma}-.005p_{T}",        50, 0, 500, 300, 0, 30 )
 	hists["metHE"] = ROOT.TH2F("", ";#slash{E}_{T};H/E",                    50, 0, 500, 100, 0, .5 )
 
 	#hists["ptSigma"] = ROOT.TH2F("", ";p_{T};#sigma_{i#etai#eta}", 100, 0, 1000, 440, 0, 0.022 )
@@ -102,19 +98,24 @@ def histoDefinitions():
 	return hists
 
 
-
-def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1):
+def splitCandidates( inputFileName, processNEvents ):
 	"""Key function of splitCanidates.py. The main loop and object selection is
 	defined here."""
-	print "Processing file {} with {} configuration".format(inputFileName, shortName)
+	datasetAbbr = getDatasetAbbr( inputFileName, slim=False )
+	print "Processing file {} with {} configuration".format(inputFileName, datasetAbbr)
 
-	tree = readTree( inputFileName, "photonTree" )
 	eventHisto = readHisto( inputFileName )
 	if processNEvents < 0:
 		processNEvents = eventHisto.GetBinContent(1)
+	lumiWeight = getLumiWeight( datasetAbbr, processNEvents )
 
+	# Input tree definiton
+	tree = readTree( inputFileName, "photonTree" )
+	tree.SetName("susyTree") # to avoid overlap with "photonTree" later on
+
+	# Output tree definition
 	import os
-	outputFileName = "slim"+os.path.basename( inputFileName )
+	outputFileName = "slimPhoton"+os.path.basename( inputFileName )
 	fout = ROOT.TFile( outputFileName, "recreate" )
 	fout.cd()
 
@@ -123,9 +124,10 @@ def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1):
 	photonElectronTree, photonElectrons = gammaSelectionClone( tree, "photonElectronTree" )
 
 	# variables which will be changed in addition to photons:
-	ROOT.gROOT.ProcessLine("struct variablesToChange { Float_t ht; Float_t weight; Float_t st30; Float_t st80; };")
+	ROOT.gROOT.ProcessLine("struct variablesToChange { Float_t ht(0); Float_t weight(0); Float_t st30(0); Float_t st80(0); };")
 	change = ROOT.variablesToChange()
 	jets = ROOT.std.vector("tree::Jet")()
+
 	for tree_ in [photonTree, photonJetTree, photonElectronTree]:
 		tree_.SetBranchAddress("weight", ROOT.AddressOf( change, "weight" ) )
 		tree_.SetBranchAddress("ht", ROOT.AddressOf( change, "ht" ) )
@@ -142,7 +144,7 @@ def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1):
 		if event.GetReadEntry() > processNEvents:
 			break
 
-		change.weight = event.weight * nExpected / processNEvents
+		change.weight = event.weight * lumiWeight
 		photons.clear()
 		photonElectrons.clear()
 		photonJets.clear()
@@ -150,8 +152,9 @@ def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1):
 
 		for photon in event.photons:
 
-			if True:
-
+			# spike rejection
+			if photon.r9 <= 1 and photon.sigmaIetaIeta > 0.001:
+				"""
 				# filling the d2 histograms
 				if not photon.pixelseed:
 					if photon.hadTowOverEm < 0.05 and photon.sigmaIetaIeta < 0.012 and photon.chargedIso < 2.6 and photon.neutralIso < 3.5 +.04*photon.pt:
@@ -164,6 +167,7 @@ def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1):
 						hists["metSigma"].Fill( event.met, photon.sigmaIetaIeta, change.weight )
 					if photon.sigmaIetaIeta < 0.012 and photon.chargedIso < 2.6 and photon.photonIso < 1.3 +0.005*photon.pt and photon.neutralIso < 3.5 +.04*photon.pt:
 						hists["metHE"].Fill( event.met, photon.hadTowOverEm, change.weight )
+				"""
 
 				# sorting objets
 				if photon.hadTowOverEm < 0.05 \
@@ -179,25 +183,24 @@ def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1):
 				and photon.sigmaIetaIeta < 0.012 \
 				and photon.chargedIso < 15 \
 				and photon.neutralIso < 3.5+ 0.04*photon.pt \
-				and photon.photonIso < 1.3 + 0.005*photon.pt \
+				and photon.photonIso < 18 + 0.005*photon.pt \
 				and not photon.pixelseed:
 					photonJets.push_back( photon )
 
 		change.ht = getHt( event.jets, photons, photonJets )
-		change.st30 = getMHt( event.jets, photons, photonJets )
-		change.st80 = getMHt2( event.jets, photons, photonJets )
-
+		if change.ht < 500:
+			continue
 
 		for jet in event.jets:
 			if not nearPhoton( jet, photons ) and not nearPhoton( jet, photonJets ):
 				jets.push_back( jet )
-
-		if jets.size() > 1 and change.ht >= 500:
-			if photons.size() or photonJets.size() or photonElectrons.size():
-				hists["eventSplitting"].Fill( photons.size(), photonJets.size(), photonElectrons.size(), change.weight )
-		else:
+		if jets.size() < 2:
 			continue
 
+		change.st30 = getMHt( event.jets, photons, photonJets )
+		change.st80 = getMHt2( event.jets, photons, photonJets )
+
+		#hists["eventSplitting"].Fill( photons.size(), photonJets.size(), photonElectrons.size(), change.weight )
 		if photons.size() and not photonJets.size():
 			photonTree.Fill()
 		if photonJets.size() and not photons.size():
@@ -222,36 +225,15 @@ def splitCandidates( inputFileName, shortName, nExpected, processNEvents=-1):
 	fout.Close()
 
 if __name__ == "__main__":
-	# include knowledge about objects saved in the tree
-	ROOT.gSystem.Load("libTreeObjects.so")
 
 	arguments = argparse.ArgumentParser( description="Slim tree" )
-	arguments.add_argument("--input", default=["WJets_V01.12_tree.root"], nargs="+" )
+	arguments.add_argument("filenames", nargs="+", type=isValidFile )
 	arguments.add_argument("--test", action="store_true" )
 	opts = arguments.parse_args()
 
 	# set limit for number of events for testing reason
 	processNEvents = 10000 if opts.test else -1
 
-	integratedLumi = 19800 #pb
-
-	datasetConfigName = "dataset.cfg"
-	datasetConf = ConfigParser.SafeConfigParser()
-	datasetConf.read( datasetConfigName )
-
-	for inName in opts.input:
-		shortName = None
-		for configName in datasetConf.sections():
-			if inName.count( configName ):
-				shortName = configName
-				crosssection = datasetConf.getfloat( configName, "crosssection" )
-		if not shortName:
-			print "No configuration for input file {} defined in '{}'".format(
-					inName, datasetConfigName )
-			continue
-
-		# N = L * sigma
-		nExpected = integratedLumi * crosssection
-
-		splitCandidates( inName, shortName, nExpected, processNEvents )
+	for inName in opts.filenames:
+		splitCandidates( inName, processNEvents )
 
