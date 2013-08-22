@@ -1,20 +1,11 @@
 #! /usr/bin/env python2
 # -*- coding: utf-8 -*-
-import ROOT
-import re
-import os
-import argparse
-from multiplot import *
-from treeFunctions import *
 from math import sqrt
 
-import Styles
-style = Styles.tdrStyle()
-style.SetOptLogy(0)
-ROOT.TGaxis.SetMaxDigits(3)
-ROOT.gROOT.SetBatch()
+from multiplot import Multihisto
+from treeFunctions import *
 
-ROOT.gSystem.Load("libTreeObjects.so")
+ROOT.TGaxis.SetMaxDigits(3)
 
 def yutarosHistogramMC( color=2 ):
 	"""Creates Yutaros fake rate histogram for mc"""
@@ -36,56 +27,46 @@ def yutarosHistogramMC( color=2 ):
 	yutaro.SetMarkerColor( color )
 	return yutaro
 
-def drawDatasetLabel( datasetAffix ):
-	"""Draws sample info on top of the canvas."""
-	datasetLabel = ROOT.TPaveText(.4,.94,.6,1, "ndc")
-	datasetLabel.SetFillColor(0)
-	datasetLabel.SetBorderSize(0)
-	datasetLabel.AddText( datasetAffix )
-	return datasetLabel
-
-def plotNewFakeRate( fileName, opts ):
-	# dataset name is from beginning till first '_'
-	datasetAffix = re.match(".*slim([^_]*)_.*", fileName ).groups()[0]
+def getFakeRateHisto( fileName, opts, color ):
+	datasetAbbr = getDatasetAbbr( fileName, slim=False )
 
 	commonCut = ""
 	gTree = readTree( fileName, "photonTree" )
 	eTree = readTree( fileName, "photonElectronTree" )
-	h_gamma = getHisto( gTree, opts.plot, commonCut+" !photons.isGen(1)", color=1 )
-	h_e = getHisto( eTree, opts.plot, commonCut+" !photons.isGen(1)", color=1 )
-
-	#h_gamma = extractHisto( Dataset( fileName, "photonTree", commonCut+" photon.isGenElectron()",color=1 ), opts.plot, 20 )
-	#h_e = extractHisto( Dataset( fileName, "photonElectronTree", commonCut+" photon.isGenElectron()",color=2 ), opts.plot, 20 )
+	h_gamma = getHisto( gTree, opts.plot, commonCut+" !photons.isGen(0)", color=color )
+	h_e = getHisto( eTree, opts.plot, commonCut+" !photons.isGen(0)", color=color )
 
 	fakeRate = divideHistos( h_gamma, addHistos( [h_gamma, h_e] ) )
 	fakeRate.GetYaxis().SetTitle("f_{e#rightarrow#gamma}")
 
-	yuOrig = yutarosHistogramMC()
+	return fakeRate
+
+
+def plotFakeRate( filenames, opts ):
+	mhisto = Multihisto()
+	mhisto.legendOption = "lp"
+	#mhisto.leg.SetHeader("Object matching")
+
+	for iColor, filename in enumerate(filenames):
+		mhisto.addHisto( getFakeRateHisto( filename, opts, iColor+2 ), getDatasetAbbr(filename,slim=False), draw="" )
+
+	if opts.plot == "photons.pt":
+		yuOrig = yutarosHistogramMC(1)
+		mhisto.addHisto( yuOrig, "DY tag&probe", draw="")
 
 	can = ROOT.TCanvas()
 	can.cd()
 	can.SetLogy(0)
-
-	mhisto = Multihisto()
-	mhisto.legendOption = "lp"
-	mhisto.addHisto( fakeRate, "MC info", draw="")
-	mhisto.addHisto( yuOrig, "DY tag&probe", draw="")
-	mhisto.leg.SetHeader("Object matching")
 	mhisto.Draw()
-
-	label = drawDatasetLabel( datasetAffix )
-	label.Draw()
-
-	saveName = "%s_%s_%s_%s"%(fakeRate.GetYaxis().GetTitle(),datasetAffix,opts.plot,opts.savePrefix)
+	saveName = "%s_%s_%s"%("fakeRate",opts.plot,opts.savePrefix)
 	can.SaveAs( "plots/%s.pdf"%manipulateSaveName(saveName) )
 
 if __name__ == "__main__":
 	arguments = argparse.ArgumentParser( description="Simple EWK" )
+	arguments.add_argument( "filenames", nargs="+", type=isValidFile )
 	arguments.add_argument( "--plot", default="photons.pt" )
-	arguments.add_argument( "--input", default=["WJets_V01.12_tree.root"], nargs="+" )
 	arguments.add_argument( "--savePrefix", default="new" )
 	opts = arguments.parse_args()
 
-	for inName in opts.input:
-		plotNewFakeRate( inName, opts )
+	plotFakeRate( opts.filenames, opts )
 
