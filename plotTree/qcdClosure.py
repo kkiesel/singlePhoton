@@ -165,13 +165,12 @@ def drawClosure( plot, gTree, foTree, cut, can, info, datasetAbbr, additionalInf
 		ratioPad = ROOT.TPad("ratioPad", "Ratio", 0, 0, 1, 0.2)
 		ratioPad.cd()
 		ratioPad.SetLogy( False )
-		ratioGraph = ratios.RatioGraph( h_gamma, h_fo )
-		ratioGraph.draw(ROOT.gPad, yMin=0, yMax=2, adaptiveBinning=False, errors="yx")
-		ratioGraph.graph.Draw("same p e0") # draw nice points
-		ratioGraph.hAxis.SetYTitle( "#gamma/#gamma_{pred}")
-
-		h2 = addErrorAndDivide( h_fo, h_fo_error )
-		h2.Draw("same e2")
+		from myRatio import Ratio
+		r = Ratio( "#gamma/#gamma_{pred}", h_gamma, h_fo )
+		ratio, sys, one = r.draw(0,2)
+		ratio.Draw("e1")
+		sys.Draw("same e2")
+		one.Draw()
 
 		can.cd()
 		hPad.Draw()
@@ -190,7 +189,7 @@ def qcdClosure( fileName ):
 	gTree = readTree( fileName, "photonTree" )
 	foTree = readTree( fileName, "photonJetTree" )
 
-	plots = [ "met" ]# , "ht", "photons[0].ptJet()","Length$(jets.pt)", "Length$(photons.pt)"]
+	plots = [ "met", "ht", "photons[0].ptJet()","Length$(jets.pt)", "Length$(photons.pt)"]
 
 	# Definition of labels
 	infoControl = PlotCaption()
