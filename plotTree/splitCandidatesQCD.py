@@ -92,7 +92,7 @@ def splitCandidates( inputFileName, processNEvents ):
 	"""Key function of splitCanidates.py. The main loop and object selection is
 	defined here."""
 	datasetAbbr = getDatasetAbbr( inputFileName, slim=False )
-	print "Processing file {} with {} configuration".format(inputFileName, datasetAbbr)
+	print "Processing file %s with %s configuration"%(inputFileName, datasetAbbr)
 
 	eventHisto = readHisto( inputFileName )
 	if processNEvents < 0:
@@ -129,7 +129,7 @@ def splitCandidates( inputFileName, processNEvents ):
 
 	for event in tree:
 		if not event.GetReadEntry()%100000:
-			stdout.write('\r{0} %'.format(100*event.GetReadEntry()/event.GetEntries()))
+			stdout.write('\r%i %%'%(100*event.GetReadEntry()/event.GetEntries()))
 			stdout.flush()
 		if event.GetReadEntry() > processNEvents:
 			break
