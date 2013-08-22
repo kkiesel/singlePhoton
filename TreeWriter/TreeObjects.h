@@ -5,8 +5,8 @@ namespace tree {
 // In this namespace classes for the trees are defined.
 
 enum genParticles{
-	genPhoton,
-	genElectron
+	kGenPhoton,
+	kGenElectron
 };
 
 class Particle {

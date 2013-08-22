@@ -164,15 +164,20 @@ unsigned int numberOfGoodVertexInCollection( std::vector<susy::Vertex>& vertexVe
 	return number;
 }
 
-bool matchLorentzToGenVector( TLorentzVector& lvec, std::vector<tree::Particle>& genParticles, float deltaPtRel_ = .3, float deltaR_ = .3 ) {
+bool matchLorentzToGenVector( TLorentzVector& lvec, std::vector<tree::Particle>& genParticles, TH2F& hist, float deltaPtRel_ = .3, float deltaR_ = .3 ) {
+	bool match = false;
+	float dR, dPt;
 	TLorentzVector a;
 	for( std::vector<tree::Particle>::iterator it = genParticles.begin();
 			it != genParticles.end(); ++it ) {
 		a.SetPtEtaPhiE( it->pt, it->eta, it->phi, 1  );
-		if ( lvec.DeltaR( a ) <= deltaR_ && 2*(it->pt-lvec.Pt())/(it->pt+lvec.Pt()) < deltaPtRel_ )
-			return true;
+		dR = lvec.DeltaR( a );
+		dPt = 2*(it->pt-lvec.Pt())/(it->pt+lvec.Pt());
+		hist.Fill( dR, dPt );
+		if ( dR <= deltaR_ &&  dPt <= deltaPtRel_ )
+			match = true;
 	}
-	return false;
+	return match;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -259,6 +264,7 @@ void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
 	loggingVerbosity = loggingVerbosity_;
 	pileupHisto = 0;
 	splitting = false;
+	hadronicSelection = false;
 	genHt = 0;
 	photonPtThreshold = 80;
 }
@@ -705,11 +711,11 @@ void TreeWriter::Loop() {
 			photonToTree.pixelseed = it->nPixelSeeds;
 			photonToTree.conversionSafeVeto = it->passelectronveto;
 			photonToTree.genInformation = 0;
-			if( matchLorentzToGenVector( it->momentum, genPhotons ) )
-				photonToTree.setGen( tree::genPhoton );
-			if( matchLorentzToGenVector( it->momentum, genElectrons ) )
-				photonToTree.setGen( tree::genElectron );
-			if(photonToTree.isGen( tree::genPhoton ))
+			if( matchLorentzToGenVector( it->momentum, genPhotons, *hist2D["matchPhoton"] ) )
+				photonToTree.setGen( tree::kGenPhoton );
+			if( matchLorentzToGenVector( it->momentum, genElectrons, *hist2D["matchElectron"] ) )
+				photonToTree.setGen( tree::kGenElectron );
+			if(photonToTree.isGen( tree::kGenPhoton ))
 				photonToTree._ptJet = getPtFromMatchedJet( *it );
 			else
 				photonToTree._ptJet = getPtFromMatchedJet( *it, false );
@@ -794,6 +800,7 @@ void TreeWriter::Loop() {
 		htHLT = getHtHLT();
 		if( splitting ) {
 			jets = getJets( true );
+			if( hadronicSelection && jets.size() < 2 ) continue;
 			st30 = getSt(30);
 			st80 = getSt(80);
 
@@ -811,17 +818,18 @@ void TreeWriter::Loop() {
 
 			if( isPhotonEvent ) {
 				ht = getHt( photons.at(0) );
-				photonTree->Fill();
+				if( hadronicSelection && ht >= 500 )
+					photonTree->Fill();
 			}
 			if( isPhotonJetEvent) {
 				ht = getHt( photonJets.at(0) );
-				photonJetTree->Fill();
+				if( hadronicSelection && ht >= 500 )
+					photonJetTree->Fill();
 			}
-			if( isPhotonJetEvent && isPhotonEvent )
-				std::cout << "error, cant be photonjet and photon event at once" << std::endl;
 			if( !isPhotonJetEvent && !isPhotonEvent && photonElectrons.size() ) {
 				ht = getHt( photonElectrons.at(0) );
-				photonElectronTree->Fill();
+				if( hadronicSelection && ht >= 500 )
+					photonElectronTree->Fill();
 			}
 		} else { // no splitting
 			ht = 0;
