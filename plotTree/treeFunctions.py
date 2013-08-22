@@ -1,3 +1,5 @@
+from math import sqrt
+
 import ROOT
 import Styles
 import argparse
@@ -26,7 +28,11 @@ def rebin2D( oldHist, xList, yList ):
 	newHist.Sumw2()
 	for i in range(oldHist.GetNbinsX()+2):
 		for j in range(oldHist.GetNbinsY()+2):
-			newHist.Fill( oldHist.GetXaxis().GetBinCenter(i), oldHist.GetYaxis().GetBinCenter(j), oldHist.GetBinContent(i,j) )
+			# newContent = newContent + oldContent
+			# newError = sqrt( newError**2 + oldError**2 )
+			newBin = newHist.FindBin( oldHist.GetXaxis().GetBinCenter(i), oldHist.GetYaxis().GetBinCenter(j) )
+			newHist.SetBinContent( newBin, oldHist.GetBinContent(i,j)+ newHist.GetBinContent(newBin) )
+			newHist.SetBinError( newBin, sqrt(newHist.GetBinError(newBin)**2 + oldHist.GetBinError( i, j )**2) )
 	return newHist
 
 def createHistoFromTree2D(tree, variable, weight, nBinsX=[], nBinsY=[] ):
