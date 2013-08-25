@@ -81,16 +81,6 @@ def histoDefinitions():
 	hists["metPhIso"] = ROOT.TH2F("", ";#slash{E}_{T};Iso^{#gamma}-.005p_{T}",        50, 0, 500, 300, 0, 30 )
 	hists["metHE"] = ROOT.TH2F("", ";#slash{E}_{T};H/E",                    50, 0, 500, 100, 0, .5 )
 
-	#hists["ptSigma"] = ROOT.TH2F("", ";p_{T};#sigma_{i#etai#eta}", 100, 0, 1000, 440, 0, 0.022 )
-	#hists["ptJetSigma"] = ROOT.TH2F("", ";p_{T^{*}};#sigma_{i#etai#eta}", 100, 0, 1000, 440, 0, 0.022 )
-	#hists["ptChIso"] = ROOT.TH2F("", ";p_{T};Iso^{#pm}",           100, 0, 1000, 150, 0, 15 )
-	#hists["ptJetChIso"] = ROOT.TH2F("", ";p_{T^{*}};Iso^{#pm}",           100, 0, 1000, 150, 0, 15 )
-	#hists["htSigma"] = ROOT.TH2F("", ";H_{T};#sigma_{i#etai#eta}", 100, 0, 1000, 440, 0, 0.022 )
-	#hists["htChIso"] = ROOT.TH2F("", ";H_{T};Iso^{#pm}",           100, 0, 1000, 150, 0, 15 )
-	#hists["nvSigma"] = ROOT.TH2F("", ";vertices;#sigma_{i#etai#eta}", 30, 0.5, 30.5, 440, 0, 0.022 )
-	#hists["nvChIso"] = ROOT.TH2F("", ";vertices;Iso^{#pm}",           30, 0.5, 30.5, 150, 0, 15 )
-	#hists["metPt"] = ROOT.TH2F("", ";#slash{E}_{T};p_{T}", 50, 0, 500, 100, 0, 1000 )
-
 	for name, hist in hists.iteritems():
 		hist.SetName( name )
 		hist.Sumw2()
@@ -102,7 +92,7 @@ def splitCandidates( inputFileName, processNEvents ):
 	"""Key function of splitCanidates.py. The main loop and object selection is
 	defined here."""
 	datasetAbbr = getDatasetAbbr( inputFileName, slim=False )
-	print "Processing file {} with {} configuration".format(inputFileName, datasetAbbr)
+	print "Processing file %s with %s configuration"%(inputFileName, datasetAbbr)
 
 	eventHisto = readHisto( inputFileName )
 	if processNEvents < 0:
@@ -115,7 +105,7 @@ def splitCandidates( inputFileName, processNEvents ):
 
 	# Output tree definition
 	import os
-	outputFileName = "slimPhoton"+os.path.basename( inputFileName )
+	outputFileName = "slim"+os.path.basename( inputFileName )
 	fout = ROOT.TFile( outputFileName, "recreate" )
 	fout.cd()
 
@@ -139,7 +129,7 @@ def splitCandidates( inputFileName, processNEvents ):
 
 	for event in tree:
 		if not event.GetReadEntry()%100000:
-			stdout.write('\r{0} %'.format(100*event.GetReadEntry()/event.GetEntries()))
+			stdout.write('\r%i %%'%(100*event.GetReadEntry()/event.GetEntries()))
 			stdout.flush()
 		if event.GetReadEntry() > processNEvents:
 			break
@@ -154,7 +144,6 @@ def splitCandidates( inputFileName, processNEvents ):
 
 			# spike rejection
 			if photon.r9 <= 1 and photon.sigmaIetaIeta > 0.001:
-				"""
 				# filling the d2 histograms
 				if not photon.pixelseed:
 					if photon.hadTowOverEm < 0.05 and photon.sigmaIetaIeta < 0.012 and photon.chargedIso < 2.6 and photon.neutralIso < 3.5 +.04*photon.pt:
@@ -167,7 +156,6 @@ def splitCandidates( inputFileName, processNEvents ):
 						hists["metSigma"].Fill( event.met, photon.sigmaIetaIeta, change.weight )
 					if photon.sigmaIetaIeta < 0.012 and photon.chargedIso < 2.6 and photon.photonIso < 1.3 +0.005*photon.pt and photon.neutralIso < 3.5 +.04*photon.pt:
 						hists["metHE"].Fill( event.met, photon.hadTowOverEm, change.weight )
-				"""
 
 				# sorting objets
 				if photon.hadTowOverEm < 0.05 \
@@ -182,8 +170,8 @@ def splitCandidates( inputFileName, processNEvents ):
 				elif photon.hadTowOverEm < 0.05 \
 				and photon.sigmaIetaIeta < 0.012 \
 				and photon.chargedIso < 15 \
-				and photon.neutralIso < 3.5+ 0.04*photon.pt \
-				and photon.photonIso < 18 + 0.005*photon.pt \
+				and photon.neutralIso < 20 + 0.04*photon.pt \
+				and photon.photonIso < 20 + 0.005*photon.pt \
 				and not photon.pixelseed:
 					photonJets.push_back( photon )
 
@@ -200,7 +188,7 @@ def splitCandidates( inputFileName, processNEvents ):
 		change.st30 = getMHt( event.jets, photons, photonJets )
 		change.st80 = getMHt2( event.jets, photons, photonJets )
 
-		#hists["eventSplitting"].Fill( photons.size(), photonJets.size(), photonElectrons.size(), change.weight )
+		hists["eventSplitting"].Fill( photons.size(), photonJets.size(), photonElectrons.size(), change.weight )
 		if photons.size() and not photonJets.size():
 			photonTree.Fill()
 		if photonJets.size() and not photons.size():

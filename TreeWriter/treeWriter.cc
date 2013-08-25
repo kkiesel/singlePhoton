@@ -174,7 +174,7 @@ bool matchLorentzToGenVector( TLorentzVector& lvec, std::vector<tree::Particle>&
 		dR = lvec.DeltaR( a );
 		dPt = 2*(it->pt-lvec.Pt())/(it->pt+lvec.Pt());
 		hist.Fill( dR, dPt );
-		if ( dR <= deltaR_ &&  dPt <= deltaPtRel_ )
+		if ( dR <= deltaR_ &&  std::abs(dPt) <= deltaPtRel_ )
 			match = true;
 	}
 	return match;
@@ -243,6 +243,8 @@ void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
 	hist2D["dRPtFO"] = new TH2F("matchingPhotonJet", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
 	hist2D["metSigma"] = new TH2F("", ";met;#sigma_{i#etai#eta}", 50, 0, 500, 440, 0, 0.022 );
 	hist2D["metChIso"] = new TH2F("", ";met;ch iso", 50, 0, 500, 150, 0, 15 );
+	hist2D["matchPhoton"] = new TH2F("", ";#DeltaR;#Delta p_{T}/p_{T}", 100, 0, 1, 200, -2, 2 );
+	hist2D["matchElectron"] = new TH2F("", ";#DeltaR;#Delta p_{T}/p_{T}", 100, 0, 1, 200, -2, 2 );
 	for( std::map<std::string, TH2F*>::iterator it = hist2D.begin();
 			it!= hist2D.end(); ++it ) {
 		it->second->SetName( (it->second->GetName() + it->first).c_str() );
@@ -711,9 +713,9 @@ void TreeWriter::Loop() {
 			photonToTree.pixelseed = it->nPixelSeeds;
 			photonToTree.conversionSafeVeto = it->passelectronveto;
 			photonToTree.genInformation = 0;
-			if( matchLorentzToGenVector( it->momentum, genPhotons, *hist2D["matchPhoton"] ) )
+			if( matchLorentzToGenVector( it->momentum, genPhotons, *hist2D["matchPhoton"], 1e6, .1 ) )
 				photonToTree.setGen( tree::kGenPhoton );
-			if( matchLorentzToGenVector( it->momentum, genElectrons, *hist2D["matchElectron"] ) )
+			if( matchLorentzToGenVector( it->momentum, genElectrons, *hist2D["matchElectron"], 1e6, .1 ) )
 				photonToTree.setGen( tree::kGenElectron );
 			if(photonToTree.isGen( tree::kGenPhoton ))
 				photonToTree._ptJet = getPtFromMatchedJet( *it );
