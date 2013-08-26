@@ -239,10 +239,8 @@ void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
 	eventNumbers->GetXaxis()->SetBinLabel(1,"Number of generated events");
 	unsigned int nBins = 3;
 	nPhotons = new TH3I("nPhotons", ";#gamma;#gamma_{jet};#gamma_{e}", nBins, -.5, -.5+nBins, nBins, -.5, -.5+nBins, nBins, -.5, -.5+nBins );
-	hist2D["dRPtGamma"] = new TH2F("matchingPhotonJet", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
-	hist2D["dRPtFO"] = new TH2F("matchingPhotonJet", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
-	hist2D["metSigma"] = new TH2F("", ";met;#sigma_{i#etai#eta}", 50, 0, 500, 440, 0, 0.022 );
-	hist2D["metChIso"] = new TH2F("", ";met;ch iso", 50, 0, 500, 150, 0, 15 );
+	hist2D["matchJet"] = new TH2F("", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
+	hist2D["matchJetFO"] = new TH2F("", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
 	hist2D["matchPhoton"] = new TH2F("", ";#DeltaR;#Delta p_{T}/p_{T}", 100, 0, 1, 200, -2, 2 );
 	hist2D["matchElectron"] = new TH2F("", ";#DeltaR;#Delta p_{T}/p_{T}", 100, 0, 1, 200, -2, 2 );
 	for( std::map<std::string, TH2F*>::iterator it = hist2D.begin();
@@ -409,9 +407,9 @@ float TreeWriter::getPtFromMatchedJet( const susy::Photon& myPhoton, bool isPhot
 		float deltaR_ = myPhoton.momentum.DeltaR( corrP4 );
 		float eRel = corrP4.Pt() / myPhoton.momentum.Pt();
 		if( isPhoton )
-			hist2D["dRPtGamma"]->Fill( deltaR_, eRel );
+			hist2D["matchJet"]->Fill( deltaR_, eRel );
 		else
-			hist2D["dRPtFO"]->Fill( deltaR_, eRel );
+			hist2D["matchJetFO"]->Fill( deltaR_, eRel );
 
 		if (deltaR_ > 0.3 || eRel <= 0.95 ) continue;
 		if( loggingVerbosity > 2 )
@@ -713,17 +711,15 @@ void TreeWriter::Loop() {
 			photonToTree.pixelseed = it->nPixelSeeds;
 			photonToTree.conversionSafeVeto = it->passelectronveto;
 			photonToTree.genInformation = 0;
-			if( matchLorentzToGenVector( it->momentum, genPhotons, *hist2D["matchPhoton"], 1e6, .1 ) )
+			if( matchLorentzToGenVector( it->momentum, genPhotons, *hist2D["matchPhoton"], 1e6, .05 ) )
 				photonToTree.setGen( tree::kGenPhoton );
-			if( matchLorentzToGenVector( it->momentum, genElectrons, *hist2D["matchElectron"], 1e6, .1 ) )
+			if( matchLorentzToGenVector( it->momentum, genElectrons, *hist2D["matchElectron"], 1e6, .05 ) )
 				photonToTree.setGen( tree::kGenElectron );
 			if(photonToTree.isGen( tree::kGenPhoton ))
 				photonToTree._ptJet = getPtFromMatchedJet( *it );
 			else
 				photonToTree._ptJet = getPtFromMatchedJet( *it, false );
 
-			hist2D["metChIso"]->Fill( event->metMap["pfMet"].met(), photonToTree.chargedIso );
-			hist2D["metSigma"]->Fill( event->metMap["pfMet"].met(), photonToTree.sigmaIetaIeta );
 			if( splitting ) {
 
 				//photon definition barrel
