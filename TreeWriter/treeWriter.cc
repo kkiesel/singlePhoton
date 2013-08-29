@@ -260,12 +260,11 @@ void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
 
 	// set default parameter
 	processNEvents = -1;
-	reportEvery = 1000;
+	reportEvery = 20000;
 	loggingVerbosity = loggingVerbosity_;
 	pileupHisto = 0;
-	splitting = false;
-	hadronicSelection = false;
-	genHt = 0;
+	splitting = true;
+	hadronicSelection = true;
 	photonPtThreshold = 80;
 }
 
@@ -578,10 +577,7 @@ void TreeWriter::SetBranches( TTree& tree ) {
 	tree.Branch("type1met", &type1met, "type1met/F");
 	tree.Branch("htHLT", &htHLT, "htHLT/F");
 	tree.Branch("ht", &ht, "ht/F");
-	tree.Branch("st30", &st30, "st30/F");
-	tree.Branch("st80", &st80, "st80/F");
 	tree.Branch("weight", &weight, "weight/F");
-	tree.Branch("genHt", &genHt, "genHt/F" );
 	tree.Branch("nVertex", &nVertex, "nVertex/I");
 	tree.Branch("runNumber", &runNumber, "runNumber/i");
 	tree.Branch("eventNumber", &eventNumber, "eventNumber/i");
@@ -669,15 +665,7 @@ void TreeWriter::Loop() {
 
 		// genParticles
 		tree::Particle thisGenParticle;
-		genHt = 0;
-		st30 = 0;
-		st80 = 0;
 		for( std::vector<susy::Particle>::iterator it = event->genParticles.begin(); it != event->genParticles.end(); ++it ) {
-			if( it->status == 1 )
-				genHt += it->momentum.Pt();
-			if( it->status == 3 )
-				st30 += it->momentum.Pt();
-			st80 += it->momentum.Pt();
 
 			// status 3: particles in matrix element
 			// status 2: intermediate particles
@@ -730,19 +718,18 @@ void TreeWriter::Loop() {
 
 				//photon definition barrel
 				bool isPhotonOrElectron = eta < susy::etaGapBegin
-					&& it->hadTowOverEm<0.05
-					&& it->sigmaIetaIeta<0.012
-					&& photonToTree.chargedIso<2.6
-					&& photonToTree.neutralIso<3.5+0.04*photonToTree.pt
-					&& photonToTree.photonIso<1.3+0.005*photonToTree.pt;
+					&& it->hadTowOverEm < 0.05
+					&& it->sigmaIetaIeta < 0.012
+					&& photonToTree.chargedIso < 2.6
+					&& photonToTree.neutralIso < 3.5+0.04*photonToTree.pt
+					&& photonToTree.photonIso < 1.3+0.005*photonToTree.pt;
 
 				bool isPhotonJet = eta < susy::etaGapBegin
-					&& it->hadTowOverEm<0.05
-					&& it->sigmaIetaIeta<0.012
-					&& photonToTree.chargedIso<15
-					&& photonToTree.neutralIso<3.5+0.04*photonToTree.pt
-					&& photonToTree.photonIso<1.3+0.005*photonToTree.pt
-					&& photonToTree.chargedIso>=2.6;
+					&& it->hadTowOverEm < 0.05
+					&& it->sigmaIetaIeta < 0.012
+					&& photonToTree.chargedIso < 26
+					&& photonToTree.neutralIso < 35+0.4*photonToTree.pt
+					&& photonToTree.photonIso < 13+0.05*photonToTree.pt;
 
 					if( isPhotonOrElectron ) {
 						if( photonToTree.pixelseed )
@@ -805,8 +792,6 @@ void TreeWriter::Loop() {
 		if( splitting ) {
 			jets = getJets( true );
 			if( hadronicSelection && jets.size() < 2 ) continue;
-			//st30 = getSt(30);
-			//st80 = getSt(80);
 
 			bool isPhotonEvent = false;
 			bool isPhotonJetEvent = false;
@@ -837,8 +822,6 @@ void TreeWriter::Loop() {
 			}
 		} else { // no splitting
 			ht = 0;
-			//st30 = 0;
-			//st80 = 0;
 			jets = getJets( false );
 
 			if( photons.size() )

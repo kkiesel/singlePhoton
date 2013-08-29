@@ -90,10 +90,7 @@ class TreeWriter {
 		float type0met;
 		float htHLT;
 		float ht;
-		float st30;
-		float st80;
 		float weight;
-		float genHt;
 		unsigned int nVertex;
 		unsigned int runNumber;
 		unsigned int eventNumber;
