@@ -1,4 +1,5 @@
 #include <iostream>
+#include <sstream>
 #include <math.h>
 #include <string>
 #include <map>
@@ -9,6 +10,7 @@
 #include "TFile.h"
 #include "TTree.h"
 #include "TChain.h"
+#include "TH1F.h"
 #include "TH1F.h"
 #include "TH2F.h"
 #include "TH3I.h"
@@ -25,35 +27,60 @@ class TreeWriter {
 		TreeWriter(TChain* inputName, std::string outputName, int loggingVerbosity_);
 		virtual ~TreeWriter();
 		virtual void Loop();
-		bool isData();
 
+		// Command line output settings
 		void SetProcessNEvents(int nEvents) { processNEvents = nEvents; }
 		void SetReportEvents(unsigned int nEvents) { reportEvery = nEvents; }
 		void SetLoggingVerbosity(unsigned int logVerb) { loggingVerbosity = logVerb; }
-		void SetTriggerPaths( std::vector<const char*> const & tp ) { triggerNames = tp; }
-		void PileUpWeightFile( std::string const & pileupFileName );
-		int IncludeAJson( TString const & _fileName );
+
+		// Configure output version
 		void SplitTree( bool v = true ) { splitting = v; }
-		void SetPhotonPtThreshold( float th ) { photonPtThreshold = th; }
-		void ApplyHadronicSelection( bool v ) { hadronicSelection = v; }
+		void SetGridParameters( int x, int y ){ gridParameterX = x; gridParameterY = y; }
+		void FinalDistriputionsOnly( bool v = true ) { onlyMetPlots = v; }
+		void ApplyHadronicSelection( bool v = true ) { hadronicSelection = v; }
+		void SetPhotonPtThreshold( float th = 80 ) { photonPtThreshold = th; }
+
+		// Set tigger and input Files
+		void SetTriggerPaths( std::vector<const char*> const & tp ) { triggerNames = tp; }
+		void SetPileUpWeightFile( std::string const & filename );
+		void SetJsonFile( TString const & filename );
+		void SetQcdWeightFile( std::string const & filename );
 
 	private:
 		void Init( std::string outputName, int loggingVerbosity_ );
 		void SetBranches( TTree& tree );
 		bool passTrigger();
-		bool passRecommendedMetFilters() const;
 		bool isGoodLumi() const;
 		float getPileUpWeight() const;
 		float getPtFromMatchedJet( const susy::Photon& myPhoton, bool isPhoton );
 		float getHtHLT() const;
-		float getHt( const tree::Photon& photon ) const;
-		float getSt( float ptCut ) const;
+		float getHt() const;
 		std::vector<tree::Jet> getJets( bool clean ) const;
+		void getQcdWeights( float pt, float ht, float & qcdWeight, float & qcdWeightUp, float & qcdWeightDown );
+
+		// Command line output settings
+		unsigned int reportEvery;
+		int processNEvents;
+		unsigned int loggingVerbosity;
+
+		// Configure output version
+		bool splitting;
+		bool onlyMetPlots;
+		bool hadronicSelection;
+		float photonPtThreshold;
+
+		// Additional information for producing the output
+		TH1F* pileupHisto;
+		TH2F* qcdWeightHisto;
+		std::map<unsigned, std::set<unsigned> > goodLumiList;
+		std::vector<const char*> triggerNames;
+		int gridParameterX, gridParameterY;
 
 		TChain* inputTree;
 		susy::Event* event;
 
-		// Saved objects
+
+		// Objects which can be saved to the file
 		TFile* outFile;
 		TTree* photonTree;
 		TTree* photonElectronTree;
@@ -61,21 +88,9 @@ class TreeWriter {
 		TH1F* eventNumbers;
 		TH3I* nPhotons;
 		std::map< std::string, TH2F* > hist2D;
+		std::map< std::string, TH1F* > hist1D;
 
-		int processNEvents; // number of events to be processed
-		unsigned int reportEvery;
-		unsigned int loggingVerbosity;
-		bool splitting;
-		bool hadronicSelection;
-		float photonPtThreshold;
-		std::vector<unsigned int> jetIndicesWithPhotonMatch;
-
-		// important dataset information
-		TH1F* pileupHisto;
-		std::map<unsigned, std::set<unsigned> > goodLumiList;
-		std::vector<const char*> triggerNames;
-
-		// variables which will be stored in the tree
+		// Variables which will be stored in the tree
 		std::vector<tree::Photon> photons;
 		std::vector<tree::Photon> photonElectrons;
 		std::vector<tree::Photon> photonJets;
@@ -90,10 +105,7 @@ class TreeWriter {
 		float type0met;
 		float htHLT;
 		float ht;
-		float st30;
-		float st80;
 		float weight;
-		float genHt;
 		unsigned int nVertex;
 		unsigned int runNumber;
 		unsigned int eventNumber;

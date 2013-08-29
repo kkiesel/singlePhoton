@@ -1,11 +1,13 @@
-VERSION = 13
+VERSION = 17
 SUFFIX = _V02.$(VERSION)_tree.root
 SAVESUFFIX = new
 
+AFFIX =
+
 hadd:
-	hadd -f slimGJets$(SUFFIX) slimGJets_200_400$(SUFFIX) slimGJets_400_inf$(SUFFIX)
-	hadd -f slimQCD$(SUFFIX) slimQCD_250_500$(SUFFIX) slimQCD_500_1000$(SUFFIX) slimQCD_1000_inf$(SUFFIX)
-	hadd -f slimAllQCD$(SUFFIX) slimGJets$(SUFFIX) slimQCD$(SUFFIX)
+	hadd -f slim$(AFFIX)GJets$(SUFFIX) slim$(AFFIX)GJets_200_400$(SUFFIX) slim$(AFFIX)GJets_400_inf$(SUFFIX)
+	hadd -f slim$(AFFIX)QCD$(SUFFIX) slim$(AFFIX)QCD_250_500$(SUFFIX) slim$(AFFIX)QCD_500_1000$(SUFFIX) slim$(AFFIX)QCD_1000_inf$(SUFFIX)
+	hadd -f slim$(AFFIX)AllQCD$(SUFFIX) slim$(AFFIX)GJets$(SUFFIX) slim$(AFFIX)QCD$(SUFFIX)
 
 ewk: ewkClosure ewkFakeRate
 	@echo Done

@@ -144,18 +144,6 @@ def splitCandidates( inputFileName, processNEvents ):
 
 			# spike rejection
 			if photon.r9 <= 1 and photon.sigmaIetaIeta > 0.001:
-				# filling the d2 histograms
-				if not photon.pixelseed:
-					if photon.hadTowOverEm < 0.05 and photon.sigmaIetaIeta < 0.012 and photon.chargedIso < 2.6 and photon.neutralIso < 3.5 +.04*photon.pt:
-						hists["metPhIso"].Fill( event.met, photon.photonIso-0.005*photon.pt, change.weight )
-					if photon.hadTowOverEm < 0.05 and photon.sigmaIetaIeta < 0.012 and photon.chargedIso < 2.6 and photon.photonIso < 1.3+0.005*photon.pt:
-						hists["metNeIso"].Fill( event.met, photon.neutralIso-0.04*photon.pt, change.weight )
-					if photon.hadTowOverEm < 0.05 and photon.sigmaIetaIeta < 0.012 and photon.photonIso < 1.3 +0.005*photon.pt and photon.neutralIso < 3.5 +.04*photon.pt:
-						hists["metChIso"].Fill( event.met, photon.chargedIso, change.weight )
-					if photon.hadTowOverEm < 0.05 and photon.chargedIso < 2.6 and photon.photonIso < 1.3 +0.005*photon.pt and photon.neutralIso < 3.5 +.04*photon.pt:
-						hists["metSigma"].Fill( event.met, photon.sigmaIetaIeta, change.weight )
-					if photon.sigmaIetaIeta < 0.012 and photon.chargedIso < 2.6 and photon.photonIso < 1.3 +0.005*photon.pt and photon.neutralIso < 3.5 +.04*photon.pt:
-						hists["metHE"].Fill( event.met, photon.hadTowOverEm, change.weight )
 
 				# sorting objets
 				if photon.hadTowOverEm < 0.05 \
@@ -169,9 +157,9 @@ def splitCandidates( inputFileName, processNEvents ):
 						photons.push_back( photon )
 				elif photon.hadTowOverEm < 0.05 \
 				and photon.sigmaIetaIeta < 0.012 \
-				and photon.chargedIso < 15 \
-				and photon.neutralIso < 20 + 0.04*photon.pt \
-				and photon.photonIso < 20 + 0.005*photon.pt \
+				and photon.chargedIso > 0 \
+				and photon.neutralIso > 0 \
+				and photon.photonIso > 5 \
 				and not photon.pixelseed:
 					photonJets.push_back( photon )
 
@@ -185,8 +173,25 @@ def splitCandidates( inputFileName, processNEvents ):
 		if jets.size() < 2:
 			continue
 
-		change.st30 = getMHt( event.jets, photons, photonJets )
-		change.st80 = getMHt2( event.jets, photons, photonJets )
+		for photon in event.photons:
+
+			# spike rejection
+			if photon.r9 <= 1 and photon.sigmaIetaIeta > 0.001:
+				# filling the d2 histograms
+				if not photon.pixelseed:
+					if photon.hadTowOverEm < 0.05 and photon.sigmaIetaIeta < 0.012 and photon.chargedIso < 2.6 and photon.neutralIso < 3.5 +.04*photon.pt:
+						hists["metPhIso"].Fill( event.met, photon.photonIso-0.005*photon.pt, change.weight )
+					if photon.hadTowOverEm < 0.05 and photon.sigmaIetaIeta < 0.012 and photon.chargedIso < 2.6 and photon.photonIso < 1.3+0.005*photon.pt:
+						hists["metNeIso"].Fill( event.met, photon.neutralIso-0.04*photon.pt, change.weight )
+					if photon.hadTowOverEm < 0.05 and photon.sigmaIetaIeta < 0.012 and photon.photonIso < 1.3 +0.005*photon.pt and photon.neutralIso < 3.5 +.04*photon.pt:
+						hists["metChIso"].Fill( event.met, photon.chargedIso, change.weight )
+					if photon.hadTowOverEm < 0.05 and photon.chargedIso < 2.6 and photon.photonIso < 1.3 +0.005*photon.pt and photon.neutralIso < 3.5 +.04*photon.pt:
+						hists["metSigma"].Fill( event.met, photon.sigmaIetaIeta, change.weight )
+					if photon.sigmaIetaIeta < 0.012 and photon.chargedIso < 2.6 and photon.photonIso < 1.3 +0.005*photon.pt and photon.neutralIso < 3.5 +.04*photon.pt:
+						hists["metHE"].Fill( event.met, photon.hadTowOverEm, change.weight )
+
+		#change.st30 = getMHt( event.jets, photons, photonJets )
+		#change.st80 = getMHt2( event.jets, photons, photonJets )
 
 		hists["eventSplitting"].Fill( photons.size(), photonJets.size(), photonElectrons.size(), change.weight )
 		if photons.size() and not photonJets.size():
@@ -211,6 +216,7 @@ def splitCandidates( inputFileName, processNEvents ):
 		hist.Write()
 
 	fout.Close()
+	print "Wrote %s"%fout.GetName()
 
 if __name__ == "__main__":
 
