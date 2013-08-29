@@ -60,8 +60,7 @@ def drawDependency( inName, histName, rebinX, rebinY, axis="y", uFlow=True, oFlo
 	mh = split2Din1DMultihist( hist2D, axis, uFlow, oFlow )
 	for h in mh.histos:
 		if h[0].Integral():
-			h[0].Scale(1./h[0].Integral("width"),"width")
-			print h[0].Integral("width")
+			h[0].Scale(1./h[0].Integral(),"width")
 		h[0].GetYaxis().SetTitle("Normed Entries, divided by bin width")
 
 	mh.leg.SetX1(.5)
@@ -69,12 +68,12 @@ def drawDependency( inName, histName, rebinX, rebinY, axis="y", uFlow=True, oFlo
 		mh.leg.SetY1(0.2)
 		mh.leg.SetY2(0.6)
 
-	can = ROOT.TCanvas("title", "name", 1000, 1400 )
+	can = ROOT.TCanvas()
 	mh.Draw()
 	datasetAbbr = getDatasetAbbr( inName )
 	label = createDatasetLabel( datasetAbbr )
 	label.Draw()
-	SaveAs( can, "2Dto1D_%s_%s_%s_%s%s.pdf"%(histName,datasetAbbr,axis,len(rebinX),len(rebinY)) )
+	SaveAs( can, "2Dto1D_%s_%s_%s_%s%s"%(histName,datasetAbbr,axis,len(rebinX),len(rebinY)) )
 
 if __name__ == "__main__":
 	arguments = argparse.ArgumentParser()
@@ -89,13 +88,13 @@ if __name__ == "__main__":
 		drawDependency( inName, "metSigma", metBinning, [0.0, 0.012, 0.014 ], True, False, False )
 		drawDependency( inName, "metSigma", metBinning, [0.001*x for x in range(0,15,2) ], True, False )
 
-		drawDependency( inName, "metChIso", metBinning, [ 0., 2.6, 15 ], True , False, False )
+		drawDependency( inName, "metChIso", metBinning, [ 0., 2.6, 26 ], True , False, False )
 		drawDependency( inName, "metChIso", metBinning, [ 0, 0.5, 2,4,8,12,16, 22 ], True, False )
 
-		drawDependency( inName, "metNeIso", metBinning, [ 3.5, 10 ], True, True )
+		drawDependency( inName, "metNeIso", metBinning, [ 3.5, 35 ], True, True )
 		drawDependency( inName, "metNeIso", metBinning, range(0,30, 3), True, True )
 
-		drawDependency( inName, "metPhIso", metBinning, [ 1.3, 10 ], True, True  )
+		drawDependency( inName, "metPhIso", metBinning, [ 1.3, 13 ], True, True  )
 		drawDependency( inName, "metPhIso", metBinning, range(0,30, 3), True, True )
 
 		drawDependency( inName, "metHE", metBinning, [ 0., 0.05, 0.1 ], True, False  )
