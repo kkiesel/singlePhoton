@@ -24,7 +24,8 @@ def datasetToLatex( datasetAbbr ):
 	sets = { "AllQCD": "(#gamma+)QCD",
 			"GJets": "#gamma+QCD",
 			"TTbar": "t#bar{t}",
-			"WJet": "W"
+			"WJet": "W",
+			"QCD": "QCD"
 			}
 	for part, label in sets.iteritems():
 		if part in datasetAbbr:
@@ -122,7 +123,7 @@ class PlotCaption:
 	"""Creates the superscription for each plot, eg
 	'19fb^{-1} sqrt{s)=8TeV #geq1#gamma #geq2jets'
 	"""
-	def __init__( self, x0=.96, y0=.96, analysisInfo=True, option="ndc" ):
+	def __init__( self, x0=.96, y0=.96, analysisInfo=True, option="ndc", signal=False, control=False ):
 		import ROOT
 		self.x0 = x0
 		self.text = ROOT.TLatex( x0, y0, "" )
@@ -130,6 +131,10 @@ class PlotCaption:
 		self.text.SetNDC()
 		if analysisInfo:
 			self.addAnalysisInfo()
+		if signal:
+			self.signalCut()
+		if control:
+			self.controlCut()
 
 	def addAnalysisInfo( self, lumi=19800, e=8, defaultcuts="#geq1#gamma,#geq2jets" ):
 		self.text.SetText( self.text.GetX(), self.text.GetY(), "%.1ffb^{-1} #sqrt{s}=%sTeV %s"%( lumi/1000., e, defaultcuts ) )
