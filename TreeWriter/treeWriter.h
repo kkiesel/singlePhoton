@@ -1,30 +1,25 @@
 #include <iostream>
-#include <sstream>
-#include <math.h>
+#include <fstream>
 #include <string>
 #include <map>
 #include <set>
-#include <fstream>
 
 #include "TSystem.h"
 #include "TFile.h"
 #include "TTree.h"
 #include "TChain.h"
 #include "TH1F.h"
-#include "TH1F.h"
 #include "TH2F.h"
 #include "TH3I.h"
 #include "TPRegexp.h"
-#include "TArrayI.h"
-#include "TLorentzVector.h"
 
 #include "SusyEvent.h"
 #include "TreeObjects.h"
 
 class TreeWriter {
 	public :
-		TreeWriter(std::string inputName, std::string outputName, int loggingVerbosity_);
-		TreeWriter(TChain* inputName, std::string outputName, int loggingVerbosity_);
+		TreeWriter(std::string inputName, std::string outputName, int loggingVerbosity_=0 );
+		TreeWriter(TChain* inputName, std::string outputName, int loggingVerbosity_=0 );
 		virtual ~TreeWriter();
 		virtual void Loop();
 
@@ -35,7 +30,6 @@ class TreeWriter {
 
 		// Configure output version
 		void SplitTree( bool v = true ) { splitting = v; }
-		void SetGridParameters( int x, int y ){ gridParameterX = x; gridParameterY = y; }
 		void FinalDistriputionsOnly( bool v = true ) { onlyMetPlots = v; }
 		void ApplyHadronicSelection( bool v = true ) { hadronicSelection = v; }
 		void SetPhotonPtThreshold( float th = 80 ) { photonPtThreshold = th; }
@@ -74,7 +68,6 @@ class TreeWriter {
 		TH2F* qcdWeightHisto;
 		std::map<unsigned, std::set<unsigned> > goodLumiList;
 		std::vector<const char*> triggerNames;
-		int gridParameterX, gridParameterY;
 
 		TChain* inputTree;
 		susy::Event* event;

@@ -282,9 +282,6 @@ void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
 	pileupHisto = 0;
 	qcdWeightHisto = 0;
 
-	gridParameterX = 0;
-	gridParameterY = 0;
-
 	splitting = true;
 	onlyMetPlots = false;
 	hadronicSelection = true;
@@ -296,13 +293,13 @@ void TreeWriter::SetJsonFile(TString const& filename) {
 	 * The content will be stored in the class variable 'goodLumiList'.
 	 */
 	if( goodLumiList.size() ) {
-		std::cout << "WARNING: Good lumi sections already defined." << filename << std::endl;
+		std::cout << "WARNING: Good lumi sections already defined. Now overwritten by " << filename << std::endl;
 		return;
 	}
 
 	ifstream inputFile( filename );
 	if( !inputFile.is_open() )
-		std::cerr << "WARNING: Cannot open JSON file." << filename << std::endl;
+		std::cerr << "WARNING: Cannot open JSON file " << filename << std::endl;
 
 	std::string line;
 	TString jsonText;
@@ -419,6 +416,7 @@ float TreeWriter::getPileUpWeight() const {
 void TreeWriter::SetQcdWeightFile( std::string const & filename ) {
 	/** Reads the pileup histogram from a given file.
 	 */
+	gSystem->Load("libHistPainter"); // to avoid waring and errors when reading th2 from file
 	TFile *qcdFile = new TFile( filename.c_str() );
 	qcdWeightHisto = (TH2F*) qcdFile->Get("qcdWeight");
 	if( loggingVerbosity > 1 )
@@ -819,7 +817,7 @@ void TreeWriter::Loop() {
 			}
 			if( isPhotonJetEvent) {
 				photonJetTree->Fill();
-				float qcdWeight, qcdWeightUp, qcdWeightDown;
+				float qcdWeight=0, qcdWeightUp=0, qcdWeightDown=0;
 				getQcdWeights( photonJets.at(0).ptJet(), ht, qcdWeight, qcdWeightUp, qcdWeightDown );
 				hist1D["fMet"]->Fill( met, weight*qcdWeight );
 				hist1D["fMetUp"]->Fill( met, weight*qcdWeightUp );
@@ -847,11 +845,17 @@ void TreeWriter::Loop() {
 				it!= hist2D.end(); ++it )
 			it->second->Write();
 	}
+	TPRegexp expFilename( ".*/tree_([0-9]+_[0-9]+)_375.root" );
+	TObjArray *arr = expFilename.MatchS( inputTree->GetCurrentFile()->GetName() );
+	std::string histoNameAppendix = "";
+	if( arr->GetLast() >0 )
+		histoNameAppendix = (std::string)(((TObjString *)arr->At(1))->GetString());
+	else
+		std::cout << "Could not extract grid parameters from filename." << std::endl;
+
 	for( std::map<std::string, TH1F*>::iterator it = hist1D.begin();
 			it!= hist1D.end(); ++it ) {
-		std::stringstream newName;
-		newName << it->second->GetName() << "_" << gridParameterX << "_" << gridParameterY;
-		it->second->SetName( (newName).str().c_str() );
+		it->second->SetName( (it->second->GetName() + histoNameAppendix ).c_str() );
 		it->second->Write();
 	}
 

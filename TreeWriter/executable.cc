@@ -11,15 +11,11 @@ int main( int argc, char** argv ) {
 	TChain *inputTree = new TChain("susyTree");
 	for( int i=2; i<argc; ++i)
 		inputTree->Add( argv[i] );
-
-	std::cout << "Write to output file \"" << outputFileName << "\"" << std::endl;
-
 	TreeWriter *tw = new TreeWriter( inputTree, outputFileName, 0 );
 
 	// common settings
 	tw->SplitTree( true );
 	tw->FinalDistriputionsOnly();
-	tw->SetGridParameters( 12, 33 );
 	tw->SetPhotonPtThreshold( 80 );
 	tw->ApplyHadronicSelection( true );
 
