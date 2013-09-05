@@ -726,8 +726,8 @@ void TreeWriter::Loop() {
 				bool isPhotonJet = eta < susy::etaGapBegin
 					&& it->hadTowOverEm < 0.05
 					&& it->sigmaIetaIeta < 0.012
-					&& photonToTree.chargedIso < 26 && photonToTree.chargedIso > 0
-					&& photonToTree.neutralIso < 35+0.4*photonToTree.pt && photonToTree.neutralIso > 0
+					&& photonToTree.chargedIso < 26 && photonToTree.chargedIso > 0.0001
+					&& photonToTree.neutralIso < 35+0.4*photonToTree.pt && photonToTree.neutralIso > 0.0001
 					&& photonToTree.photonIso < 13+0.05*photonToTree.pt && photonToTree.photonIso > 1.3+0.005*photonToTree.pt;
 
 					if( isPhotonOrElectron ) {
@@ -794,22 +794,23 @@ void TreeWriter::Loop() {
 		if( splitting && hadronicSelection && ( jets.size() < 2 || ht < 500 ) ) continue;
 
 		if( splitting ) {
+			float ePt=0, gPt=0, fPt=0;
+			if( photons.size() )
+				gPt = photons.at(0).pt;
+			if( photonJets.size() )
+				fPt = photonJets.at(0).pt;
+			if( photonElectrons.size() )
+				ePt = photonElectrons.at(0).pt;
 			bool isPhotonEvent = false;
 			bool isPhotonJetEvent = false;
 			bool isPhotonElectronEvent = false;
 
-			if( photons.size() && !photonJets.size() )
+			if( gPt > 0 && gPt > fPt && gPt > ePt )
 				isPhotonEvent = true;
-			if( !photons.size() && photonJets.size() )
-				isPhotonJetEvent = true;
-			if( photons.size() && photonJets.size() ) {
-				if( photons.at(0).pt > photonJets.at(0).pt )
-					isPhotonEvent = true;
-				else
-					isPhotonJetEvent = true;
-			}
-			if( photonElectrons.size() && !isPhotonEvent && !isPhotonElectronEvent )
+			if( ePt > 0 && ePt > fPt && ePt > gPt )
 				isPhotonElectronEvent = true;
+			if( fPt > 0 && fPt > ePt && fPt > gPt )
+				isPhotonJetEvent = true;
 
 			if( isPhotonEvent ) {
 				photonTree->Fill();
@@ -823,10 +824,12 @@ void TreeWriter::Loop() {
 				hist1D["fMetUp"]->Fill( met, weight*qcdWeightUp );
 				hist1D["fMetDown"]->Fill( met, weight*qcdWeightDown );
 			}
-			if( !isPhotonJetEvent && !isPhotonEvent && photonElectrons.size() ) {
+			if( isPhotonElectronEvent ) {
 				photonElectronTree->Fill();
 				hist1D["eMet"]->Fill( met, weight );
 			}
+			if( isPhotonEvent+isPhotonElectronEvent+isPhotonJetEvent > 1 )
+				std::cout <<"ERROR: One event is control and signal at once!" << std::endl;
 		} else if( photons.size() ) // no splitting
 				photonTree->Fill();
 
