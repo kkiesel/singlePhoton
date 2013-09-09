@@ -534,6 +534,31 @@ std::vector<tree::Jet> TreeWriter::getJets( bool clean ) const {
 	return returnedJets;
 }
 
+float TreeWriter::getJetHt() const {
+	if( !splitting )
+		return 0;
+
+	// ht
+	float returnedHt = 0;
+	std::vector<susy::PFJet> jetVector = event->pfJets["ak5"];
+	for(std::vector<susy::PFJet>::iterator it = jetVector.begin();
+			it != jetVector.end(); ++it) {
+
+		if( !looseJetId( *it ) ) continue;
+		if( !it->passPuJetIdLoose( susy::kPUJetIdFull ) ) continue;
+		if( isAdjacentToParticles<tree::Photon>( *it, photons ) ) continue;
+		if( isAdjacentToParticles<tree::Photon>( *it, photonJets ) ) continue;
+
+		TLorentzVector corrP4 = it->jecScaleFactors.at("L1FastL2L3") * it->momentum;
+
+		if( corrP4.Pt() < 40 || corrP4.Eta() > 3. ) continue;
+
+		returnedHt += corrP4.Pt();
+	}
+
+	return returnedHt;
+}
+
 float TreeWriter::getHt() const {
 	if( !splitting )
 		return 0;
@@ -597,6 +622,7 @@ void TreeWriter::SetBranches( TTree& tree ) {
 	tree.Branch("type1met", &type1met, "type1met/F");
 	tree.Branch("htHLT", &htHLT, "htHLT/F");
 	tree.Branch("ht", &ht, "ht/F");
+	tree.Branch("jetHt", &jetHt, "jetHt/F");
 	tree.Branch("weight", &weight, "weight/F");
 	tree.Branch("nVertex", &nVertex, "nVertex/I");
 	tree.Branch("runNumber", &runNumber, "runNumber/i");
@@ -726,8 +752,8 @@ void TreeWriter::Loop() {
 				bool isPhotonJet = eta < susy::etaGapBegin
 					&& it->hadTowOverEm < 0.05
 					&& it->sigmaIetaIeta < 0.012
-					&& photonToTree.chargedIso < 26 && photonToTree.chargedIso > 0.0001
-					&& photonToTree.neutralIso < 35+0.4*photonToTree.pt && photonToTree.neutralIso > 0.0001
+					&& photonToTree.chargedIso < 26 && photonToTree.chargedIso > 0.01
+					&& photonToTree.neutralIso < 35+0.4*photonToTree.pt && photonToTree.neutralIso > 0.01
 					&& photonToTree.photonIso < 13+0.05*photonToTree.pt && photonToTree.photonIso > 1.3+0.005*photonToTree.pt;
 
 					if( isPhotonOrElectron ) {
@@ -789,6 +815,7 @@ void TreeWriter::Loop() {
 
 		htHLT = getHtHLT();
 		ht = getHt();
+		jetHt = getJetHt();
 
 		jets = getJets( splitting );
 		if( splitting && hadronicSelection && ( jets.size() < 2 || ht < 500 ) ) continue;

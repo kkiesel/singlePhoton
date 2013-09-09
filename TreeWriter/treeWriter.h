@@ -49,6 +49,7 @@ class TreeWriter {
 		float getPtFromMatchedJet( const susy::Photon& myPhoton, bool isPhoton );
 		float getHtHLT() const;
 		float getHt() const;
+		float getJetHt() const;
 		std::vector<tree::Jet> getJets( bool clean ) const;
 		void getQcdWeights( float pt, float ht, float & qcdWeight, float & qcdWeightUp, float & qcdWeightDown );
 
@@ -98,6 +99,7 @@ class TreeWriter {
 		float type0met;
 		float htHLT;
 		float ht;
+		float jetHt;
 		float weight;
 		unsigned int nVertex;
 		unsigned int runNumber;
