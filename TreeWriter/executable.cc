@@ -15,7 +15,7 @@ int main( int argc, char** argv ) {
 
 	// common settings
 	tw->SplitTree( true );
-	tw->FinalDistriputionsOnly();
+	//tw->FinalDistriputionsOnly();
 	tw->SetPhotonPtThreshold( 80 );
 	tw->ApplyHadronicSelection( true );
 
