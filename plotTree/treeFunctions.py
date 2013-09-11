@@ -1,14 +1,15 @@
 from math import sqrt
 
 import ROOT
+ROOT.PyConfig.IgnoreCommandLineOptions = True
 import Styles
 import argparse
+from sys import stdout
 from prettifyFunctions import *
 import ratios
 
 # To use user defined help message, sys.arv has to be sent to python and not
 # to TApplication.
-ROOT.PyConfig.IgnoreCommandLineOptions = True
 
 Styles.tdrStyle()
 ROOT.gROOT.SetBatch()
@@ -110,6 +111,11 @@ def readHisto( filename, histoname="eventNumbers" ):
 	ROOT.gROOT.cd()
 	histo = f.Get( histoname )
 	# the name +Clone is only temporaly, since for TH1::Clone a different name is expected
+	if type(histo) == type(ROOT.TObject()):
+		print 'Histogram "%s" not found in file "%s".'%(histoname, filename)
+		return
+	if not histo.GetSumw2():
+		histo.Sumw2()
 	histo.SetName(histoname+"Clone")
 	histo = histo.Clone( histoname )
 	return histo
@@ -184,7 +190,7 @@ def getXMinXMax( histo_list ):
 		maxi = max( maxi, histo.GetBinLowEdge(lastBin)+histo.GetBinWidth(lastBin) )
 	return mini, maxi
 
-def getHisto( tree, plot, cut="1", overflow=0, weight="weight", color=1, nBins=20, firstBin=None, lastBin=None ):
+def getHisto( tree, plot, cut="1", overflow=0, weight="weight", color=1, nBins=20, firstBin=None, lastBin=None, fillEmptyBins=False ):
 	"""Creates a histogram and apply the axis settings
 	cut: cutstring applied to the tree
 	overflow: size of the overflow bin, if overflow>0
@@ -202,6 +208,18 @@ def getHisto( tree, plot, cut="1", overflow=0, weight="weight", color=1, nBins=2
 		histo = createHistoFromTree( tree, plot, "%s*(%s)"%(weight, cut), nBins=nBins, firstBin=firstBin, lastBin=lastBin )
 	if overflow > 0:
 		histo = appendOverflowBin(histo, overflow)
+
+	if fillEmptyBins:
+		# If a neigbour of a empty bin is filled, the error of the bin will be
+		# set to the poisson error for 0 times the weight.
+		poissonZeroError = 1.14
+		weightH = createHistoFromTree( tree, "weight", "weight", 100 )
+		weight = weightH.GetMean()
+
+		for bin in range(1, histo.GetNbinsX()+2):
+			# if the bin left or right is not empty but the bin itself, set the error
+			if not histo.GetBinContent( bin ) and ( histo.GetBinContent( bin-1 ) or histo.GetBinContent( bin+1 ) ):
+				histo.SetBinError( bin, poissonZeroError*weight / histo.GetBinWidth(bin) )
 
 	histo.SetLineColor( color )
 	histo.SetMarkerColor( color )
@@ -319,4 +337,28 @@ def divideHistos( numerator, denominator, bayes=False ):
 	resultHisto = numerator.Clone( randomName() )
 	resultHisto.Divide( numerator, denominator, 1,1, option )
 	return resultHisto
+
+def applyFakeRateEWK( histo ):
+	"""Apply the hard-coded fake rate and error to a histogram. The prediction
+	is returned."""
+
+	fakeRate = 0.0084
+	fakeRateError = 0.0006 # stat
+
+	# correct fake rate, if it is estimated with yutaros method
+	fakeRateError = fakeRateError / (1-fakeRate)**2
+	fakeRate = fakeRate / ( 1 - fakeRate )
+
+	for i in range( histo.GetNbinsX() +1 ):
+		content = histo.GetBinContent(i)
+		histo.SetBinContent( i,fakeRate * content )
+		# sigma_{ef} = sqrt( ( e*e_f )**2 + ( e_e*f )**2 )
+		histo.SetBinError( i, sqrt( (fakeRateError*content)**2 + (fakeRate*histo.GetBinError(i))**2 ) )
+	return histo
+
+
+
+
+
+
 

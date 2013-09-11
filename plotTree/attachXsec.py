@@ -4,18 +4,18 @@ from sys import stdout
 from treeFunctions import *
 import re
 
-def modify( inputFileName, processNEvents, genMatch=False ):
-	if genMatch:
-		print "not implemented yet"
+
+def modify( inputFileName, printOnly ):
 	"""Key function of splitCanidates.py. The main loop and object selection is
 	defined here."""
 	datasetAbbr = getDatasetAbbr( inputFileName, slim=False )
-	print "Processing file %s with %s configuration"%(inputFileName, datasetAbbr)
 
 	eventHisto = readHisto( inputFileName )
-	if processNEvents < 0:
-		processNEvents = eventHisto.GetBinContent(1)
+	processNEvents = eventHisto.GetBinContent(1)
 	lumiWeight = getLumiWeight( datasetAbbr, processNEvents )
+	print datasetAbbr, processNEvents, lumiWeight
+	if printOnly:
+		return
 
 	treeNames = []
 	histNames = []
@@ -61,13 +61,9 @@ if __name__ == "__main__":
 
 	arguments = argparse.ArgumentParser( description="Slim tree" )
 	arguments.add_argument("filenames", nargs="+", type=isValidFile )
-	arguments.add_argument("--test", action="store_true" )
-	arguments.add_argument("--genMatch", action="store_true" )
+	arguments.add_argument("--printOnly", action="store_true" )
 	opts = arguments.parse_args()
 
-	# set limit for number of events for testing reason
-	processNEvents = 10000 if opts.test else -1
-
 	for inName in opts.filenames:
-		modify( inName, processNEvents, opts.genMatch )
+		modify( inName, opts.printOnly )
 

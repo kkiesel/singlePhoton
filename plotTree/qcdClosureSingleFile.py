@@ -11,6 +11,7 @@ reweightVar = "ht"
 def writeWeight2DToFile( fileName, tree, h_weight, weightTreeName ):
 	"""Write weight for a tree in another tree in a given file.
 	This tree can be added to the original tree via 'AddFriend()'.
+
 	fileName: name of file to which tree is written
 	tree: tree which is weighted
 	h_weight: two dimensional histogram with weights
@@ -25,7 +26,7 @@ def writeWeight2DToFile( fileName, tree, h_weight, weightTreeName ):
 
 	for event in tree:
 		if not event.GetReadEntry()%10000:
-			stdout.write( "\r%s / %s"%(event.GetReadEntry(), event.GetEntries() ) )
+			stdout.write( "\r%s: %s / %s"%(fileName, event.GetReadEntry(), event.GetEntries() ) )
 			stdout.flush()
 
 		b = h_weight.FindBin( event.photons.at(0).ptJet(), eval("event.%s"%reweightVar) )
@@ -39,51 +40,13 @@ def writeWeight2DToFile( fileName, tree, h_weight, weightTreeName ):
 	weightTree.Write()
 	f.Close()
 
-def drawBeforeClosure( plot, gTree, foTree, cut, can, info, datasetAbbr, additionalInfo="" ):
-		# The first attempt to get the histogram is only to get the minimal
-		# and maximal value on the x-axis, for not predefined binning
-		h_gamma = getHisto( gTree, plot, cut=cut )
-		h_fo = getHisto( foTree, plot, cut=cut )
-		xMin, xMax = getXMinXMax( [ h_gamma, h_fo ] )
+def getMixedWeigthHisto( filenames, predFilenames, commonCut ):
+	"""Calculate #photons/#photonFakes in bins of photons.ptJet and a second
+	(global) variable.
 
-		h_gamma = getHisto( gTree, plot, cut=cut, color=1, firstBin=xMin,lastBin=xMax )
-		h_fo = getHisto( foTree, plot, cut=cut, color=46, firstBin=xMin,lastBin=xMax )
-
-		muhisto = Multihisto()
-		muhisto.leg.SetHeader( datasetToLatex( datasetAbbr ) )
-		muhisto.addHisto( h_gamma, "#gamma", draw="hist e0" )
-		muhisto.addHisto( h_fo, "#gamma_{jet}", draw="hist e0")
-
-		hPad = ROOT.TPad("hPad", "Histogram", 0, 0.2, 1, 1)
-		hPad.cd()
-		muhisto.Draw()
-
-		ROOT.TGaxis.SetMaxDigits(4)
-		ratioPad = ROOT.TPad("ratioPad", "Ratio", 0, 0, 1, 0.2)
-		ratioPad.cd()
-		ratioPad.SetLogy( False )
-		ratioGraph = ratios.RatioGraph( h_gamma, h_fo )
-		ratioGraph.draw(ROOT.gPad, yMin=None, yMax=None, adaptiveBinning=False, errors="yx")
-		ratioGraph.graph.Draw("same p e0") # draw nice points
-		ratioGraph.hAxis.SetYTitle( "#gamma/#gamma_{jet}")
-
-		can.cd()
-		hPad.Draw()
-		ratioPad.Draw()
-		info.Draw()
-		SaveAs(can, "qcd_preWeight_%s_%s_%s"%(datasetAbbr+additionalInfo, plot,reweightVar) )
-		ROOT.SetOwnership( hPad, False )
-		ROOT.SetOwnership( ratioPad, False )
-
-def getClosureHists( plot, gTree, foTree, cut, can, infoSignal ):
-	gHist = getHisto( gTree, plot, cut=cut, color=1, firstBin=1, lastBin=1 )
-	foHist = getHisto( foTree, plot, weight="weight*w_qcd", cut=cut, color=46, firstBin=1, lastBin=1 )
-	upHist = getHisto( foTree, plot, weight="weight*(w_qcd+w_qcd_error)", cut=cut, color=foHist.GetLineColor(), firstBin=1, lastBin=1 )
-	downHist = getHisto( foTree, plot, weight="weight*(w_qcd-w_qcd_error)", cut=cut, color=foHist.GetLineColor(), firstBin=1, lastBin=1 )
-
-	return gHist, foHist, upHist, downHist
-
-def getMixedWeigthHisto( filenames, commonCut, datasetAbbr ):
+	filenames: files containing photons
+	predFilenames: files containing fakes
+	"""
 
 	xVar = "photons[0].ptJet()"
 	yVar = reweightVar
@@ -91,19 +54,18 @@ def getMixedWeigthHisto( filenames, commonCut, datasetAbbr ):
 	ylabel, yunit, ybinning = readAxisConf( yVar )
 
 	numerator = None
-	denominator = None
-
 	for fileName in filenames:
 		gTree = readTree( fileName, "photonTree" )
-		foTree = readTree( fileName, "photonJetTree" )
-
 		num = createHistoFromTree2D( gTree, yVar+":"+xVar, "weight*(met<100&&%s)"%commonCut, xbinning, ybinning )
-		den = createHistoFromTree2D( foTree, yVar+":"+xVar, "weight*(met<100&&%s)"%commonCut, xbinning, ybinning )
-
 		if numerator:
 			numerator.Add( num )
 		else:
 			numerator = num
+
+	denominator = None
+	for fileName in predFilenames:
+		foTree = readTree( fileName, "photonJetTree" )
+		den = createHistoFromTree2D( foTree, yVar+":"+xVar, "weight*(met<100&&%s)"%commonCut, xbinning, ybinning )
 		if denominator:
 			denominator.Add( den )
 		else:
@@ -118,6 +80,10 @@ def getMixedWeigthHisto( filenames, commonCut, datasetAbbr ):
 				weight2D.SetBinContent( i, j, 1 )
 				weight2D.SetBinError( i, j, 1 )
 
+	drawWeightHisto( weight2D, numerator, denominator )
+	return weight2D
+
+def drawWeightHisto( weight2D, numerator, denominator ):
 	# Draw the histograms
 	info = PlotCaption(control=True)
 
@@ -132,7 +98,7 @@ def getMixedWeigthHisto( filenames, commonCut, datasetAbbr ):
 
 	# Draw histograms
 	Styles.tdrStyle2D()
-	ROOT.gStyle.SetPaintTextFormat("4.2f");
+	ROOT.gStyle.SetPaintTextFormat("1.1f");
 	can2D = ROOT.TCanvas()
 	can2D.cd()
 	for hist, name in [
@@ -143,7 +109,7 @@ def getMixedWeigthHisto( filenames, commonCut, datasetAbbr ):
 			(weightRelErrors, "weightRelError") ]:
 		hist.Draw("colz text")
 		info.Draw()
-		SaveAs(can2D, "qcd_preWeight_%s_%s_%s"%(datasetAbbr,name,yVar) )
+		SaveAs(can2D, "qcd_preWeight_%s_%s"%(name,reweightVar) )
 	Styles.tdrStyle()
 
 	weightFile = ROOT.TFile( "qcdWeight.root", "recreate" )
@@ -153,57 +119,74 @@ def getMixedWeigthHisto( filenames, commonCut, datasetAbbr ):
 	weightErrors.Write()
 	weightFile.Close()
 
+def photonHisto( filenames, plot, cut, modifyEmptyBins ):
+	gHist = None
+	for filename in filenames:
+		gTree = readTree( filename, "photonTree" )
+		hist = getHisto( gTree, plot, cut=cut, color=1, firstBin=1, lastBin=1, fillEmptyBins=modifyEmptyBins )
+		if gHist:
+			gHist.Add( hist )
+		else:
+			gHist = hist
+	return gHist
 
-	return weight2D
+def predictionHistos( filenames, plot, cut, modifyEmptyBins ):
+	fHist, sysHist = None, None
 
-def drawClosure( filenames, plot, commonCut, can, infoText, fullDatasetAbbr, additionalLabel, errorZeroBins=False ):
-	hists = {}
-	for fileName in filenames:
-		gTree = readTree( fileName, "photonTree" )
-		foTree = readTree( fileName, "photonJetTree" )
-		foTree.AddFriend( "foWeights", fileName )
+	for filename in filenames:
+		fTree = readTree( filename, "photonJetTree" )
+		fTree.AddFriend( "foWeights", filename )
+		hist = getHisto( fTree, plot, weight="weight*w_qcd", cut=cut, color=46, firstBin=1, lastBin=1, fillEmptyBins=modifyEmptyBins )
+		histUp = getHisto( fTree, plot, weight="weight*(w_qcd+w_qcd_error)", cut=cut, color=hist.GetLineColor(), firstBin=1, lastBin=1, fillEmptyBins=modifyEmptyBins )
+		histDown = getHisto( fTree, plot, weight="weight*(w_qcd-w_qcd_error)", cut=cut, color=hist.GetLineColor(), firstBin=1, lastBin=1, fillEmptyBins=modifyEmptyBins )
+		sHist = histUp.Clone( randomName() )
+		for bin in range( histUp.GetNbinsX()+2 ):
+			up = histUp.GetBinContent(bin)
+			down = histDown.GetBinContent(bin)
+			sHist.SetBinContent( bin, (up+down)/2 )
+			sHist.SetBinError( bin, (up-down)/2 )
 
-		allHists = getClosureHists( plot, gTree, foTree, commonCut, can, infoText )
+		if fHist:
+			fHist.Add( hist )
+			sysHist.Add( sHist )
+		else:
+			fHist = hist
+			sysHist = sHist
 
-		#assume the mean weight is the same in gTree and foTree
-		weightH = createHistoFromTree( gTree, "weight", "weight", 100 )
-		weight = weightH.GetMean()
-
-		poissonZeroError = 1.14 if errorZeroBins else 0
-
-		for h in allHists:
-			for bin in range(1, h.GetNbinsX()+2):
-				# if the bin left or right is not empty but the bin itself, set the error
-				if not h.GetBinContent( bin ) and ( h.GetBinContent( bin-1 ) or h.GetBinContent( bin+1 ) ):
-					h.SetBinError( bin, poissonZeroError*weight / h.GetBinWidth(bin) )
-		hists[ fileName ] = allHists
-
-	addedList = [None, None, None, None]
-	for name, hList in hists.iteritems():
-		for i, h in enumerate(addedList):
-			if h:
-				addedList[i].Add( hList[i] )
-			else:
-				addedList[i] = hList[i]
-	gHist, foHist, upHist, downHist = addedList
-
-	sysHist = upHist.Clone( randomName() )
-	for bin in range( upHist.GetNbinsX()+2 ):
-		up = upHist.GetBinContent(bin)
-		down = downHist.GetBinContent(bin)
-		sysHist.SetBinContent( bin, (up+down)/2 )
-		sysHist.SetBinError( bin, (up-down)/2 )
-
-	sysHist.SetFillColor( foHist.GetLineColor() )
+	sysHist.SetFillColor( sysHist.GetLineColor() )
 	sysHist.SetLineColor( sysHist.GetLineColor() )
 	sysHist.SetFillStyle(3254)
 	sysHist.SetMarkerSize(0)
 
+	return fHist, sysHist
+
+
+def drawClosure( filenames, predFilenames, plot, commonCut, can, infoText, additionalLabel, modifyEmptyBins=False ):
+
+	gHist = photonHisto( filenames, plot, commonCut, modifyEmptyBins )
+	fHist, sysHist = predictionHistos( predFilenames, plot, commonCut, modifyEmptyBins )
+	fewkHist, sysewkHist = predictionHistos( predFilenames+["slimTTJets_V02.22_tree.root", "slimWJets_V02.22_tree.root"], plot, commonCut, modifyEmptyBins )
+	for h in [ fewkHist, sysewkHist]:
+		h.SetLineColor(3)
+		h.SetMarkerColor(3)
+	sysewkHist.SetFillColor(3)
+	sysewkHist.SetFillStyle(3254)
+	sysewkHist.SetMarkerSize(0)
+
+	fDatasetAbbrs = []
+	for f in predFilenames:
+		fDatasetAbbrs.append( getDatasetAbbr( f ) )
+
+
+	fullDatasetAbbr = mergeDatasetAbbr( fDatasetAbbrs )
+
 	muhisto = Multihisto()
-	muhisto.leg.SetHeader( datasetToLatex( fullDatasetAbbr ) )
+	muhisto.leg.SetHeader( ",".join( [ datasetToLatex(x) for x in fullDatasetAbbr ] ) )
 	muhisto.addHisto( gHist, "#gamma", draw="hist e0" )
-	muhisto.addHisto( foHist, "#gamma_{jet}#upointw", draw="hist e0")
+	muhisto.addHisto( fHist, "#gamma_{jet}#upointw", draw="hist e0")
 	muhisto.addHisto( sysHist, "#sigma_{w}", draw="e2")
+	muhisto.addHisto( fewkHist, "pred with ewk", draw="hist e0")
+	muhisto.addHisto( fewkHist, "pred with ewk", draw="e2")
 
 	hPad = ROOT.TPad("hPad", "Histogram", 0, 0.2, 1, 1)
 	hPad.cd()
@@ -213,7 +196,7 @@ def drawClosure( filenames, plot, commonCut, can, infoText, fullDatasetAbbr, add
 	ratioPad.cd()
 	ratioPad.SetLogy( False )
 	from myRatio import Ratio
-	r = Ratio( "#gamma/#gamma_{pred}", gHist, foHist )
+	r = Ratio( "#gamma/#gamma_{pred ewk}", gHist, fewkHist )
 	ratio, sys, one = r.draw(0,2)
 	ratio.Draw("same e0")
 	sys.Draw("same e2")
@@ -223,12 +206,17 @@ def drawClosure( filenames, plot, commonCut, can, infoText, fullDatasetAbbr, add
 	hPad.Draw()
 	ratioPad.Draw()
 	infoText.Draw()
-	SaveAs(can, "qcdClosure_%s_%s_%s_%s"%(fullDatasetAbbr+additionalLabel, plot,errorZeroBins, reweightVar) )
+	saveLabelZeroBinError = "errorEmptyBin" if modifyEmptyBins else "normal"
+	SaveAs(can, "qcdClosure_%s_%s_%s_%s"%("".join( fullDatasetAbbr)+additionalLabel, plot, saveLabelZeroBinError, reweightVar) )
+	ROOT.SetOwnership( hPad, False )
+	ROOT.SetOwnership( ratioPad, False )
 
 
-def qcdClosure( filenames, plots, fullDatasetAbbr ):
+
+def qcdClosure( filenames, predFilenames, plots ):
 	signalCut = "met>=100"
 	controlCut = "!(%s)"%signalCut
+	commonCut = "!photons.isGen(1) && @photons.size()"
 	commonCut = "1"
 
 	# Definition of labels
@@ -239,60 +227,30 @@ def qcdClosure( filenames, plots, fullDatasetAbbr ):
 	can = ROOT.TCanvas()
 	can.cd()
 
-	weights = getMixedWeigthHisto( filenames, commonCut, fullDatasetAbbr )
+	weights = getMixedWeigthHisto( filenames, predFilenames, commonCut )
 
-	for fileName in filenames:
+	for fileName in predFilenames:
 		foTree = readTree( fileName, "photonJetTree" )
 		writeWeight2DToFile( fileName, foTree, weights, "foWeights" )
 
 	for plot in plots:
 		if plot != "met":
-			drawClosure( filenames, plot, commonCut+"&&"+signalCut, can, infoSignal, fullDatasetAbbr, "_signal" )
-			drawClosure( filenames, plot, commonCut+"&&"+controlCut, can, infoControl, fullDatasetAbbr, "_control" )
-		drawClosure( filenames, plot, commonCut, can, info, fullDatasetAbbr, "" )
-		drawClosure( filenames, plot, commonCut, can, info, fullDatasetAbbr, "", True )
-
-	#ROOT.SetOwnership( hPad, False )
-	#ROOT.SetOwnership( ratioPad, False )
-
-	# Delete the trees from memory, important for many iterations.
-	# The trees have to be deleted by hand to avoid segmentation violations.
-	#ROOT.SetOwnership( gTree, False )
-	#ROOT.SetOwnership( foTree, False )
-	#for tree in [ gTree, foTree ]:
-	#	tree.Delete()
-	#	del tree
-	del can
+			drawClosure( filenames, predFilenames, plot, commonCut+"&&"+signalCut, can, infoSignal, "_signal" )
+			drawClosure( filenames, predFilenames, plot, commonCut+"&&"+controlCut, can, infoControl, "_control" )
+		drawClosure( filenames, predFilenames, plot, commonCut, can, info,  "" )
+		drawClosure( filenames, predFilenames, plot, commonCut, can, info, "", True )
 
 if __name__ == "__main__":
 	arguments = argparse.ArgumentParser()
 	arguments.add_argument("filenames", nargs="+", type=isValidFile )
-	arguments.add_argument("--plot", nargs="+", default = ["met"] )
+	arguments.add_argument("-p", "--prediction", nargs="+", default=[], type=isValidFile )
+	arguments.add_argument("--plot", nargs="+", default=["met"] )
 	opts = arguments.parse_args()
 
 	if opts.plot == ["all"]:
 		opts.plot = [ "met", "ht", "photons[0].ptJet()","Length$(jets.pt)", "Length$(photons.pt)"]
+	if not opts.prediction:
+		opts.prediction = opts.filenames
 
-	datasets = []
-	for filename in opts.filenames:
-		datasets.append( getDatasetAbbr( filename ) )
-	datasets.sort()
-
-	if "GJets_200_400" in datasets and "GJets_400_inf" in datasets:
-		datasets.remove( "GJets_200_400" )
-		datasets.remove( "GJets_400_inf" )
-		datasets.append( "GJets" )
-	if "QCD_250_500" in datasets and "QCD_500_1000" in datasets and "QCD_1000_inf" in datasets:
-		datasets.remove( "QCD_250_500" )
-		datasets.remove( "QCD_500_1000" )
-		datasets.remove( "QCD_1000_inf" )
-		datasets.append( "QCD" )
-	if "QCD" in datasets and "GJets" in datasets:
-		datasets.remove( "QCD" )
-		datasets.remove( "GJets" )
-		datasets.append( "AllQCD" )
-
-	sumDatasetAbbr = "-".join( datasets )
-
-	qcdClosure( opts.filenames, opts.plot, sumDatasetAbbr )
+	qcdClosure( opts.filenames, opts.prediction, opts.plot )
 

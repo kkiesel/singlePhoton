@@ -12,6 +12,11 @@ def isValidFile( fileName ):
 def getDatasetAbbr( fileName, slim=True ):
 	"""Parses the abbrevation for a sample from a root fileName."""
 	import re
+
+	datamatch = re.match("PhotonHad([ABCD]{0,1})_V.*", fileName.split("/")[-1])
+	if datamatch:
+		return "Data %s"%datamatch.groups()[0]
+
 	prefix = "slim" if slim else ""
 	match = re.match("%s(.*)_V.*_tree.root"%prefix, fileName.split("/")[-1] )
 	if match:
@@ -19,18 +24,35 @@ def getDatasetAbbr( fileName, slim=True ):
 	else:
 		return fileName
 
+def replaceListElementsBy( list_, search, replacement ):
+	if len([x for x in list_ if x in search ]) == len(search):
+		return [x for x in list_ if x not in search ]+[replacement]
+	return list_
+
+def mergeDatasetAbbr( datasetAbbrs ):
+	datasetAbbrs = replaceListElementsBy( datasetAbbrs, ["GJets_200_400", "GJets_400_inf"], "GJets" )
+	datasetAbbrs = replaceListElementsBy( datasetAbbrs, ["QCD_250_500", "QCD_500_1000", "QCD_1000_inf"], "QCD" )
+	datasetAbbrs = replaceListElementsBy( datasetAbbrs, ["GJets", "QCD"], "AllQCD" )
+	datasetAbbrs = replaceListElementsBy( datasetAbbrs, ["TTJets", "WJets"], "EWK" )
+	datasetAbbrs = replaceListElementsBy( datasetAbbrs, ["WGamma", "ZGamma"], "FSR" )
+	return datasetAbbrs
+
+
 def datasetToLatex( datasetAbbr ):
 	"""Translates the dataset name to a TLatex name"""
 	sets = { "AllQCD": "(#gamma+)QCD",
 			"GJets": "#gamma+QCD",
-			"TTbar": "t#bar{t}",
-			"WJet": "W",
+			"TTJets": "t#bar{t}",
+			"WJets": "W",
 			"QCD": "QCD"
 			}
-	for part, label in sets.iteritems():
-		if part in datasetAbbr:
-			return label
-	return datasetAbbr
+	#for part, label in sets.iteritems():
+	#	if part in datasetAbbr:
+	#		return label
+	try:
+		return sets[datasetAbbr]
+	except:
+		return datasetAbbr
 
 def createDatasetLabel( datasetAbbr ):
 	import ROOT
@@ -161,4 +183,25 @@ class PlotCaption:
 		self.text.SetX( self.x0-shiftNDC )
 		self.text.Draw()
 
+def readSignalXSection( filename ):
+	"""Read xsection and other informations for various signal MC from a file
+	found at https://twiki.cern.ch/twiki/bin/viewauth/CMS/RA3PrivateSignalMC2012
+	The syntax is printf("%6.0f %6.0f %6.0f %6.0f %6.0f LO: %9.3e + %9.3e - %9.3e NLO: %9.3e + %9.3e - %9.3e\n", $nevents, $msquark, $mgluino, $mbino, $mwwino, $loxsec,$lohierr,$loloerr,$nloxsec,$nlohierr,$nloloerr);
+
+	returns list[ (point1, point2) ] = ( sigmaNLO, errorUp, errorDown )
+	"""
+	f = open( filename )
+	text = f.readlines()
+	f.close()
+
+	info = {}
+
+	floatMatch = "\-{0,1}\d\.\d+e[+-]\d{2}"
+	import re
+	for t in text:
+		matches = re.match(" (\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+) LO: (%s) \+ (%s) \- (%s) NLO: (%s) \+ (%s) \- (%s)\n"%(floatMatch,floatMatch,floatMatch,floatMatch,floatMatch,floatMatch), t ).groups()
+
+		info[ (int(matches[1]), int(matches[2]) ) ] = ( float(matches[8]), float(matches[9]), float(matches[10]) )
+
+	return info
 
