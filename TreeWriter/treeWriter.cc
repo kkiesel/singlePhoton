@@ -756,9 +756,9 @@ void TreeWriter::Loop() {
 				bool isPhotonJet = eta < susy::etaGapBegin
 					&& it->hadTowOverEm < 0.05
 					&& it->sigmaIetaIeta < 0.012
-					&& photonToTree.chargedIso < 26 && photonToTree.chargedIso > 0.01
-					&& photonToTree.neutralIso < 35+0.4*photonToTree.pt && photonToTree.neutralIso > 0.01
-					&& photonToTree.photonIso < 13+0.05*photonToTree.pt && photonToTree.photonIso > 1.3+0.005*photonToTree.pt;
+					&& photonToTree.chargedIso < 10 && photonToTree.chargedIso > 0.01
+					&& photonToTree.neutralIso < 35+0.4*photonToTree.pt && photonToTree.neutralIso > 0.35+0.004*photonToTree.neutralIso
+					&& photonToTree.photonIso < 13+0.05*photonToTree.pt && photonToTree.photonIso > 0.13+0.0005*photonToTree.pt;
 
 					if( isPhotonOrElectron ) {
 						if( photonToTree.pixelseed )
