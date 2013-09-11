@@ -396,6 +396,10 @@ bool TreeWriter::isGoodLumi() const {
 }
 
 float TreeWriter::getPileUpWeight() const {
+	/**
+	 * If a pileup weight histogram has been added, the pile-up weight for the
+	 * current event is computed.
+	 */
 	float thisWeight = 1;
 	if (pileupHisto == 0) {
 		thisWeight = 1.;
@@ -821,22 +825,19 @@ void TreeWriter::Loop() {
 		if( splitting && hadronicSelection && ( jets.size() < 2 || ht < 500 ) ) continue;
 
 		if( splitting ) {
-			float ePt=0, gPt=0, fPt=0;
-			if( photons.size() )
-				gPt = photons.at(0).pt;
-			if( photonJets.size() )
-				fPt = photonJets.at(0).pt;
-			if( photonElectrons.size() )
-				ePt = photonElectrons.at(0).pt;
+			float gPt = photons.size()         ? photons.at(0).pt         : 0;
+			float ePt = photonElectrons.size() ? photonElectrons.at(0).pt : 0;
+			float fPt = photonJets.size()      ? photonJets.at(0).pt      : 0;
+
 			bool isPhotonEvent = false;
 			bool isPhotonJetEvent = false;
 			bool isPhotonElectronEvent = false;
 
-			if( gPt > 0 && gPt > fPt && gPt > ePt )
+			if( gPt && gPt > fPt && gPt > ePt )
 				isPhotonEvent = true;
-			if( ePt > 0 && ePt > fPt && ePt > gPt )
+			if( ePt && ePt > fPt && ePt > gPt )
 				isPhotonElectronEvent = true;
-			if( fPt > 0 && fPt > ePt && fPt > gPt )
+			if( fPt && fPt > ePt && fPt > gPt )
 				isPhotonJetEvent = true;
 
 			if( isPhotonEvent ) {
