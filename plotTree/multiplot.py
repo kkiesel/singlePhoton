@@ -76,8 +76,8 @@ class Multihisto:
 			self.histos[0][0].SetMaximum( maximum )
 			self.histos[0][0].SetMinimum( minimum )
 
-			self.histos[0][0].Draw(self.histos[0][1])
-			for hist, draw in self.histos[1:]:
+			self.histos[-1][0].Draw(self.histos[-1][1])
+			for hist, draw in self.histos[0:-1]:
 				hist.Draw("same %s"%draw)
 		else:
 			print "No histogram added"
