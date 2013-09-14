@@ -180,6 +180,31 @@ bool matchLorentzToGenVector( TLorentzVector& lvec, std::vector<tree::Particle>&
 	return match;
 }
 
+void printChildren( int index, susy::ParticleCollection&  particles, int level=0 ){
+	/* Prints the daughter and recursivly her's daughters of particle 'index'
+	 */
+	for (int i = 0; i< level; ++i )
+		std::cout <<"\t";
+	int status = 0;
+	if( particles[index].status == 1 ) status = 1;
+	if( particles[index].status == 2 ) status = 2;
+	if( particles[index].status == 3 ) status = 3;
+
+	int pdgId = particles[index].pdgId;
+
+	if( id.find(pdgId) != id.end() )
+		std::cout << id.at(particles[index].pdgId) << " (" << status << ")"<< std::endl;
+	else
+		std::cout << particles[index].pdgId << " (" << status << ")"<< std::endl;
+
+
+	//susy::ParticleCollection children;
+	for( susy::ParticleCollection::iterator it = particles.begin(); it != particles.end(); ++it ) {
+		if( it->motherIndex == index )
+			printChildren( std::distance(particles.begin(), it ), particles, level+1 );
+	}
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Here the class implementation begins ///////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -672,6 +697,13 @@ void TreeWriter::Loop() {
 		if ( loggingVerbosity>1 || jentry%reportEvery==0 ) std::cout << jentry << " / " << processNEvents << std::endl;
 		event->getEntry(jentry);
 
+		bool printCascade = false;
+		for( susy::ParticleCollection::iterator it = event->genParticles.begin(); printCascade && it != event->genParticles.end(); ++it ){
+			if( it->motherIndex == -1 ){
+				printChildren( std::distance(event->genParticles.begin(), it ), event->genParticles );
+			}
+		}
+
 		if ( event->isRealData )
 			if ( !isGoodLumi() || !passTrigger() || !event->passMetFilters() ) continue;
 
@@ -699,6 +731,7 @@ void TreeWriter::Loop() {
 			// status 3: particles in matrix element
 			// status 2: intermediate particles
 			// status 1: final particles (but can decay in geant, etc)
+			// TODO: Check substraction of 10
 			if( it->momentum.Pt() < photonPtThreshold-10 || it->status != 1) continue;
 
 			thisGenParticle.pt = it->momentum.Pt();
