@@ -181,22 +181,12 @@ bool matchLorentzToGenVector( TLorentzVector& lvec, std::vector<tree::Particle>&
 }
 
 void printChildren( int index, susy::ParticleCollection&  particles, int level=0 ){
-	/* Prints the daughter and recursivly her's daughters of particle 'index'
+	/* Prints the daughter and recursivly her's daughters of particle 'index'.
+	 * The status of the particle is denoted in paranthesis.
 	 */
 	for (int i = 0; i< level; ++i )
 		std::cout <<"\t";
-	int status = 0;
-	if( particles[index].status == 1 ) status = 1;
-	if( particles[index].status == 2 ) status = 2;
-	if( particles[index].status == 3 ) status = 3;
-
-	int pdgId = particles[index].pdgId;
-
-	if( id.find(pdgId) != id.end() )
-		std::cout << id.at(particles[index].pdgId) << " (" << status << ")"<< std::endl;
-	else
-		std::cout << particles[index].pdgId << " (" << status << ")"<< std::endl;
-
+	std::cout << particles[index].pdgId << " (" << (int)particles[index].status << ")"<< std::endl;
 
 	//susy::ParticleCollection children;
 	for( susy::ParticleCollection::iterator it = particles.begin(); it != particles.end(); ++it ) {
@@ -697,7 +687,7 @@ void TreeWriter::Loop() {
 		if ( loggingVerbosity>1 || jentry%reportEvery==0 ) std::cout << jentry << " / " << processNEvents << std::endl;
 		event->getEntry(jentry);
 
-		bool printCascade = false;
+		bool printCascade = true;
 		for( susy::ParticleCollection::iterator it = event->genParticles.begin(); printCascade && it != event->genParticles.end(); ++it ){
 			if( it->motherIndex == -1 ){
 				printChildren( std::distance(event->genParticles.begin(), it ), event->genParticles );
