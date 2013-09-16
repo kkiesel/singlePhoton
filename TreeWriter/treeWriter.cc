@@ -761,10 +761,7 @@ void TreeWriter::Loop() {
 				photonToTree.setGen( tree::kGenPhoton );
 			if( matchLorentzToGenVector( it->momentum, genElectrons, *hist2D["matchElectron"], 1e6, .05 ) )
 				photonToTree.setGen( tree::kGenElectron );
-			if(photonToTree.isGen( tree::kGenPhoton ))
-				photonToTree._ptJet = getPtFromMatchedJet( *it );
-			else
-				photonToTree._ptJet = getPtFromMatchedJet( *it, false );
+			photonToTree._ptJet = getPtFromMatchedJet( *it, photonToTree.isGen( tree::kGenPhoton) );
 
 			if( splitting ) {
 
