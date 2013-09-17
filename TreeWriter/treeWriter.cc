@@ -266,6 +266,7 @@ void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
 	hist2D["matchJetFO"] = new TH2F("", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
 	hist2D["matchPhoton"] = new TH2F("", ";#DeltaR;#Delta p_{T}/p_{T}", 100, 0, 1, 200, -2, 2 );
 	hist2D["matchElectron"] = new TH2F("", ";#DeltaR;#Delta p_{T}/p_{T}", 100, 0, 1, 200, -2, 2 );
+	hist2D["default"] = new TH2F("", ";", 1, 0, 1, 1, 0, 1 );
 	for( std::map<std::string, TH2F*>::iterator it = hist2D.begin();
 			it!= hist2D.end(); ++it ) {
 		it->second->SetName( (it->second->GetName() + it->first).c_str() );
@@ -737,6 +738,33 @@ void TreeWriter::Loop() {
 			}
 		}
 
+		// electrons
+		std::vector<susy::Electron> eVector = event->electrons["gsfElectrons"];
+		for(std::vector<susy::Electron>::iterator it = eVector.begin(); it < eVector.end(); ++it) {
+			if( it->momentum.Pt() < 15 || std::abs(it->momentum.Eta()) > 2.6 || !isVetoElectron( *it, *event, loggingVerbosity ) )
+				continue;
+			electronToTree.pt = it->momentum.Pt();
+			electronToTree.eta = it->momentum.Eta();
+			electronToTree.phi = it->momentum.Phi();
+			electrons.push_back( electronToTree );
+		}
+		if( loggingVerbosity > 1 )
+			std::cout << "Found " << electrons.size() << " electrons" << std::endl;
+
+		// muons
+		std::vector<susy::Muon> mVector = event->muons["muons"];
+		for( std::vector<susy::Muon>::iterator it = mVector.begin(); it != mVector.end(); ++it) {
+			// see https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuideMuonId#Loose_Muon
+			if( it->momentum.Pt() < 15 || std::abs(it->momentum.Eta()) > 2.6 || !(it->isPFMuon() && (it->isGlobalMuon() || it->isTrackerMuon())) )
+				continue;
+			muonToTree.pt = it->momentum.Et();
+			muonToTree.eta = it->momentum.Eta();
+			muonToTree.phi = it->momentum.Phi();
+			muons.push_back( muonToTree );
+		}
+		if( loggingVerbosity > 1 )
+			std::cout << "Found " << muons.size() << " muons" << std::endl;
+
 		// photons
 		std::vector<susy::Photon> photonVector = event->photons["photons"];
 		for(std::vector<susy::Photon>::iterator it = photonVector.begin();
@@ -761,6 +789,12 @@ void TreeWriter::Loop() {
 				photonToTree.setGen( tree::kGenPhoton );
 			if( matchLorentzToGenVector( it->momentum, genElectrons, *hist2D["matchElectron"], 1e6, .05 ) )
 				photonToTree.setGen( tree::kGenElectron );
+
+			if( matchLorentzToGenVector( it->momentum, electrons, *hist2D["default"], 1e6 ) ||
+					matchLorentzToGenVector( it->momentum, muons, *hist2D["default"], 1e6 ) )
+				photonToTree.setGen( tree::kNearLepton );
+
+
 			photonToTree._ptJet = getPtFromMatchedJet( *it, photonToTree.isGen( tree::kGenPhoton) );
 
 			if( splitting ) {
@@ -802,33 +836,6 @@ void TreeWriter::Loop() {
 					<< photonJets.size() << " photon_{jets} and "
 					<< photonElectrons.size() << " photon electrons." << std::endl;
 		nPhotons->Fill( photons.size(), photonJets.size(), photonElectrons.size() );
-
-		// electrons
-		std::vector<susy::Electron> eVector = event->electrons["gsfElectrons"];
-		for(std::vector<susy::Electron>::iterator it = eVector.begin(); it < eVector.end(); ++it) {
-			if( it->momentum.Pt() < 15 || std::abs(it->momentum.Eta()) > 2.6 || !isVetoElectron( *it, *event, loggingVerbosity ) )
-				continue;
-			electronToTree.pt = it->momentum.Pt();
-			electronToTree.eta = it->momentum.Eta();
-			electronToTree.phi = it->momentum.Phi();
-			electrons.push_back( electronToTree );
-		}
-		if( loggingVerbosity > 1 )
-			std::cout << "Found " << electrons.size() << " electrons" << std::endl;
-
-		// muons
-		std::vector<susy::Muon> mVector = event->muons["muons"];
-		for( std::vector<susy::Muon>::iterator it = mVector.begin(); it != mVector.end(); ++it) {
-			// see https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuideMuonId#Loose_Muon
-			if( it->momentum.Pt() < 15 || std::abs(it->momentum.Eta()) > 2.6 || !(it->isPFMuon() && (it->isGlobalMuon() || it->isTrackerMuon())) )
-				continue;
-			muonToTree.pt = it->momentum.Et();
-			muonToTree.eta = it->momentum.Eta();
-			muonToTree.phi = it->momentum.Phi();
-			muons.push_back( muonToTree );
-		}
-		if( loggingVerbosity > 1 )
-			std::cout << "Found " << muons.size() << " muons" << std::endl;
 
 		// met
 		met = event->metMap["pfMet"].met();
