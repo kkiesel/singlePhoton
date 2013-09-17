@@ -6,7 +6,8 @@ namespace tree {
 
 enum genParticles{
 	kGenPhoton,
-	kGenElectron
+	kGenElectron,
+	kNearLepton
 };
 
 class Particle {
