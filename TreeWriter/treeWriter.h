@@ -18,8 +18,7 @@
 
 class TreeWriter {
 	public :
-		TreeWriter(std::string inputName, std::string outputName, int loggingVerbosity_=0 );
-		TreeWriter(TChain* inputName, std::string outputName, int loggingVerbosity_=0 );
+		TreeWriter( int nFiles, char** fileList, std::string const& );
 		virtual ~TreeWriter();
 		virtual void Loop();
 
@@ -41,12 +40,11 @@ class TreeWriter {
 		void SetQcdWeightFile( std::string const & filename );
 
 	private:
-		void Init( std::string outputName, int loggingVerbosity_ );
 		void SetBranches( TTree& tree );
 		bool passTrigger();
 		bool isGoodLumi() const;
-		float getPileUpWeight() const;
-		float getPtFromMatchedJet( const susy::Photon& myPhoton, bool isPhoton );
+		float getPileUpWeight();
+		float getPtFromMatchedJet( susy::Photon const & myPhoton, bool isPhoton );
 		float getHtHLT() const;
 		float getHt() const;
 		float getJetHt() const;
@@ -65,24 +63,23 @@ class TreeWriter {
 		float photonPtThreshold;
 
 		// Additional information for producing the output
-		TH1F* pileupHisto;
-		TH2F* qcdWeightHisto;
+		TH1F pileupHisto;
+		TH2F qcdWeightHisto;
 		std::map<unsigned, std::set<unsigned> > goodLumiList;
 		std::vector<const char*> triggerNames;
 
-		TChain* inputTree;
-		susy::Event* event;
-
+		TChain inputTree;
+		susy::Event event;
 
 		// Objects which can be saved to the file
-		TFile* outFile;
-		TTree* photonTree;
-		TTree* photonElectronTree;
-		TTree* photonJetTree;
-		TH1F* eventNumbers;
-		TH3I* nPhotons;
-		std::map< std::string, TH2F* > hist2D;
-		std::map< std::string, TH1F* > hist1D;
+		TFile outFile;
+		TTree photonTree;
+		TTree photonElectronTree;
+		TTree photonJetTree;
+		TH1F eventNumbers;
+		TH3I nPhotons;
+		std::map< std::string, TH2F > hist2D;
+		std::map< std::string, TH1F > hist1D;
 
 		// Variables which will be stored in the tree
 		std::vector<tree::Photon> photons;

@@ -199,109 +199,63 @@ void printChildren( int index, susy::ParticleCollection&  particles, int level=0
 // Here the class implementation begins ///////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-TreeWriter::TreeWriter( std::string inputName, std::string outputName, int loggingVerbosity_ ) {
-	/** Constructor function for a single input file.
-	 *
-	 * The tree from the file will be read.
-	 * inputName: points to a root file with a "susyTree"
-	 */
-	inputTree = new TChain("susyTree");
-	if (loggingVerbosity_ > 0)
-		std::cout << "Add files to chain" << std::endl;
-	inputTree->Add( inputName.c_str() );
-	Init( outputName, loggingVerbosity_ );
-}
+TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputName) :
+	reportEvery(20000),
+	processNEvents(-1),
+	loggingVerbosity(0),
+	splitting(true),
+	onlyMetPlots(false),
+	hadronicSelection(true),
+	photonPtThreshold(80),
+	inputTree("susyTree"),
+	event(),
+	outFile( outputName.c_str(), "recreate" ),
+	photonTree("photonTree","Tree for single photon analysis"),
+	photonElectronTree("photonElectronTree","Tree for single photon analysis"),
+	photonJetTree("photonJetTree","Tree for single photon analysis"),
+	eventNumbers("eventNumbers", "Histogram containing number of generated events", 1, 0, 1),
+	nPhotons("nPhotons", ";#gamma;#gamma_{jet};#gamma_{e}", 3, -.5, -2.5, 3, -.5, -2.5, 3, -.5, -2.5 )
+{
 
-TreeWriter::TreeWriter( TChain* inputTree_, std::string outputName, int loggingVerbosity_ ) {
-	/** Constructor function for a TTree as input.
-	 */
-	inputTree = inputTree_;
-	Init( outputName, loggingVerbosity_ );
+	for( int i = 0; i<nFiles; ++i )
+		inputTree.Add( fileList[i] );
+	event.setInput( inputTree );
+
+	// Here the number of proceeded events will be stored. For plotting, simply use L*sigma/eventNumber
+	eventNumbers.GetXaxis()->SetBinLabel(1,"Number of generated events");
+
+	// Define one dimensional histograms
+	hist1D["gMet"] = TH1F("", ";met;", 50, 0, 500 );
+	hist1D["eMet"] = TH1F("", ";met;", 50, 0, 500 );
+	hist1D["fMet"] = TH1F("", ";met;", 50, 0, 500 );
+	hist1D["fMetUp"] = TH1F("", ";met;", 50, 0, 500 );
+	hist1D["fMetDown"] = TH1F("", ";met;", 50, 0, 500 );
+
+	// Define two dimensional histograms
+	hist2D["matchJet"] = TH2F("", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
+	hist2D["matchJetFO"] = TH2F("", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
+	hist2D["matchPhoton"] = TH2F("", ";#DeltaR;#Delta p_{T}/p_{T}", 100, 0, 1, 200, -2, 2 );
+	hist2D["matchElectron"] = TH2F("", ";#DeltaR;#Delta p_{T}/p_{T}", 100, 0, 1, 200, -2, 2 );
+	hist2D["default"] = TH2F("", ";", 1, 0, 1, 1, 0, 1 );
+
+	// Set the keyName as histogram name for one and two dimensional histograms
+	for( std::map<std::string, TH1F>::iterator it = hist1D.begin();
+			it!= hist1D.end(); ++it ) {
+		it->second.SetName( (it->second.GetName() + it->first).c_str() );
+		it->second.Sumw2();
+	}
+	for( std::map<std::string, TH2F>::iterator it = hist2D.begin();
+			it!= hist2D.end(); ++it ) {
+		it->second.SetName( (it->second.GetName() + it->first).c_str() );
+		it->second.Sumw2();
+	}
 }
 
 TreeWriter::~TreeWriter() {
 	/** Deconstructor
-	 *
-	 * Event has to be deleted before the tree.
+	 * Event has to be deleted before the deletion of the tree.
 	 */
-	if( pileupHisto )
-		delete pileupHisto;
-	if( qcdWeightHisto )
-		delete qcdWeightHisto;
-
-	inputTree->GetCurrentFile()->Close();
-	delete event;
-	delete inputTree;
-	delete outFile;
-	delete photonTree;
-	delete photonElectronTree;
-	delete photonJetTree;
-	for( std::map<std::string, TH2F*>::iterator it = hist2D.begin();
-			it!= hist2D.end(); ++it )
-		delete it->second;
-	for( std::map<std::string, TH1F*>::iterator it = hist1D.begin();
-			it!= hist1D.end(); ++it )
-		delete it->second;
-}
-
-void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
-	/** Initialize the Object
-	 *
-	 * This function is called by each constructor function. Some basic setting
-	 * are done.
-	 */
-	if (loggingVerbosity_ > 0)
-		std::cout << "Set Branch Address of susy::Event" << std::endl;
-	event = new susy::Event;
-	event->setInput( *inputTree );
-
-	// Here the number of proceeded events will be stored. For plotting, simply use L*sigma/eventNumber
-	eventNumbers = new TH1F("eventNumbers", "Histogram containing number of generated events", 1, 0, 1);
-	eventNumbers->GetXaxis()->SetBinLabel(1,"Number of generated events");
-
-	// Define 2D and 1D histograms
-	unsigned int nBins = 3;
-	nPhotons = new TH3I("nPhotons", ";#gamma;#gamma_{jet};#gamma_{e}", nBins, -.5, -.5+nBins, nBins, -.5, -.5+nBins, nBins, -.5, -.5+nBins );
-	hist2D["matchJet"] = new TH2F("", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
-	hist2D["matchJetFO"] = new TH2F("", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
-	hist2D["matchPhoton"] = new TH2F("", ";#DeltaR;#Delta p_{T}/p_{T}", 100, 0, 1, 200, -2, 2 );
-	hist2D["matchElectron"] = new TH2F("", ";#DeltaR;#Delta p_{T}/p_{T}", 100, 0, 1, 200, -2, 2 );
-	hist2D["default"] = new TH2F("", ";", 1, 0, 1, 1, 0, 1 );
-	for( std::map<std::string, TH2F*>::iterator it = hist2D.begin();
-			it!= hist2D.end(); ++it ) {
-		it->second->SetName( (it->second->GetName() + it->first).c_str() );
-		it->second->Sumw2();
-	}
-	hist1D["gMet"] = new TH1F("", ";met;", 50, 0, 500 );
-	hist1D["eMet"] = new TH1F("", ";met;", 50, 0, 500 );
-	hist1D["fMet"] = new TH1F("", ";met;", 50, 0, 500 );
-	hist1D["fMetUp"] = new TH1F("", ";met;", 50, 0, 500 );
-	hist1D["fMetDown"] = new TH1F("", ";met;", 50, 0, 500 );
-	for( std::map<std::string, TH1F*>::iterator it = hist1D.begin();
-			it!= hist1D.end(); ++it ) {
-		it->second->SetName( (it->second->GetName() + it->first).c_str() );
-		it->second->Sumw2();
-	}
-
-	// open the output file
-	if (loggingVerbosity_>0)
-		std::cout << "Open file " << outputName << " for writing." << std::endl;
-	outFile = new TFile( outputName.c_str(), "recreate" );
-	photonTree = new TTree("photonTree","Tree for single photon analysis");
-	photonElectronTree = new TTree("photonElectronTree","Tree for single photon analysis");
-	photonJetTree = new TTree("photonJetTree","Tree for single photon analysis");
-
-	// set default parameter
-	processNEvents = -1;
-	reportEvery = 20000;
-	loggingVerbosity = loggingVerbosity_;
-	pileupHisto = 0;
-	qcdWeightHisto = 0;
-
-	splitting = true;
-	onlyMetPlots = false;
-	hadronicSelection = true;
-	photonPtThreshold = 80;
+	event.releaseTree(inputTree);
 }
 
 void TreeWriter::SetJsonFile(TString const& filename) {
@@ -315,7 +269,7 @@ void TreeWriter::SetJsonFile(TString const& filename) {
 
 	ifstream inputFile( filename );
 	if( !inputFile.is_open() )
-		std::cerr << "WARNING: Cannot open JSON file " << filename << std::endl;
+		std::cerr << "ERROR: Cannot open JSON file " << filename << std::endl;
 
 	std::string line;
 	TString jsonText;
@@ -354,10 +308,40 @@ void TreeWriter::SetJsonFile(TString const& filename) {
 void TreeWriter::SetPileUpWeightFile( std::string const & filename ) {
 	/** Reads the pileup histogram from a given file.
 	 */
-	TFile *puFile = new TFile( filename.c_str() );
-	pileupHisto = (TH1F*) puFile->Get("pileup");
+
+	TFile puFile( filename.c_str() );
+	if( puFile.IsZombie() )
+		std::cerr << "ERROR: Could not read pileup weight file " << filename << std::endl;
+
+	std::string histogramName = "pileup";
+	if( puFile.GetListOfKeys()->Contains( histogramName.c_str() ) )
+		pileupHisto = *((TH1F*) puFile.Get( histogramName.c_str() ));
+	else
+		std::cerr << "ERROR: Could not extract " << histogramName
+			<< " histogram from " << filename << std::endl;
+
 	if( loggingVerbosity > 1 )
 		std::cout << "Pile-up reweighting histogram added." << std::endl;
+}
+
+void TreeWriter::SetQcdWeightFile( std::string const & filename ) {
+	/** Reads the pileup histogram from a given file.
+	 */
+	gSystem->Load("libHistPainter"); // to avoid waring and errors when reading th2 from file
+
+	TFile qcdFile( filename.c_str() );
+	if( qcdFile.IsZombie() )
+		std::cerr << "ERROR: Could not read pileup weight file " << filename << std::endl;
+
+	std::string histogramName = "qcdWeight";
+	if( qcdFile.GetListOfKeys()->Contains( histogramName.c_str() ) )
+		qcdWeightHisto = *((TH2F*) qcdFile.Get( histogramName.c_str() ));
+	else
+		std::cerr << "ERROR: Could not extract " << histogramName
+			<< " histogram from " << filename << std::endl;
+
+	if( loggingVerbosity > 1 )
+		std::cout << "QCD weighting histogram added." << std::endl;
 }
 
 bool TreeWriter::passTrigger() {
@@ -374,8 +358,8 @@ bool TreeWriter::passTrigger() {
 
 	for( std::vector<const char*>::iterator it = triggerNames.begin();
 			it != triggerNames.end(); ++it ) {
-		for( susy::TriggerMap::iterator tm = event->hltMap.begin();
-				tm != event->hltMap.end(); ++tm ) {
+		for( susy::TriggerMap::iterator tm = event.hltMap.begin();
+				tm != event.hltMap.end(); ++tm ) {
 			if ( tm->first.Contains( *it ) && (int(tm->second.second))) {
 				return true;
 				if( loggingVerbosity > 1 )
@@ -397,8 +381,8 @@ bool TreeWriter::isGoodLumi() const {
 		return true;
 	}
 	bool goodLumi = false;
-	unsigned run = event->runNumber;
-	unsigned lumi = event->luminosityBlockNumber;
+	unsigned run = event.runNumber;
+	unsigned lumi = event.luminosityBlockNumber;
 	std::map<unsigned, std::set<unsigned> >::const_iterator rItr(goodLumiList.find(run));
 	if(rItr != goodLumiList.end()){
 		std::set<unsigned>::const_iterator lItr(rItr->second.find(lumi));
@@ -411,51 +395,31 @@ bool TreeWriter::isGoodLumi() const {
 	return goodLumi;
 }
 
-float TreeWriter::getPileUpWeight() const {
+float TreeWriter::getPileUpWeight(){
 	/**
 	 * If a pileup weight histogram has been added, the pile-up weight for the
 	 * current event is computed.
 	 */
-	float thisWeight = 1;
-	if (pileupHisto == 0) {
-		thisWeight = 1.;
-	} else {
-		float trueNumInteractions = -1;
-		for( susy::PUSummaryInfoCollection::const_iterator iBX = event->pu.begin();
-				iBX != event->pu.end() && trueNumInteractions < 0; ++iBX) {
-			if (iBX->BX == 0)
-				trueNumInteractions = iBX->trueNumInteractions;
-		}
-		thisWeight = pileupHisto->GetBinContent( pileupHisto->FindBin( trueNumInteractions ) );
+
+	float trueNumInteractions = -1;
+	for( susy::PUSummaryInfoCollection::const_iterator iBX = event.pu.begin();
+			iBX != event.pu.end() && trueNumInteractions < 0; ++iBX) {
+		if (iBX->BX == 0)
+			trueNumInteractions = iBX->trueNumInteractions;
 	}
+	float thisWeight = pileupHisto.GetBinContent( pileupHisto.FindBin( trueNumInteractions ) );
+
 	if( loggingVerbosity > 2 )
 		std::cout << "Pile-up weight = " << thisWeight << std::endl;
 	return thisWeight;
 }
 
-void TreeWriter::SetQcdWeightFile( std::string const & filename ) {
-	/** Reads the pileup histogram from a given file.
-	 */
-	gSystem->Load("libHistPainter"); // to avoid waring and errors when reading th2 from file
-	TFile *qcdFile = new TFile( filename.c_str() );
-	qcdWeightHisto = (TH2F*) qcdFile->Get("qcdWeight");
-	if( loggingVerbosity > 1 )
-		std::cout << "Pile-up reweighting histogram added." << std::endl;
-}
-
 void TreeWriter::getQcdWeights( float pt, float ht_, float & qcdWeight, float & qcdWeightUp, float & qcdWeightDown ){
-	if( qcdWeightHisto ) {
-		int bin = qcdWeightHisto->FindBin( pt, ht_ );
-		float error = qcdWeightHisto->GetBinError(bin);
-		qcdWeight = qcdWeightHisto->GetBinContent(bin);
-		qcdWeightUp = qcdWeight + error;
-		qcdWeightDown = qcdWeight - error;
-	} else {
-		std::cout << "WARNING: No qcd weight found." << std::endl;
-		qcdWeight = 0;
-		qcdWeightUp = 0;
-		qcdWeightDown = 0;
-	}
+	int bin = qcdWeightHisto.FindBin( pt, ht_ );
+	float error = qcdWeightHisto.GetBinError(bin);
+	qcdWeight = qcdWeightHisto.GetBinContent(bin);
+	qcdWeightUp = qcdWeight + error;
+	qcdWeightDown = qcdWeight - error;
 }
 
 float TreeWriter::getPtFromMatchedJet( const susy::Photon& myPhoton, bool isPhoton=true ) {
@@ -466,7 +430,7 @@ float TreeWriter::getPtFromMatchedJet( const susy::Photon& myPhoton, bool isPhot
 	 * If several jets are found, take the one with the minimal pt difference
 	 * compared to the photon. If no such jets are found, keep the photon_pt
 	 */
-	std::vector<susy::PFJet> jetColl = event->pfJets["ak5"];
+	std::vector<susy::PFJet> jetColl = event.pfJets.find("ak5")->second;
 	std::vector< std::pair<unsigned int,susy::PFJet> > nearJets;
 
 	for(std::vector<susy::PFJet>::const_iterator it = jetColl.begin();
@@ -476,9 +440,9 @@ float TreeWriter::getPtFromMatchedJet( const susy::Photon& myPhoton, bool isPhot
 		float deltaR_ = myPhoton.momentum.DeltaR( corrP4 );
 		float eRel = corrP4.Pt() / myPhoton.momentum.Pt();
 		if( isPhoton )
-			hist2D["matchJet"]->Fill( deltaR_, eRel );
+			hist2D["matchJet"].Fill( deltaR_, eRel );
 		else
-			hist2D["matchJetFO"]->Fill( deltaR_, eRel );
+			hist2D["matchJetFO"].Fill( deltaR_, eRel );
 
 		if (deltaR_ > 0.3 || eRel <= 0.95 ) continue;
 		if( loggingVerbosity > 2 )
@@ -512,11 +476,11 @@ std::vector<tree::Jet> TreeWriter::getJets( bool clean ) const {
 	tree::Jet jetToTree;
 	std::vector<tree::Jet> returnedJets;
 
-	std::vector<susy::PFJet> jetVector = event->pfJets["ak5"];
+	std::vector<susy::PFJet> jetVector = event.pfJets.find("ak5")->second;
 	for(std::vector<susy::PFJet>::iterator it = jetVector.begin();
 			it != jetVector.end(); ++it) {
 		if( !looseJetId( *it ) ) continue;
-		if( !it->passPuJetIdLoose( susy::kPUJetIdFull ) ) continue;
+		//if( !it->passPuJetIdLoose( susy::kPUJetIdFull ) ) continue;
 
 		TLorentzVector corrP4 = it->jecScaleFactors.at("L1FastL2L3") * it->momentum;
 
@@ -560,12 +524,12 @@ float TreeWriter::getJetHt() const {
 
 	// ht
 	float returnedHt = 0;
-	std::vector<susy::PFJet> jetVector = event->pfJets["ak5"];
+	std::vector<susy::PFJet> jetVector = event.pfJets.find("ak5")->second;
 	for(std::vector<susy::PFJet>::iterator it = jetVector.begin();
 			it != jetVector.end(); ++it) {
 
 		if( !looseJetId( *it ) ) continue;
-		if( !it->passPuJetIdLoose( susy::kPUJetIdFull ) ) continue;
+		//if( !it->passPuJetIdLoose( susy::kPUJetIdFull ) ) continue;
 		if( isAdjacentToParticles<tree::Photon>( *it, photons ) ) continue;
 		if( isAdjacentToParticles<tree::Photon>( *it, photonJets ) ) continue;
 
@@ -585,12 +549,12 @@ float TreeWriter::getHt() const {
 
 	// ht
 	float returnedHt = 0;
-	std::vector<susy::PFJet> jetVector = event->pfJets["ak5"];
+	std::vector<susy::PFJet> jetVector = event.pfJets.find("ak5")->second;
 	for(std::vector<susy::PFJet>::iterator it = jetVector.begin();
 			it != jetVector.end(); ++it) {
 
 		if( !looseJetId( *it ) ) continue;
-		if( !it->passPuJetIdLoose( susy::kPUJetIdFull ) ) continue;
+		//if( !it->passPuJetIdLoose( susy::kPUJetIdFull ) ) continue;
 
 		TLorentzVector corrP4 = it->jecScaleFactors.at("L1FastL2L3") * it->momentum;
 
@@ -615,12 +579,12 @@ float TreeWriter::getHt() const {
 float TreeWriter::getHtHLT() const {
 	// ht
 	float returnedHt = 0;
-	std::vector<susy::PFJet> jetVector = event->pfJets["ak5"];
+	std::vector<susy::PFJet> jetVector = event.pfJets.find("ak5")->second;
 	for(std::vector<susy::PFJet>::iterator it = jetVector.begin();
 			it != jetVector.end(); ++it) {
 
 		if( !looseJetId( *it ) ) continue;
-		if( !it->passPuJetIdLoose( susy::kPUJetIdFull ) ) continue;
+		//if( !it->passPuJetIdLoose( susy::kPUJetIdFull ) ) continue;
 
 		TLorentzVector corrP4 = it->jecScaleFactors.at("L1FastL2L3") * it->momentum;
 		if( corrP4.Pt() < 40 || std::abs(corrP4.Eta()) > 3. )
@@ -659,25 +623,22 @@ void TreeWriter::Loop() {
 	 * output File
 	 */
 
-	// here the event loop is implemented and the tree is filled
-	if (inputTree == 0) return;
-
 	// get number of events to be proceeded
-	Long64_t nentries = inputTree->GetEntries();
+	Long64_t nentries = inputTree.GetEntries();
 	// store them in histo
-	eventNumbers->Fill( "Number of generated events", nentries );
+	eventNumbers.Fill( "Number of generated events", nentries );
 
 	if(processNEvents <= 0 || processNEvents > nentries) processNEvents = nentries;
 	if( loggingVerbosity > 0 )
 		std::cout << "Processing " << processNEvents << " ouf of "
 			<< nentries << " events. " << std::endl;
 
-	photonTree->Branch( "photons", &photons );
-	photonElectronTree->Branch( "photons", &photonElectrons );
-	photonJetTree->Branch( "photons", &photonJets );
-	SetBranches( *photonTree );
-	SetBranches( *photonElectronTree );
-	SetBranches( *photonJetTree );
+	photonTree.Branch( "photons", &photons );
+	photonElectronTree.Branch( "photons", &photonElectrons );
+	photonJetTree.Branch( "photons", &photonJets );
+	SetBranches( photonTree );
+	SetBranches( photonElectronTree );
+	SetBranches( photonJetTree );
 
 	// Declaration for objects saved in Tree
 	tree::Photon photonToTree;
@@ -686,20 +647,20 @@ void TreeWriter::Loop() {
 
 	for (long jentry=0; jentry < processNEvents; ++jentry) {
 		if ( loggingVerbosity>1 || jentry%reportEvery==0 ) std::cout << jentry << " / " << processNEvents << std::endl;
-		event->getEntry(jentry);
+		event.getEntry(jentry);
 
-		bool printCascade = true;
-		for( susy::ParticleCollection::iterator it = event->genParticles.begin(); printCascade && it != event->genParticles.end(); ++it ){
+		bool printCascade = false;
+		for( susy::ParticleCollection::iterator it = event.genParticles.begin(); printCascade && it != event.genParticles.end(); ++it ){
 			if( it->motherIndex == -1 ){
-				printChildren( std::distance(event->genParticles.begin(), it ), event->genParticles );
+				printChildren( std::distance(event.genParticles.begin(), it ), event.genParticles );
 			}
 		}
 
-		if ( event->isRealData )
-			if ( !isGoodLumi() || !passTrigger() || !event->passMetFilters() ) continue;
+		if ( event.isRealData )
+			if ( !isGoodLumi() || !passTrigger() || !event.passMetFilters() ) continue;
 
 		// vertices
-		nVertex = numberOfGoodVertexInCollection( event->vertices );
+		nVertex = numberOfGoodVertexInCollection( event.vertices );
 		if( !nVertex ) continue;
 
 		photons.clear();
@@ -710,14 +671,14 @@ void TreeWriter::Loop() {
 		muons.clear();
 		genElectrons.clear();
 		genPhotons.clear();
-		runNumber = event->runNumber;
-		eventNumber = event->eventNumber;
-		luminosityBlockNumber = event->luminosityBlockNumber;
-		weight = event->isRealData ? 1. : getPileUpWeight();
+		runNumber = event.runNumber;
+		eventNumber = event.eventNumber;
+		luminosityBlockNumber = event.luminosityBlockNumber;
+		weight = event.isRealData ? 1. : getPileUpWeight();
 
 		// genParticles
 		tree::Particle thisGenParticle;
-		for( std::vector<susy::Particle>::iterator it = event->genParticles.begin(); it != event->genParticles.end(); ++it ) {
+		for( std::vector<susy::Particle>::iterator it = event.genParticles.begin(); it != event.genParticles.end(); ++it ) {
 
 			// status 3: particles in matrix element
 			// status 2: intermediate particles
@@ -739,9 +700,9 @@ void TreeWriter::Loop() {
 		}
 
 		// electrons
-		std::vector<susy::Electron> eVector = event->electrons["gsfElectrons"];
+		std::vector<susy::Electron> eVector = event.electrons["gsfElectrons"];
 		for(std::vector<susy::Electron>::iterator it = eVector.begin(); it < eVector.end(); ++it) {
-			if( it->momentum.Pt() < 15 || std::abs(it->momentum.Eta()) > 2.6 || !isVetoElectron( *it, *event, loggingVerbosity ) )
+			if( it->momentum.Pt() < 15 || std::abs(it->momentum.Eta()) > 2.6 || !isVetoElectron( *it, event, loggingVerbosity ) )
 				continue;
 			electronToTree.pt = it->momentum.Pt();
 			electronToTree.eta = it->momentum.Eta();
@@ -752,7 +713,7 @@ void TreeWriter::Loop() {
 			std::cout << "Found " << electrons.size() << " electrons" << std::endl;
 
 		// muons
-		std::vector<susy::Muon> mVector = event->muons["muons"];
+		std::vector<susy::Muon> mVector = event.muons["muons"];
 		for( std::vector<susy::Muon>::iterator it = mVector.begin(); it != mVector.end(); ++it) {
 			// see https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuideMuonId#Loose_Muon
 			if( it->momentum.Pt() < 15 || std::abs(it->momentum.Eta()) > 2.6 || !(it->isPFMuon() && (it->isGlobalMuon() || it->isTrackerMuon())) )
@@ -766,15 +727,15 @@ void TreeWriter::Loop() {
 			std::cout << "Found " << muons.size() << " muons" << std::endl;
 
 		// photons
-		std::vector<susy::Photon> photonVector = event->photons["photons"];
+		std::vector<susy::Photon> photonVector = event.photons["photons"];
 		for(std::vector<susy::Photon>::iterator it = photonVector.begin();
 				it != photonVector.end(); ++it ) {
 			float eta = std::abs( it->momentum.Eta() );
 			if( it->momentum.Pt() < photonPtThreshold || eta >= susy::etaGapBegin )
 				continue;
-			photonToTree.chargedIso = chargedHadronIso_corrected(*it, event->rho25);
-			photonToTree.neutralIso = neutralHadronIso_corrected(*it, event->rho25);
-			photonToTree.photonIso = photonIso_corrected(*it, event->rho25);
+			photonToTree.chargedIso = chargedHadronIso_corrected(*it, event.rho25);
+			photonToTree.neutralIso = neutralHadronIso_corrected(*it, event.rho25);
+			photonToTree.photonIso = photonIso_corrected(*it, event.rho25);
 			photonToTree.pt = it->momentum.Pt();
 			photonToTree.eta = it->momentum.Eta();
 			photonToTree.phi = it->momentum.Phi();
@@ -785,13 +746,13 @@ void TreeWriter::Loop() {
 			photonToTree.pixelseed = it->nPixelSeeds;
 			photonToTree.conversionSafeVeto = it->passelectronveto;
 			photonToTree.genInformation = 0;
-			if( matchLorentzToGenVector( it->momentum, genPhotons, *hist2D["matchPhoton"], 1e6, .05 ) )
+			if( matchLorentzToGenVector( it->momentum, genPhotons, hist2D["matchPhoton"], 1e6, .05 ) )
 				photonToTree.setGen( tree::kGenPhoton );
-			if( matchLorentzToGenVector( it->momentum, genElectrons, *hist2D["matchElectron"], 1e6, .05 ) )
+			if( matchLorentzToGenVector( it->momentum, genElectrons, hist2D["matchElectron"], 1e6, .05 ) )
 				photonToTree.setGen( tree::kGenElectron );
 
-			if( matchLorentzToGenVector( it->momentum, electrons, *hist2D["default"], 1e6 ) ||
-					matchLorentzToGenVector( it->momentum, muons, *hist2D["default"], 1e6 ) )
+			if( matchLorentzToGenVector( it->momentum, electrons, hist2D["default"], 1e6 ) ||
+					matchLorentzToGenVector( it->momentum, muons, hist2D["default"], 1e6 ) )
 				photonToTree.setGen( tree::kNearLepton );
 
 
@@ -835,12 +796,12 @@ void TreeWriter::Loop() {
 			std::cout << "Found " << photons.size() << " photons, "
 					<< photonJets.size() << " photon_{jets} and "
 					<< photonElectrons.size() << " photon electrons." << std::endl;
-		nPhotons->Fill( photons.size(), photonJets.size(), photonElectrons.size() );
+		nPhotons.Fill( photons.size(), photonJets.size(), photonElectrons.size() );
 
 		// met
-		met = event->metMap["pfMet"].met();
-		type0met = event->metMap["pfType01CorrectedMet"].met();
-		type1met = event->metMap["pfType1CorrectedMet"].met();
+		met = event.metMap["pfMet"].met();
+		type0met = event.metMap["pfType01CorrectedMet"].met();
+		type1met = event.metMap["pfType1CorrectedMet"].met();
 		if( loggingVerbosity > 2 )
 			std::cout << " met = " << met << std::endl;
 
@@ -868,55 +829,53 @@ void TreeWriter::Loop() {
 				isPhotonJetEvent = true;
 
 			if( isPhotonEvent ) {
-				photonTree->Fill();
-				hist1D["gMet"]->Fill( met, weight );
+				photonTree.Fill();
+				hist1D["gMet"].Fill( met, weight );
 			}
 			if( isPhotonJetEvent) {
-				photonJetTree->Fill();
+				photonJetTree.Fill();
 				float qcdWeight=0, qcdWeightUp=0, qcdWeightDown=0;
 				getQcdWeights( photonJets.at(0).ptJet(), ht, qcdWeight, qcdWeightUp, qcdWeightDown );
-				hist1D["fMet"]->Fill( met, weight*qcdWeight );
-				hist1D["fMetUp"]->Fill( met, weight*qcdWeightUp );
-				hist1D["fMetDown"]->Fill( met, weight*qcdWeightDown );
+				hist1D["fMet"].Fill( met, weight*qcdWeight );
+				hist1D["fMetUp"].Fill( met, weight*qcdWeightUp );
+				hist1D["fMetDown"].Fill( met, weight*qcdWeightDown );
 			}
 			if( isPhotonElectronEvent ) {
-				photonElectronTree->Fill();
-				hist1D["eMet"]->Fill( met, weight );
+				photonElectronTree.Fill();
+				hist1D["eMet"].Fill( met, weight );
 			}
 			if( isPhotonEvent+isPhotonElectronEvent+isPhotonJetEvent > 1 )
 				std::cout <<"ERROR: One event is control and signal at once!" << std::endl;
 		} else if( photons.size() ) // no splitting
-				photonTree->Fill();
+				photonTree.Fill();
 
 	} // for jentry
 
-	outFile->cd();
+	outFile.cd();
 	if( !onlyMetPlots ) {
-		photonTree->Write();
+		photonTree.Write();
 		if( splitting ) {
-			photonElectronTree->Write();
-			photonJetTree->Write();
-			nPhotons->Write();
+			photonElectronTree.Write();
+			photonJetTree.Write();
+			nPhotons.Write();
 		}
-		eventNumbers->Write();
-		for( std::map<std::string, TH2F*>::iterator it = hist2D.begin();
+		eventNumbers.Write();
+		for( std::map<std::string, TH2F>::iterator it = hist2D.begin();
 				it!= hist2D.end(); ++it )
-			it->second->Write();
+			it->second.Write();
 	}
 	TPRegexp expFilename( ".*/tree_([0-9]+_[0-9]+)_375.root" );
-	TObjArray *arr = expFilename.MatchS( inputTree->GetCurrentFile()->GetName() );
+	TObjArray *arr = expFilename.MatchS( inputTree.GetCurrentFile()->GetName() );
 	std::string histoNameAppendix = "";
 	if( arr->GetLast() >0 )
 		histoNameAppendix = (std::string)(((TObjString *)arr->At(1))->GetString());
 	else
 		std::cout << "Could not extract grid parameters from filename." << std::endl;
 
-	for( std::map<std::string, TH1F*>::iterator it = hist1D.begin();
+	for( std::map<std::string, TH1F>::iterator it = hist1D.begin();
 			it!= hist1D.end(); ++it ) {
-		it->second->SetName( (it->second->GetName() + histoNameAppendix ).c_str() );
-		it->second->Write();
+		it->second.SetName( (it->second.GetName() + histoNameAppendix ).c_str() );
+		it->second.Write();
 	}
-
-	outFile->Close();
 }
 
