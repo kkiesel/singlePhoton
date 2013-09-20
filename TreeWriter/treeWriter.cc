@@ -572,6 +572,11 @@ float TreeWriter::getHt() const {
 		if( photon->_ptJet == 0 )
 			returnedHt += photon->pt;
 	}
+	for( std::vector<tree::Photon>::const_iterator photon = photonElectrons.begin();
+			photon != photonElectrons.end(); ++photon ) {
+		if( photon->_ptJet == 0 )
+			returnedHt += photon->pt;
+	}
 
 	return returnedHt;
 }
