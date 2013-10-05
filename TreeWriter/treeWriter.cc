@@ -3,18 +3,18 @@
 float effectiveAreaElectron( float eta ) {
 	/** Returns the effective area for the isolation criteria for electrons.
 	 * See https://twiki.cern.ch/twiki/bin/view/CMS/EgammaEARhoCorrection
-	 * only for Delta R = 0.3 on 2012 Data
+	 * only for Delta R = 0.4 on 2012 Data
 	 */
 	eta = fabs( eta );
 	float ea;
 
-	if( eta < 1.0 ) ea = 0.13;
-	else if( eta < 1.479 ) ea = 0.14;
-	else if( eta < 2.0 ) ea = 0.07;
-	else if( eta < 2.2 ) ea = 0.09;
-	else if( eta < 2.3 ) ea = 0.11;
-	else if( eta < 2.4 ) ea = 0.11;
-	else ea = 0.14;
+	if( eta < 1.0 ) ea = 0.208;
+	else if( eta < 1.479 ) ea = 0.209;
+	else if( eta < 2.0 ) ea = 0.115;
+	else if( eta < 2.2 ) ea = 0.143;
+	else if( eta < 2.3 ) ea = 0.183;
+	else if( eta < 2.4 ) ea = 0.194;
+	else ea = 0.261;
 
 	return ea;
 }
@@ -484,7 +484,7 @@ std::vector<tree::Jet> TreeWriter::getJets( bool clean ) const {
 
 		TLorentzVector corrP4 = it->jecScaleFactors.at("L1FastL2L3") * it->momentum;
 
-		if( std::abs(corrP4.Eta()) > 2.6 ) continue;
+		if( std::abs(corrP4.Eta()) > 2.5 ) continue;
 		if( corrP4.Pt() < 30 ) continue;
 		if( isAdjacentToParticles<tree::Particle>( *it, electrons ) ) continue;
 		if( isAdjacentToParticles<tree::Particle>( *it, muons ) ) continue;
