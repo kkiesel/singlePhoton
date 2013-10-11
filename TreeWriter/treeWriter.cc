@@ -451,7 +451,7 @@ void TreeWriter::getQcdWeights( float pt, float ht_, float & qcdWeight, float & 
 		qcdWeightUp = qcdWeight + error;
 		qcdWeightDown = qcdWeight - error;
 	} else {
-		std::cout << "WARNING: No qcd weight found." << std::endl;
+		if( loggingVerbosity > 0 ) std::cout << "WARNING: No qcd weight found." << std::endl;
 		qcdWeight = 0;
 		qcdWeightUp = 0;
 		qcdWeightDown = 0;
@@ -467,7 +467,7 @@ float TreeWriter::getPtFromMatchedJet( const susy::Photon& myPhoton, bool isPhot
 	 * compared to the photon. If no such jets are found, keep the photon_pt
 	 */
 	std::vector<susy::PFJet> jetColl = event->pfJets["ak5"];
-	std::vector< std::pair<unsigned int,susy::PFJet> > nearJets;
+	float returnPt = 0;
 
 	for(std::vector<susy::PFJet>::const_iterator it = jetColl.begin();
 			it != jetColl.end(); ++it) {
@@ -483,29 +483,19 @@ float TreeWriter::getPtFromMatchedJet( const susy::Photon& myPhoton, bool isPhot
 		if (deltaR_ > 0.3 || eRel <= 0.95 ) continue;
 		if( loggingVerbosity > 2 )
 			std::cout << " pT_jet / pT_gamma = " << eRel << std::endl;
-		nearJets.push_back( std::make_pair(std::distance<std::vector<susy::PFJet>::const_iterator>( jetColl.begin(), it ),*it) );
-	}// for jet
-
-	if ( nearJets.size() == 0 ) {
-		if( loggingVerbosity > 1 )
-			std::cout << "No matching jet found, do not change photon_pt." << std::endl;
-		return 0;
-	} else if ( nearJets.size() == 1 ) {
-		return nearJets.at(0).second.momentum.Pt();
-	} else {
-		std::cout << "More than one jet found, set the photon_ptJet to the nearest value in pt." << std::endl;
-		float pt = 0;
-		float minPtDifferenz = 1E20; // should be very high
-		for( std::vector< std::pair<unsigned int,susy::PFJet> >::iterator it = nearJets.begin(), jetEnd = nearJets.end();
-				it != jetEnd; ++it ) {
-			float ptDiff = std::abs(myPhoton.momentum.Pt() - it->second.momentum.Pt());
-			if (  ptDiff < minPtDifferenz ) {
-				minPtDifferenz = ptDiff;
-				pt = it->second.momentum.Pt();
+		if( !returnPt )
+			returnPt = corrP4.Pt();
+		else {
+			if( std::abs( corrP4.Pt() - myPhoton.momentum.Pt() ) < std::abs( returnPt - myPhoton.momentum.Pt() ) ) {
+				std::cout << "More than one jet found, set the photon_ptJet to the nearest value in pt." << std::endl;
+				returnPt = corrP4.Pt();
 			}
 		}
-		return pt;
-	}
+	}// for jet
+
+	if ( returnPt == 0  && loggingVerbosity > 1 )
+		std::cout << "No matching jet found, do not change photon_pt." << std::endl;
+	return returnPt;
 }
 
 std::vector<tree::Jet> TreeWriter::getJets( bool clean ) const {
@@ -688,7 +678,7 @@ void TreeWriter::Loop() {
 		if ( loggingVerbosity>1 || jentry%reportEvery==0 ) std::cout << jentry << " / " << processNEvents << std::endl;
 		event->getEntry(jentry);
 
-		bool printCascade = true;
+		bool printCascade = false;
 		for( susy::ParticleCollection::iterator it = event->genParticles.begin(); printCascade && it != event->genParticles.end(); ++it ){
 			if( it->motherIndex == -1 ){
 				printChildren( std::distance(event->genParticles.begin(), it ), event->genParticles );
@@ -810,7 +800,7 @@ void TreeWriter::Loop() {
 				bool isPhotonJet = eta < susy::etaGapBegin
 					&& it->hadTowOverEm < 0.05
 					&& it->sigmaIetaIeta < 0.012
-					&& photonToTree.chargedIso < 10 && photonToTree.chargedIso > 0.01
+					&& photonToTree.chargedIso < 26 && photonToTree.chargedIso > 0.26
 					&& photonToTree.neutralIso < 35+0.4*photonToTree.pt && photonToTree.neutralIso > 0.35+0.004*photonToTree.neutralIso
 					&& photonToTree.photonIso < 13+0.05*photonToTree.pt && photonToTree.photonIso > 0.13+0.0005*photonToTree.pt;
 
