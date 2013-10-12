@@ -47,7 +47,16 @@ class Jet : public Particle{
 		void setMatch( jetMatches id );
 		short matchInformation;
 		float bCSV;
-		float chargedHadronEnergy,neutralHadronEnergy,photonEnergy,electronEnergy,muonEnergy,HFHadronEnergy,HFEMEnergy,chargedEmEnergy,chargedMuEnergy,neutralEmEnergy;
+		float chargedHadronEnergy,
+			neutralHadronEnergy,
+			photonEnergy,
+			electronEnergy,
+			muonEnergy,
+			HFHadronEnergy,
+			HFEMEnergy,
+			chargedEmEnergy,
+			chargedMuEnergy,
+			neutralEmEnergy;
 };
 
 bool EtGreater(const tree::Particle, const tree::Particle);
