@@ -46,11 +46,10 @@ class TreeWriter {
 		bool passTrigger();
 		bool isGoodLumi() const;
 		float getPileUpWeight() const;
-		float getPtFromMatchedJet( const susy::Photon& myPhoton, bool isPhoton );
-		float getHtHLT() const;
+		void getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton );
 		float getHt() const;
-		float getJetHt() const;
-		std::vector<tree::Jet> getJets( bool clean ) const;
+		void fillJets();
+		unsigned int countGoodJets( bool clean ) const;
 		void getQcdWeights( float pt, float ht, float & qcdWeight, float & qcdWeightUp, float & qcdWeightDown );
 
 		// Command line output settings
@@ -97,10 +96,9 @@ class TreeWriter {
 		float met;
 		float type1met;
 		float type0met;
-		float htHLT;
 		float ht;
-		float jetHt;
 		float weight;
+		unsigned int nGoodJets;
 		unsigned int nVertex;
 		unsigned int runNumber;
 		unsigned int eventNumber;
