@@ -429,18 +429,11 @@ float TreeWriter::getPileUpWeight(){
 }
 
 void TreeWriter::getQcdWeights( float pt, float ht_, float & qcdWeight, float & qcdWeightUp, float & qcdWeightDown ){
-	if( qcdWeightHisto ) {
-		int bin = qcdWeightHisto->FindBin( pt, ht_ );
-		float error = qcdWeightHisto->GetBinError(bin);
-		qcdWeight = qcdWeightHisto->GetBinContent(bin);
-		qcdWeightUp = qcdWeight + error;
-		qcdWeightDown = qcdWeight - error;
-	} else {
-		if( loggingVerbosity > 0 ) std::cout << "WARNING: No qcd weight found." << std::endl;
-		qcdWeight = 0;
-		qcdWeightUp = 0;
-		qcdWeightDown = 0;
-	}
+	int bin = qcdWeightHisto.FindBin( pt, ht_ );
+	float error = qcdWeightHisto.GetBinError(bin);
+	qcdWeight = qcdWeightHisto.GetBinContent(bin);
+	qcdWeightUp = qcdWeight + error;
+	qcdWeightDown = qcdWeight - error;
 }
 
 void TreeWriter::getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton=true ) {
@@ -638,7 +631,7 @@ void TreeWriter::Loop() {
 		event.getEntry(jentry);
 
 		bool printCascade = false;
-		for( susy::ParticleCollection::iterator it = event->genParticles.begin(); printCascade && it != event->genParticles.end(); ++it ){
+		for( susy::ParticleCollection::iterator it = event.genParticles.begin(); printCascade && it != event.genParticles.end(); ++it ){
 			if( it->motherIndex == -1 ){
 				printChildren( std::distance(event.genParticles.begin(), it ), event.genParticles );
 			}

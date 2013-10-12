@@ -43,7 +43,7 @@ class TreeWriter {
 		void SetBranches( TTree& tree );
 		bool passTrigger();
 		bool isGoodLumi() const;
-		float getPileUpWeight() const;
+		float getPileUpWeight();
 		void getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton );
 		float getHt() const;
 		void fillJets();
