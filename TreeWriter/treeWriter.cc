@@ -91,6 +91,20 @@ bool isAdjacentToParticles( const susy::PFJet& jet, const std::vector<Particle>&
 	return false;
 }
 
+template <typename Particle>
+bool isAdjacentToParticles( const tree::Jet& jet, const std::vector<Particle>& particles, float deltaR_ = 0.3 ) {
+	/** Particles near the jet are searched.
+	 *
+	 * Returns true if a particle is found in a certain radius near the jet.
+	 */
+	for( typename std::vector<Particle>::const_iterator particle = particles.begin(); particle != particles.end(); ++particle) {
+		if ( jet.DeltaR( *particle ) < deltaR_)
+			return true;
+	}
+	return false;
+}
+
+
 bool isVetoElectron( const susy::Electron& electron, const susy::Event& event, const int loggingVerbosity ) {
 	/** Definition of veto working point for electrons.
 	 *
@@ -128,7 +142,7 @@ bool isVetoElectron( const susy::Electron& electron, const susy::Event& event, c
 	return isElectron;
 }
 
-bool looseJetId( const susy::PFJet& jet ) {
+bool passLooseJetId( const susy::PFJet& jet ) {
 	/**
 	 * \brief Apply loose cut on jets.
 	 *
@@ -422,7 +436,7 @@ void TreeWriter::getQcdWeights( float pt, float ht_, float & qcdWeight, float & 
 	qcdWeightDown = qcdWeight - error;
 }
 
-float TreeWriter::getPtFromMatchedJet( const susy::Photon& myPhoton, bool isPhoton=true ) {
+void TreeWriter::getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton=true ) {
 	/**
 	 * \brief Takes jet p_T as photon p_T
 	 *
@@ -430,70 +444,67 @@ float TreeWriter::getPtFromMatchedJet( const susy::Photon& myPhoton, bool isPhot
 	 * If several jets are found, take the one with the minimal pt difference
 	 * compared to the photon. If no such jets are found, keep the photon_pt
 	 */
-	std::vector<susy::PFJet> jetColl = event.pfJets.find("ak5")->second;
-	std::vector< std::pair<unsigned int,susy::PFJet> > nearJets;
+	float returnPt = 0;
+	std::vector<short> indices;
 
-	for(std::vector<susy::PFJet>::const_iterator it = jetColl.begin();
-			it != jetColl.end(); ++it) {
-		TLorentzVector corrP4 = it->jecScaleFactors.at("L1FastL2L3") * it->momentum;
+	for(std::vector<tree::Jet>::iterator jet = jets.begin();
+			jet != jets.end(); ++jet) {
 
-		float deltaR_ = myPhoton.momentum.DeltaR( corrP4 );
-		float eRel = corrP4.Pt() / myPhoton.momentum.Pt();
+		float deltaR_ = myPhoton.DeltaR( *jet );
+		float eRel = jet->pt / myPhoton.pt;
 		if( isPhoton )
 			hist2D["matchJet"].Fill( deltaR_, eRel );
 		else
 			hist2D["matchJetFO"].Fill( deltaR_, eRel );
 
 		if (deltaR_ > 0.3 || eRel <= 0.95 ) continue;
-		if( loggingVerbosity > 2 )
-			std::cout << " pT_jet / pT_gamma = " << eRel << std::endl;
-		nearJets.push_back( std::make_pair(std::distance<std::vector<susy::PFJet>::const_iterator>( jetColl.begin(), it ),*it) );
-	}// for jet
+		jet->setMatch( tree::kJetAllPhoton );
 
-	if ( nearJets.size() == 0 ) {
-		if( loggingVerbosity > 1 )
-			std::cout << "No matching jet found, do not change photon_pt." << std::endl;
-		return 0;
-	} else if ( nearJets.size() == 1 ) {
-		return nearJets.at(0).second.momentum.Pt();
-	} else {
-		std::cout << "More than one jet found, set the photon_ptJet to the nearest value in pt." << std::endl;
+		if( loggingVerbosity > 2 ) std::cout << " pT_jet / pT_gamma = " << eRel << std::endl;
+
+		indices.push_back( std::distance( jets.begin(), jet ) );
+		returnPt = jet->pt;
+	}// for jet
+	if( indices.size() > 1 ) {
 		float pt = 0;
+		short minIndex = 0;
 		float minPtDifferenz = 1E20; // should be very high
-		for( std::vector< std::pair<unsigned int,susy::PFJet> >::iterator it = nearJets.begin(), jetEnd = nearJets.end();
-				it != jetEnd; ++it ) {
-			float ptDiff = std::abs(myPhoton.momentum.Pt() - it->second.momentum.Pt());
-			if (  ptDiff < minPtDifferenz ) {
+
+		for( std::vector<short>::const_iterator index = indices.begin();
+				index != indices.end(); ++index ) {
+			float ptDiff = std::abs(myPhoton.pt - jets.at(*index).pt);
+			if ( ptDiff < minPtDifferenz ) {
 				minPtDifferenz = ptDiff;
-				pt = it->second.momentum.Pt();
+				pt = jets.at(*index).pt;
+				minIndex = *index;
 			}
 		}
-		return pt;
-	}
+		jets.at(minIndex).setMatch( tree::kJetPhoton );
+		myPhoton.matchedJetIndex = minIndex;
+		myPhoton._ptJet = pt;
+	} else if( indices.size() == 1 ) {
+		myPhoton.matchedJetIndex = indices.at(0);
+		jets.at(0).setMatch( tree::kJetPhoton );
+		myPhoton._ptJet = returnPt;
+	} else if( loggingVerbosity > 1 )
+		std::cout << "No matching jet found, do not change photon_pt." << std::endl;
 }
 
-std::vector<tree::Jet> TreeWriter::getJets( bool clean ) const {
+void TreeWriter::fillJets() {
+	jets.clear();
 	tree::Jet jetToTree;
-	std::vector<tree::Jet> returnedJets;
 
 	std::vector<susy::PFJet> jetVector = event.pfJets.find("ak5")->second;
 	for(std::vector<susy::PFJet>::iterator it = jetVector.begin();
 			it != jetVector.end(); ++it) {
-		if( !looseJetId( *it ) ) continue;
-		//if( !it->passPuJetIdLoose( susy::kPUJetIdFull ) ) continue;
 
 		TLorentzVector corrP4 = it->jecScaleFactors.at("L1FastL2L3") * it->momentum;
 
-		if( std::abs(corrP4.Eta()) > 2.5 ) continue;
+		if( std::abs(corrP4.Eta()) > 3 ) continue;
 		if( corrP4.Pt() < 30 ) continue;
-		if( isAdjacentToParticles<tree::Particle>( *it, electrons ) ) continue;
-		if( isAdjacentToParticles<tree::Particle>( *it, muons ) ) continue;
-		if( clean ) {
-			if( isAdjacentToParticles<tree::Photon>( *it, photons ) ) continue;
-			if( isAdjacentToParticles<tree::Photon>( *it, photonElectrons ) ) continue;
-			if( isAdjacentToParticles<tree::Photon>( *it, photonJets ) ) continue;
-		}
 
+		jetToTree.matchInformation = 0;
+		if( passLooseJetId( *it ) ) jetToTree.setMatch( tree::kJetGoodId );
 		jetToTree.pt = corrP4.Pt();
 		jetToTree.eta = corrP4.Eta();
 		jetToTree.phi = corrP4.Phi();
@@ -509,58 +520,26 @@ std::vector<tree::Jet> TreeWriter::getJets( bool clean ) const {
 		jetToTree.chargedEmEnergy = it->chargedEmEnergy;
 		jetToTree.chargedMuEnergy = it->chargedMuEnergy;
 		jetToTree.neutralEmEnergy = it->neutralEmEnergy;
-		returnedJets.push_back( jetToTree );
+		jets.push_back( jetToTree );
 
 		if( loggingVerbosity > 2 )
 			std::cout << " p_T, jet = " << jetToTree.pt << std::endl;
 	}// for jet
-	std::sort( returnedJets.begin(), returnedJets.end(), tree::EtGreater);
-	return returnedJets;
-}
-
-float TreeWriter::getJetHt() const {
-	if( !splitting )
-		return 0;
-
-	// ht
-	float returnedHt = 0;
-	std::vector<susy::PFJet> jetVector = event.pfJets.find("ak5")->second;
-	for(std::vector<susy::PFJet>::iterator it = jetVector.begin();
-			it != jetVector.end(); ++it) {
-
-		if( !looseJetId( *it ) ) continue;
-		//if( !it->passPuJetIdLoose( susy::kPUJetIdFull ) ) continue;
-		if( isAdjacentToParticles<tree::Photon>( *it, photons ) ) continue;
-		if( isAdjacentToParticles<tree::Photon>( *it, photonJets ) ) continue;
-
-		TLorentzVector corrP4 = it->jecScaleFactors.at("L1FastL2L3") * it->momentum;
-
-		if( corrP4.Pt() < 40 || corrP4.Eta() > 3. ) continue;
-
-		returnedHt += corrP4.Pt();
-	}
-
-	return returnedHt;
+	std::sort( jets.begin(), jets.end(), tree::EtGreater);
 }
 
 float TreeWriter::getHt() const {
 	if( !splitting )
 		return 0;
 
-	// ht
 	float returnedHt = 0;
-	std::vector<susy::PFJet> jetVector = event.pfJets.find("ak5")->second;
-	for(std::vector<susy::PFJet>::iterator it = jetVector.begin();
-			it != jetVector.end(); ++it) {
+	for(std::vector<tree::Jet>::const_iterator jet = jets.begin();
+			jet != jets.end(); ++jet ) {
 
-		if( !looseJetId( *it ) ) continue;
-		//if( !it->passPuJetIdLoose( susy::kPUJetIdFull ) ) continue;
+		if( !jet->isMatch( tree::kJetGoodId ) && !jet->isMatch( tree::kJetPhoton ) ) continue;
+		if( jet->pt < 40 || jet->eta > 3. ) continue;
 
-		TLorentzVector corrP4 = it->jecScaleFactors.at("L1FastL2L3") * it->momentum;
-
-		if( corrP4.Pt() < 40 || corrP4.Eta() > 3. ) continue;
-
-		returnedHt += corrP4.Pt();
+		returnedHt += jet->pt;
 	}
 	for( std::vector<tree::Photon>::const_iterator photon = photons.begin();
 			photon != photons.end(); ++photon ) {
@@ -581,25 +560,24 @@ float TreeWriter::getHt() const {
 	return returnedHt;
 }
 
-float TreeWriter::getHtHLT() const {
-	// ht
-	float returnedHt = 0;
-	std::vector<susy::PFJet> jetVector = event.pfJets.find("ak5")->second;
-	for(std::vector<susy::PFJet>::iterator it = jetVector.begin();
-			it != jetVector.end(); ++it) {
+unsigned int TreeWriter::countGoodJets( bool clean ) const {
+	unsigned int number = 0;
+	for(std::vector<tree::Jet>::const_iterator jet = jets.begin();
+			jet != jets.end(); ++jet ) {
+		if( jet->pt < 30 || jet->eta > 2.5 ) continue;
+		if( !jet->isMatch( tree::kJetGoodId ) ) continue;
 
-		if( !looseJetId( *it ) ) continue;
-		//if( !it->passPuJetIdLoose( susy::kPUJetIdFull ) ) continue;
-
-		TLorentzVector corrP4 = it->jecScaleFactors.at("L1FastL2L3") * it->momentum;
-		if( corrP4.Pt() < 40 || std::abs(corrP4.Eta()) > 3. )
-			continue;
-
-		returnedHt += corrP4.Pt();
+		if( isAdjacentToParticles<tree::Particle>( *jet, electrons ) ) continue;
+		if( isAdjacentToParticles<tree::Particle>( *jet, muons ) ) continue;
+		if( clean ) {
+			if( isAdjacentToParticles<tree::Photon>( *jet, photons ) ) continue;
+			if( isAdjacentToParticles<tree::Photon>( *jet, photonElectrons ) ) continue;
+			if( isAdjacentToParticles<tree::Photon>( *jet, photonJets ) ) continue;
+		}
+		++number;
 	}
-	return returnedHt;
+	return number;
 }
-
 void TreeWriter::SetBranches( TTree& tree ) {
 	tree.Branch("jets", &jets);
 	tree.Branch("electrons", &electrons);
@@ -609,11 +587,10 @@ void TreeWriter::SetBranches( TTree& tree ) {
 	tree.Branch("met", &met, "met/F");
 	tree.Branch("type0met", &type0met, "type0met/F");
 	tree.Branch("type1met", &type1met, "type1met/F");
-	tree.Branch("htHLT", &htHLT, "htHLT/F");
 	tree.Branch("ht", &ht, "ht/F");
-	tree.Branch("jetHt", &jetHt, "jetHt/F");
 	tree.Branch("weight", &weight, "weight/F");
 	tree.Branch("nVertex", &nVertex, "nVertex/I");
+	tree.Branch("nGoodJets", &nGoodJets, "nGoodJets/i");
 	tree.Branch("runNumber", &runNumber, "runNumber/i");
 	tree.Branch("eventNumber", &eventNumber, "eventNumber/i");
 	tree.Branch("luminosityBlockNumber", &luminosityBlockNumber, "luminosityBlockNumber/i");
@@ -731,6 +708,9 @@ void TreeWriter::Loop() {
 		if( loggingVerbosity > 1 )
 			std::cout << "Found " << muons.size() << " muons" << std::endl;
 
+		// get jets
+		fillJets();
+
 		// photons
 		std::vector<susy::Photon> photonVector = event.photons["photons"];
 		for(std::vector<susy::Photon>::iterator it = photonVector.begin();
@@ -761,24 +741,25 @@ void TreeWriter::Loop() {
 				photonToTree.setGen( tree::kNearLepton );
 
 
-			photonToTree._ptJet = getPtFromMatchedJet( *it, photonToTree.isGen( tree::kGenPhoton) );
+			getPtFromMatchedJet( photonToTree, photonToTree.isGen( tree::kGenPhoton) );
 
 			if( splitting ) {
 
 				//photon definition barrel
 				bool isPhotonOrElectron = eta < susy::etaGapBegin
-					&& it->hadTowOverEm < 0.05
-					&& it->sigmaIetaIeta < 0.012
+					&& photonToTree.hadTowOverEm < 0.05
+					&& photonToTree.sigmaIetaIeta < 0.012
 					&& photonToTree.chargedIso < 2.6
 					&& photonToTree.neutralIso < 3.5+0.04*photonToTree.pt
 					&& photonToTree.photonIso < 1.3+0.005*photonToTree.pt;
 
 				bool isPhotonJet = eta < susy::etaGapBegin
-					&& it->hadTowOverEm < 0.05
-					&& it->sigmaIetaIeta < 0.012
-					&& photonToTree.chargedIso < 26 && photonToTree.chargedIso > 0.01
-					&& photonToTree.neutralIso < 35+0.4*photonToTree.pt && photonToTree.neutralIso > 0.01
-					&& photonToTree.photonIso < 13+0.05*photonToTree.pt && photonToTree.photonIso > 1.3+0.005*photonToTree.pt;
+					&& !photonToTree.pixelseed
+					&& photonToTree.hadTowOverEm < 0.05
+					&& photonToTree.sigmaIetaIeta < 0.012
+					&& photonToTree.chargedIso < 26 && photonToTree.chargedIso > 0.26
+					&& photonToTree.neutralIso < 35+0.4*photonToTree.pt && photonToTree.neutralIso > 0.35+0.004*photonToTree.neutralIso
+					&& photonToTree.photonIso < 13+0.05*photonToTree.pt && photonToTree.photonIso > 0.13+0.0005*photonToTree.pt;
 
 					if( isPhotonOrElectron ) {
 						if( photonToTree.pixelseed )
@@ -810,12 +791,10 @@ void TreeWriter::Loop() {
 		if( loggingVerbosity > 2 )
 			std::cout << " met = " << met << std::endl;
 
-		htHLT = getHtHLT();
 		ht = getHt();
-		jetHt = getJetHt();
+		nGoodJets = countGoodJets( splitting );
 
-		jets = getJets( splitting );
-		if( splitting && hadronicSelection && ( jets.size() < 2 || ht < 500 ) ) continue;
+		if( splitting && hadronicSelection && ( nGoodJets < 2 || ht < 500 ) ) continue;
 
 		if( splitting ) {
 			float gPt = photons.size()         ? photons.at(0).pt         : 0;

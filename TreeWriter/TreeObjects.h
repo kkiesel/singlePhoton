@@ -1,17 +1,28 @@
+#include <TLorentzVector.h>
+#include <TVector3.h>
+
 #ifndef TreeObjects_h
 #define TreeObjects_h
 
 namespace tree {
 // In this namespace classes for the trees are defined.
 
-enum genParticles{
+enum genParticles {
 	kGenPhoton,
 	kGenElectron,
 	kNearLepton
 };
 
+enum jetMatches {
+	kJetPhoton,
+	kJetAllPhoton,
+	kJetGoodId
+};
+
 class Particle {
 	public:
+		float DeltaR( const Particle &p2 ) const;
+		float DeltaR( const TLorentzVector &vec2 ) const;
 		float pt, eta, phi;
 };
 
@@ -27,10 +38,14 @@ class Photon : public Particle {
 		bool conversionSafeVeto;
 		int pixelseed;
 		short genInformation;
+		short matchedJetIndex;
 };
 
 class Jet : public Particle{
 	public:
+		bool isMatch( jetMatches id ) const;
+		void setMatch( jetMatches id );
+		short matchInformation;
 		float bCSV;
 		float chargedHadronEnergy,
 			neutralHadronEnergy,
