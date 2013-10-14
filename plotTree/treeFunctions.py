@@ -74,7 +74,7 @@ def createHistoFromTree(tree, variable, weight="", nBins=20, firstBin=None, last
 		import ROOT
 		tree.Draw("%s>>%s(%s,,)"%(variable,name,nBins), weight, "goff")
 		result = ROOT.gDirectory.Get( name )
-		if type( result ) == type( ROOT.TObject() ):
+		if isinstance( result, ROOT.TTree ):
 			print "Warning, no entries"
 			return ROOT.TH1F()
 		result.Sumw2() # applying the errors here is perhaps not entirely correct
@@ -111,7 +111,7 @@ def readHisto( filename, histoname="eventNumbers" ):
 	ROOT.gROOT.cd()
 	histo = f.Get( histoname )
 	# the name +Clone is only temporaly, since for TH1::Clone a different name is expected
-	if type(histo) == type(ROOT.TObject()):
+	if not isinstance( histo, ROOT.TH1 ):
 		print 'Histogram "%s" not found in file "%s".'%(histoname, filename)
 		return
 	if not histo.GetSumw2():
@@ -212,7 +212,7 @@ def getHisto( tree, plot, cut="1", overflow=0, weight="weight", color=1, nBins=2
 	if fillEmptyBins:
 		# If a neigbour of a empty bin is filled, the error of the bin will be
 		# set to the poisson error for 0 times the weight.
-		poissonZeroError = 1.14
+		poissonZeroError = 1.14787446444
 		weightH = createHistoFromTree( tree, "weight", "weight", 100 )
 		weight = weightH.GetMean()
 
@@ -338,12 +338,14 @@ def divideHistos( numerator, denominator, bayes=False ):
 	resultHisto.Divide( numerator, denominator, 1,1, option )
 	return resultHisto
 
-def applyFakeRateEWK( histo ):
+def applyFakeRateEWK( histo, fakeRate=None, fakeRateError=None ):
 	"""Apply the hard-coded fake rate and error to a histogram. The prediction
 	is returned."""
 
-	fakeRate = 0.0084
-	fakeRateError = 0.0006 # stat
+	if not fakeRate:
+		fakeRate = 0.0084
+	if not fakeRateError:
+		fakeRateError = 0.0006 # stat
 
 	# correct fake rate, if it is estimated with yutaros method
 	fakeRateError = fakeRateError / (1-fakeRate)**2
