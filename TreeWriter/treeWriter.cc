@@ -465,7 +465,7 @@ void TreeWriter::getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton=true
 			hist2D["matchJetFO"].Fill( deltaR_, eRel );
 
 		// Define the selection criteria
-		if (deltaR_ > 0.3 || eRel < 0.95 ) continue;
+		if (deltaR_ > 0.35 ) continue;
 		jet->setMatch( tree::kJetAllPhoton );
 
 		// If only one jet is found, we would be done here
