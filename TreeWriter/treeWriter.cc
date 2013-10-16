@@ -5,18 +5,18 @@ using namespace std;
 float effectiveAreaElectron( float eta ) {
 	/** Returns the effective area for the isolation criteria for electrons.
 	 * See https://twiki.cern.ch/twiki/bin/view/CMS/EgammaEARhoCorrection
-	 * only for Delta R = 0.3 on 2012 Data
+	 * only for Delta R = 0.4 on 2012 Data
 	 */
 	eta = fabs( eta );
 	float ea;
 
-	if( eta < 1.0 ) ea = 0.13;
-	else if( eta < 1.479 ) ea = 0.14;
-	else if( eta < 2.0 ) ea = 0.07;
-	else if( eta < 2.2 ) ea = 0.09;
-	else if( eta < 2.3 ) ea = 0.11;
-	else if( eta < 2.4 ) ea = 0.11;
-	else ea = 0.14;
+	if( eta < 1.0 ) ea = 0.208;
+	else if( eta < 1.479 ) ea = 0.209;
+	else if( eta < 2.0 ) ea = 0.115;
+	else if( eta < 2.2 ) ea = 0.143;
+	else if( eta < 2.3 ) ea = 0.183;
+	else if( eta < 2.4 ) ea = 0.194;
+	else ea = 0.261;
 
 	return ea;
 }
@@ -252,7 +252,7 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 	hist2D["matchJetFO"] = TH2F("", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
 	hist2D["matchPhoton"] = TH2F("", ";#DeltaR;#Delta p_{T}/p_{T}", 100, 0, 1, 200, -2, 2 );
 	hist2D["matchElectron"] = TH2F("", ";#DeltaR;#Delta p_{T}/p_{T}", 100, 0, 1, 200, -2, 2 );
-	hist2D["default"] = TH2F("", ";", 1, 0, 1, 1, 0, 1 );
+	hist2D["matchLepton"] = TH2F("", ";", 1, 0, 1, 1, 0, 1 );
 
 	// Set the keyName as histogram name for one and two dimensional histograms
 	for( std::map<std::string, TH1F>::iterator it = hist1D.begin();
@@ -505,6 +505,7 @@ void TreeWriter::fillJets() {
 			it != jetVector.end(); ++it) {
 
 		TLorentzVector corrP4 = it->jecScaleFactors.at("L1FastL2L3") * it->momentum;
+
 		if( std::abs(corrP4.Eta()) > 3 ) continue;
 		if( corrP4.Pt() < 30 ) continue;
 
@@ -720,13 +721,24 @@ void TreeWriter::Loop() {
 		std::vector<susy::Photon> photonVector = event.photons["photons"];
 		for(std::vector<susy::Photon>::iterator it = photonVector.begin();
 				it != photonVector.end(); ++it ) {
-			float eta = std::abs( it->momentum.Eta() );
-			if( it->momentum.Pt() < photonPtThreshold || eta >= susy::etaGapBegin )
-				continue;
+			if( std::abs( it->momentum.Eta() ) > susy::etaGapBegin ) continue;
+
+			photonToTree.genInformation = 0;
+			if( matchLorentzToGenVector( it->momentum, genPhotons, hist2D["matchPhoton"], 1e6, .05 ) )
+				photonToTree.setGen( tree::kGenPhoton );
+			if( matchLorentzToGenVector( it->momentum, genElectrons, hist2D["matchElectron"], 1e6, .05 ) )
+				photonToTree.setGen( tree::kGenElectron );
+			if( matchLorentzToGenVector( it->momentum, electrons, hist2D["matchLepton"], 1e6 ) ||
+					matchLorentzToGenVector( it->momentum, muons, hist2D["matchLepton"], 1e6 ) )
+				photonToTree.setGen( tree::kNearLepton );
+
+			getPtFromMatchedJet( photonToTree, photonToTree.isGen( tree::kGenPhoton) );
+			photonToTree.pt = it->momentum.Pt();
+			if( photonToTree.ptJet() < photonPtThreshold ) continue;
+
 			photonToTree.chargedIso = chargedHadronIso_corrected(*it, event.rho25);
 			photonToTree.neutralIso = neutralHadronIso_corrected(*it, event.rho25);
 			photonToTree.photonIso = photonIso_corrected(*it, event.rho25);
-			photonToTree.pt = it->momentum.Pt();
 			photonToTree.eta = it->momentum.Eta();
 			photonToTree.phi = it->momentum.Phi();
 			photonToTree.r9 = it->r9;
@@ -735,18 +747,6 @@ void TreeWriter::Loop() {
 			photonToTree.hadTowOverEm = it->hadTowOverEm;
 			photonToTree.pixelseed = it->nPixelSeeds;
 			photonToTree.conversionSafeVeto = it->passelectronveto;
-			photonToTree.genInformation = 0;
-			if( matchLorentzToGenVector( it->momentum, genPhotons, hist2D["matchPhoton"], 1e6, .05 ) )
-				photonToTree.setGen( tree::kGenPhoton );
-			if( matchLorentzToGenVector( it->momentum, genElectrons, hist2D["matchElectron"], 1e6, .05 ) )
-				photonToTree.setGen( tree::kGenElectron );
-
-			if( matchLorentzToGenVector( it->momentum, electrons, hist2D["default"], 1e6 ) ||
-					matchLorentzToGenVector( it->momentum, muons, hist2D["default"], 1e6 ) )
-				photonToTree.setGen( tree::kNearLepton );
-
-
-			getPtFromMatchedJet( photonToTree, photonToTree.isGen( tree::kGenPhoton) );
 
 			if( splitting ) {
 

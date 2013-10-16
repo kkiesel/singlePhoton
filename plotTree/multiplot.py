@@ -6,81 +6,94 @@ class Multihisto:
 		self.orderByIntegral = True
 		self.histos = []
 		self.histosToStack = []
-		self.denominator = None
-		self.numerator = None
+		self.minimum = None
+		self.maximum = None
 		self.leg = myLegend(.7,.7,.95,.92)
-		self.legendOption = "l"
 
 	def addHisto( self, singleHisto, label=None, toStack=False, draw="hist" ):
 		if toStack:
-			singleHisto.SetFillColor( singleHisto.GetLineColor() )
-			singleHisto.SetLineColor( 1 )
-			self.histosToStack.append( singleHisto )
-			self.leg.AddEntry( singleHisto, label, "f" )
+			self.histosToStack.append( ( singleHisto, label, draw ) )
 		else:
-			self.histos.append( (singleHisto, draw) )
-			if label:
-				if "p" in draw:
-					self.legendOption = "pl"
-				if "hist" in draw:
-					self.legendOption = "l"
-				if draw == "e2":
-					self.legendOption = "f"
-				self.leg.AddEntry( singleHisto, label, self.legendOption )
+			self.histos.append( ( singleHisto, label, draw ) )
 
 	def stackHistos( self ):
 		if not self.histosToStack:
 			return
 		if self.orderByIntegral:
 			# sort histograms first
-			self.histosToStack.sort( key=lambda x: x.Integral() )
+			self.histosToStack.sort( key=lambda x: x[0].Integral() )
+
 		stack = ROOT.THStack()
-		stack.SetTitle( ";%s;%s"%(self.histosToStack[0].GetXaxis().GetTitle(),self.histosToStack[0].GetYaxis().GetTitle()) )
+		stack.SetTitle( ";%s;%s"%(self.histosToStack[0][0].GetXaxis().GetTitle(),self.histosToStack[0][0].GetYaxis().GetTitle()) )
 		for h in self.histosToStack:
-			stack.Add( h )
-		self.histos.append( (stack,"hist") )
+			h[0].SetFillColor( h[0].GetLineColor() )
+			h[0].SetLineColor(1)
+			stack.Add( h[0] )
 
-	def GetMinimum( self ):
-		mini = 100000
-		for hist,draw in self.histos:
-			# search for minimum > 0
-			try:
-				if hist.GetMinimum(0) < mini:
-					mini = hist.GetMinimum(0)
-			except:
-				myMin = hist.GetMinimum()
-				if myMin < mini and myMin > 0:
-					mini = myMin
-		return mini
+		self.stack = stack
+		return stack
 
-	def GetMaximum( self ):
-		maxi = -100000
-		for hist, draw in self.histos:
-			if hist.GetMaximum() > maxi:
-				maxi = hist.GetMaximum()
-		return maxi
+	def GetMinimum( self, histos ):
+		values = []
+		for hist, label, draw in histos:
+			if isinstance( hist, ROOT.THStack ) and hist.GetMinimum()>0:
+				values.append( hist.GetMinimum() )
+			else:
+				values.append( hist.GetMinimum(0) )
+		return min( values )
+
+	def GetMaximum( self, histos ):
+		return max( [ x[0].GetMaximum() for x in histos ] )
+
+	def fillLegend( self ):
+		for hist, label, draw in self.histos:
+			if label:
+				legendOption = "l"
+				if "p" in draw:
+					legendOption = "pl"
+				elif "hist" in draw:
+					legendOption = "l"
+				elif draw == "e2":
+					legendOption = "f"
+				self.leg.AddEntry( hist, label, legendOption )
+		for hist, label, draw in reversed(self.histosToStack):
+			if label:
+				self.leg.AddEntry( hist, label, "f" )
 
 	def Draw( self  ):
-		self.stackHistos()
-
-		if self.histos:
-			# adjust maximum and minimum for log and not log
-			maximum = self.GetMaximum()
-			minimum = self.GetMinimum()
-			if ROOT.gPad.GetLogy():
-				maximum = maximum*5
-				minimum = minimum/3
-			else:
-				maximum = maximum + (maximum-minimum)*.1
-				minimum = minimum - (maximum-minimum)*.1
-			self.histos[0][0].SetMaximum( maximum )
-			self.histos[0][0].SetMinimum( minimum )
-
-			self.histos[-1][0].Draw(self.histos[-1][1])
-			for hist, draw in self.histos[0:-1]:
-				hist.Draw("same %s"%draw)
-		else:
+		if not self.histos and not self.histosToStack:
 			print "No histogram added"
+			return
 
+		stack = self.stackHistos()
+		self.stack = stack
+
+		histosToDraw = self.histos
+		if stack:
+			histosToDraw = [(stack, "", "hist" )] + self.histos
+
+		maximum = self.GetMaximum( histosToDraw )
+		minimum = self.GetMinimum( histosToDraw )
+		if ROOT.gPad.GetLogy():
+			maximum = 2.5*maximum
+			minimum = 0.5*minimum
+		else:
+			maximum = maximum + (maximum-minimum)*.1
+			minimum = minimum - (maximum-minimum)*.1
+
+		if self.maximum != None:
+			maximum = self.maximum
+		if self.minimum != None:
+			minimum = self.minimum
+
+		histosToDraw[0][0].SetMaximum( maximum )
+		histosToDraw[0][0].SetMinimum( minimum )
+
+		histosToDraw[0][0].Draw( histosToDraw[0][2] )
+		for hist, label, draw in histosToDraw[1:]:
+			hist.Draw("same %s"%draw)
+
+
+		self.fillLegend()
 		if self.leg.GetListOfPrimitives().GetSize():
 			self.leg.Draw()
