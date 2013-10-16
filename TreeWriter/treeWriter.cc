@@ -721,7 +721,7 @@ void TreeWriter::Loop() {
 		std::vector<susy::Photon> photonVector = event.photons["photons"];
 		for(std::vector<susy::Photon>::iterator it = photonVector.begin();
 				it != photonVector.end(); ++it ) {
-			if( std::abs( it->momentum.Eta() ) > susy::etaGapBegin ) continue;
+			if( std::abs( it->momentum.Eta() ) >= susy::etaGapBegin ) continue;
 
 			photonToTree.genInformation = 0;
 			if( matchLorentzToGenVector( it->momentum, genPhotons, hist2D["matchPhoton"], 1e6, .05 ) )
@@ -751,15 +751,13 @@ void TreeWriter::Loop() {
 			if( splitting ) {
 
 				//photon definition barrel
-				bool isPhotonOrElectron = eta < susy::etaGapBegin
-					&& photonToTree.hadTowOverEm < 0.05
+				bool isPhotonOrElectron = photonToTree.hadTowOverEm < 0.05
 					&& photonToTree.sigmaIetaIeta < 0.012
 					&& photonToTree.chargedIso < 2.6
 					&& photonToTree.neutralIso < 3.5+0.04*photonToTree.pt
 					&& photonToTree.photonIso < 1.3+0.005*photonToTree.pt;
 
-				bool isPhotonJet = eta < susy::etaGapBegin
-					&& !photonToTree.pixelseed
+				bool isPhotonJet = !photonToTree.pixelseed
 					&& photonToTree.hadTowOverEm < 0.05
 					&& photonToTree.sigmaIetaIeta < 0.012
 					&& photonToTree.chargedIso < 26 && photonToTree.chargedIso > 0.26
