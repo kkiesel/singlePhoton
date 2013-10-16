@@ -715,6 +715,7 @@ void TreeWriter::Loop() {
 		std::vector<susy::Photon> photonVector = event.photons["photons"];
 		for(std::vector<susy::Photon>::iterator it = photonVector.begin();
 				it != photonVector.end(); ++it ) {
+			if( std::abs( it->momentum.Eta() ) > susy::etaGapBegin ) continue;
 
 			photonToTree.genInformation = 0;
 			if( matchLorentzToGenVector( it->momentum, genPhotons, hist2D["matchPhoton"], 1e6, .05 ) )
@@ -725,13 +726,13 @@ void TreeWriter::Loop() {
 					matchLorentzToGenVector( it->momentum, muons, hist2D["matchLepton"], 1e6 ) )
 				photonToTree.setGen( tree::kNearLepton );
 
-			float eta = std::abs( it->momentum.Eta() );
-			if( it->momentum.Pt() < photonPtThreshold || eta >= susy::etaGapBegin )
-				continue;
+			getPtFromMatchedJet( photonToTree, photonToTree.isGen( tree::kGenPhoton) );
+			photonToTree.pt = it->momentum.Pt();
+			if( photonToTree.ptJet() < photonPtThreshold ) continue;
+
 			photonToTree.chargedIso = chargedHadronIso_corrected(*it, event.rho25);
 			photonToTree.neutralIso = neutralHadronIso_corrected(*it, event.rho25);
 			photonToTree.photonIso = photonIso_corrected(*it, event.rho25);
-			photonToTree.pt = it->momentum.Pt();
 			photonToTree.eta = it->momentum.Eta();
 			photonToTree.phi = it->momentum.Phi();
 			photonToTree.r9 = it->r9;
@@ -740,8 +741,6 @@ void TreeWriter::Loop() {
 			photonToTree.hadTowOverEm = it->hadTowOverEm;
 			photonToTree.pixelseed = it->nPixelSeeds;
 			photonToTree.conversionSafeVeto = it->passelectronveto;
-
-			getPtFromMatchedJet( photonToTree, photonToTree.isGen( tree::kGenPhoton) );
 
 			if( splitting ) {
 
