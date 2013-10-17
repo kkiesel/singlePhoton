@@ -1,5 +1,7 @@
 #include "treeWriter.h"
 
+using namespace std;
+
 float effectiveAreaElectron( float eta ) {
 	/** Returns the effective area for the isolation criteria for electrons.
 	 * See https://twiki.cern.ch/twiki/bin/view/CMS/EgammaEARhoCorrection
@@ -451,8 +453,11 @@ void TreeWriter::getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton=true
 	 * At first all jets with DeltaR < 0.3 (isolation cone) are searched.
 	 * If several jets are found, take the one with the minimal pt difference
 	 * compared to the photon. If no such jets are found, keep the photon_pt
+
+	 * change _ptJet and matchedJetIndex
 	 */
-	float returnPt = 0;
+	myPhoton._ptJet = 0;
+	myPhoton.matchedJetIndex = -1;
 	std::vector<short> indices;
 
 	for(std::vector<tree::Jet>::iterator jet = jets.begin();
@@ -460,22 +465,27 @@ void TreeWriter::getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton=true
 
 		float deltaR_ = myPhoton.DeltaR( *jet );
 		float eRel = jet->pt / myPhoton.pt;
+
+		// Fill in matching histograms
 		if( isPhoton )
 			hist2D["matchJet"].Fill( deltaR_, eRel );
 		else
 			hist2D["matchJetFO"].Fill( deltaR_, eRel );
 
-		if (deltaR_ > 0.3 || eRel <= 0.95 ) continue;
+		// Define the selection criteria
+		if (deltaR_ > 0.35 ) continue;
 		jet->setMatch( tree::kJetAllPhoton );
 
-		if( loggingVerbosity > 2 ) std::cout << " pT_jet / pT_gamma = " << eRel << std::endl;
+		// If only one jet is found, we would be done here
+		myPhoton.matchedJetIndex = std::distance( jets.begin(), jet );
+		myPhoton._ptJet = jet->pt;
 
-		indices.push_back( std::distance( jets.begin(), jet ) );
-		returnPt = jet->pt;
+		// If more than one jet is found, we have to decide which jet to choose
+		indices.push_back( myPhoton.matchedJetIndex );
 	}// for jet
+
+	// If more than one jet was found, we take the one nearer to the photon in pt
 	if( indices.size() > 1 ) {
-		float pt = 0;
-		short minIndex = 0;
 		float minPtDifferenz = 1E20; // should be very high
 
 		for( std::vector<short>::const_iterator index = indices.begin();
@@ -483,17 +493,13 @@ void TreeWriter::getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton=true
 			float ptDiff = std::abs(myPhoton.pt - jets.at(*index).pt);
 			if ( ptDiff < minPtDifferenz ) {
 				minPtDifferenz = ptDiff;
-				pt = jets.at(*index).pt;
-				minIndex = *index;
+				myPhoton._ptJet = jets.at(*index).pt;
+				myPhoton.matchedJetIndex = *index;
 			}
 		}
-		jets.at(minIndex).setMatch( tree::kJetPhoton );
-		myPhoton.matchedJetIndex = minIndex;
-		myPhoton._ptJet = pt;
+		jets.at( myPhoton.matchedJetIndex ).setMatch( tree::kJetPhoton );
 	} else if( indices.size() == 1 ) {
-		myPhoton.matchedJetIndex = indices.at(0);
 		jets.at(0).setMatch( tree::kJetPhoton );
-		myPhoton._ptJet = returnPt;
 	} else if( loggingVerbosity > 1 )
 		std::cout << "No matching jet found, do not change photon_pt." << std::endl;
 }
@@ -744,7 +750,7 @@ void TreeWriter::Loop() {
 		std::vector<susy::Photon> photonVector = event.photons["photons"];
 		for(std::vector<susy::Photon>::iterator it = photonVector.begin();
 				it != photonVector.end(); ++it ) {
-			if( std::abs( it->momentum.Eta() ) > susy::etaGapBegin ) continue;
+			if( std::abs( it->momentum.Eta() ) >= susy::etaGapBegin ) continue;
 
 			photonToTree.genInformation = 0;
 			if( matchLorentzToGenVector( it->momentum, genPhotons, hist2D["matchPhoton"], 1e6, .1) )
@@ -774,16 +780,14 @@ void TreeWriter::Loop() {
 			if( splitting ) {
 
 				//photon definition barrel
-				bool isPhotonOrElectron = eta < susy::etaGapBegin
-					&& photonToTree.hadTowOverEm < 0.05
+				bool isPhotonOrElectron = photonToTree.hadTowOverEm < 0.05
 					&& photonToTree.sigmaIetaIeta < 0.012
 					&& photonToTree.chargedIso < 2.6
 					&& photonToTree.neutralIso < 3.5+0.04*photonToTree.pt
 					&& photonToTree.photonIso < 1.3+0.005*photonToTree.pt;
 
 				// photonJet definition
-				bool isPhotonJet = eta < susy::etaGapBegin
-					&& !photonToTree.pixelseed
+				bool isPhotonJet = !photonToTree.pixelseed
 					&& photonToTree.hadTowOverEm < 0.05
 					&& photonToTree.sigmaIetaIeta < 0.012
 					&& photonToTree.chargedIso < 26 && photonToTree.chargedIso > 0.26
@@ -845,8 +849,10 @@ void TreeWriter::Loop() {
 			if( isPhotonEvent ) {
 				photonTree.Fill();
 				hist1D["gMet"].Fill( met, weight );
+				if( ht < photons.at(0).ptJet() ) std::cout << "HT<pt in " << inputTree.GetFile()->GetName() << " with event number " << eventNumber << std::endl;
 			}
 			if( isPhotonJetEvent) {
+				if( ht < photonJets.at(0).ptJet() ) std::cout << "loose HT<pt in " << inputTree.GetFile()->GetName() << " with event number " << eventNumber << std::endl;
 				photonJetTree.Fill();
 				float qcdWeight=0, qcdWeightUp=0, qcdWeightDown=0;
 				getQcdWeights( photonJets.at(0).ptJet(), ht, qcdWeight, qcdWeightUp, qcdWeightDown );
