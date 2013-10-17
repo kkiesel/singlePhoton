@@ -160,7 +160,7 @@ bool passLooseJetId( const susy::PFJet& jet ) {
 }
 
 bool goodVertex( susy::Vertex& vtx ) {
-	/** Definition of a good vertex
+	/** Definition of a good vertex. Returns true if the vertex is good.
 	 */
 	return (!vtx.isFake() &&
 		vtx.ndof > 4 &&
@@ -169,6 +169,8 @@ bool goodVertex( susy::Vertex& vtx ) {
 }
 
 unsigned int numberOfGoodVertexInCollection( std::vector<susy::Vertex>& vertexVector ) {
+	/* Counts the number of good vertices in the vertex Vector
+	 */
 	unsigned int number = 0;
 	for( std::vector<susy::Vertex>::iterator vtx = vertexVector.begin();
 			vtx != vertexVector.end(); ++vtx ) {
@@ -179,6 +181,12 @@ unsigned int numberOfGoodVertexInCollection( std::vector<susy::Vertex>& vertexVe
 }
 
 bool matchLorentzToGenVector( TLorentzVector& lvec, std::vector<tree::Particle>& genParticles, TH2F& hist, float deltaPtRel_ = .3, float deltaR_ = .3 ) {
+	/* Try to match a TLorentzVector any element in a given vector.
+	 *
+	 * lvec: vector for which match is computed
+	 * genParticles: vector of many particles for which a match to lvec is checked.
+	 * hist: fill the histogram with dR and relPt
+	 */
 	bool match = false;
 	float dR, dPt;
 	TLorentzVector a;
@@ -491,6 +499,11 @@ void TreeWriter::getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton=true
 }
 
 void TreeWriter::fillJets() {
+	/* Read the jets from susyEvent and save them to jet vector.
+	 * All jets for HT calculation, and photon-jet matching are saved.
+	 * This are not the final jets in the analysis.
+	 * All jets are corrected
+	 */
 	jets.clear();
 	tree::Jet jetToTree;
 
@@ -529,6 +542,12 @@ void TreeWriter::fillJets() {
 }
 
 float TreeWriter::getHt() const {
+	/* HT is sum jet + sum photon + sum photonJet + sum photonElectron
+	 * For the jet sum, jets have to have a good Id or was used as match for a
+	 * photon/photonJet/photonElectron.
+	 * For the sum of photonObjects, the pt is only added in case the pt of the
+	 * matched jet was not added.
+	 */
 	if( !splitting )
 		return 0;
 
@@ -561,6 +580,12 @@ float TreeWriter::getHt() const {
 }
 
 unsigned int TreeWriter::countGoodJets( bool clean ) const {
+	/* Count the number of good jets.
+	 * They
+	 * * have different pt and eta criteria as the jet collection
+	 * * jetID
+	 * * cleared of electorns, muons, photonObjects
+	 */
 	unsigned int number = 0;
 	for(std::vector<tree::Jet>::const_iterator jet = jets.begin();
 			jet != jets.end(); ++jet ) {
@@ -579,6 +604,8 @@ unsigned int TreeWriter::countGoodJets( bool clean ) const {
 	return number;
 }
 void TreeWriter::SetBranches( TTree& tree ) {
+	/* For each tree, the branches have to be set
+	 */
 	tree.Branch("jets", &jets);
 	tree.Branch("electrons", &electrons);
 	tree.Branch("muons", &muons);
@@ -656,6 +683,8 @@ void TreeWriter::Loop() {
 		runNumber = event.runNumber;
 		eventNumber = event.eventNumber;
 		luminosityBlockNumber = event.luminosityBlockNumber;
+
+		// For data, the weight is 1. Else take the pileup weight.
 		weight = event.isRealData ? 1. : getPileUpWeight();
 
 		// genParticles
@@ -707,7 +736,8 @@ void TreeWriter::Loop() {
 		if( loggingVerbosity > 1 )
 			std::cout << "Found " << muons.size() << " muons" << std::endl;
 
-		// get jets
+		// The jets have to be filled before looping over the photons and searching
+		// for jet photon matches.
 		fillJets();
 
 		// photons
@@ -717,9 +747,9 @@ void TreeWriter::Loop() {
 			if( std::abs( it->momentum.Eta() ) > susy::etaGapBegin ) continue;
 
 			photonToTree.genInformation = 0;
-			if( matchLorentzToGenVector( it->momentum, genPhotons, hist2D["matchPhoton"], 1e6, .05 ) )
+			if( matchLorentzToGenVector( it->momentum, genPhotons, hist2D["matchPhoton"], 1e6, .1) )
 				photonToTree.setGen( tree::kGenPhoton );
-			if( matchLorentzToGenVector( it->momentum, genElectrons, hist2D["matchElectron"], 1e6, .05 ) )
+			if( matchLorentzToGenVector( it->momentum, genElectrons, hist2D["matchElectron"], 1e6, .1 ) )
 				photonToTree.setGen( tree::kGenElectron );
 			if( matchLorentzToGenVector( it->momentum, electrons, hist2D["matchLepton"], 1e6 ) ||
 					matchLorentzToGenVector( it->momentum, muons, hist2D["matchLepton"], 1e6 ) )
@@ -751,6 +781,7 @@ void TreeWriter::Loop() {
 					&& photonToTree.neutralIso < 3.5+0.04*photonToTree.pt
 					&& photonToTree.photonIso < 1.3+0.005*photonToTree.pt;
 
+				// photonJet definition
 				bool isPhotonJet = eta < susy::etaGapBegin
 					&& !photonToTree.pixelseed
 					&& photonToTree.hadTowOverEm < 0.05
@@ -795,6 +826,7 @@ void TreeWriter::Loop() {
 		if( splitting && hadronicSelection && ( nGoodJets < 2 || ht < 500 ) ) continue;
 
 		if( splitting ) {
+			// Assing event to the leading photonObject
 			float gPt = photons.size()         ? photons.at(0).pt         : 0;
 			float ePt = photonElectrons.size() ? photonElectrons.at(0).pt : 0;
 			float fPt = photonJets.size()      ? photonJets.at(0).pt      : 0;
@@ -846,14 +878,19 @@ void TreeWriter::Loop() {
 				it!= hist2D.end(); ++it )
 			it->second.Write();
 	}
-	TPRegexp expFilename( ".*/tree_([0-9]+_[0-9]+)_375.root" );
+
+	// If running over signal scans, the mass point information is appended to
+	// the histogram name.
+	TPRegexp expFilename( ".*/tree_([0-9]+_[0-9]+)_375.root" ); // eg. /path/to/mc/tree_1200_1220_375.root
 	TObjArray *arr = expFilename.MatchS( inputTree.GetCurrentFile()->GetName() );
+
 	std::string histoNameAppendix = "";
 	if( arr->GetLast() >0 )
 		histoNameAppendix = (std::string)(((TObjString *)arr->At(1))->GetString());
-	else
+	else if( loggingVerbosity > 0 )
 		std::cout << "Could not extract grid parameters from filename." << std::endl;
 
+	// Append the signal information to the histogram name
 	for( std::map<std::string, TH1F>::iterator it = hist1D.begin();
 			it!= hist1D.end(); ++it ) {
 		it->second.SetName( (it->second.GetName() + histoNameAppendix ).c_str() );

@@ -71,6 +71,9 @@ class TreeWriter {
 		susy::Event event;
 
 		// Objects which can be saved to the file
+		// photons: All tight photons (signal photons)
+		// photonJets: All loose photons (qcd fake object)
+		// photonElectrons: All photons with pixel seeds (ewk fake object)
 		TFile outFile;
 		TTree photonTree;
 		TTree photonElectronTree;
