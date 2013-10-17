@@ -665,8 +665,7 @@ void TreeWriter::Loop() {
 			// status 3: particles in matrix element
 			// status 2: intermediate particles
 			// status 1: final particles (but can decay in geant, etc)
-			// TODO: Check substraction of 10
-			if( it->momentum.Pt() < photonPtThreshold-10 || it->status != 1) continue;
+			if( it->momentum.Pt() < 40 || it->status != 1) continue;
 
 			thisGenParticle.pt = it->momentum.Pt();
 			thisGenParticle.eta = it->momentum.Eta();
