@@ -10,6 +10,7 @@ namespace tree {
 enum genParticles {
 	kGenPhoton,
 	kGenElectron,
+	kGenJet,
 	kNearLepton
 };
 
