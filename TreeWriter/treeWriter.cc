@@ -182,7 +182,7 @@ unsigned int numberOfGoodVertexInCollection( const std::vector<susy::Vertex>& ve
 	return number;
 }
 
-bool matchLorentzToGenVector( TLorentzVector& lvec, std::vector<tree::Particle>& genParticles, TH2F& hist, float deltaPtRel_ = .3, float deltaR_ = .3 ) {
+bool matchLorentzToGenVector( TLorentzVector& lvec, std::vector<tree::Particle>& genParticles, TH2F* hist=NULL, float deltaR_=.3, float deltaPtRel_=1e6 ) {
 	/* Try to match a TLorentzVector any element in a given vector.
 	 *
 	 * lvec: vector for which match is computed
@@ -197,7 +197,9 @@ bool matchLorentzToGenVector( TLorentzVector& lvec, std::vector<tree::Particle>&
 		a.SetPtEtaPhiE( it->pt, it->eta, it->phi, 1  );
 		dR = lvec.DeltaR( a );
 		dPt = 2*(it->pt-lvec.Pt())/(it->pt+lvec.Pt());
-		hist.Fill( dR, dPt );
+
+		if( hist ) hist->Fill( dR, dPt );
+
 		if ( dR <= deltaR_ &&  std::abs(dPt) <= deltaPtRel_ )
 			match = true;
 	}
@@ -210,7 +212,7 @@ void printChildren( int index, susy::ParticleCollection&  particles, int level=0
 	 */
 	for (int i = 0; i< level; ++i )
 		std::cout <<"\t";
-	std::cout << particles[index].pdgId << " (" << (int)particles[index].status << ")"<< std::endl;
+	std::cout << particles[index].pdgId << " (" << (int)particles[index].status << ") " << particles[index].momentum.Pt() << std::endl;
 
 	//susy::ParticleCollection children;
 	for( susy::ParticleCollection::const_iterator it = particles.begin(); it != particles.end(); ++it ) {
@@ -667,10 +669,14 @@ void TreeWriter::Loop() {
 		event.getEntry(jentry);
 
 		bool printCascade = false;
-		for( susy::ParticleCollection::const_iterator it = event.genParticles.begin(); printCascade && it != event.genParticles.end(); ++it ){
-			if( it->motherIndex == -1 ){
-				printChildren( std::distance<susy::ParticleCollection::const_iterator>(event.genParticles.begin(), it ), event.genParticles );
+		if( printCascade ) {
+			std::cout << "=================================================" << std::endl;
+			for( susy::ParticleCollection::const_iterator it = event.genParticles.begin(); printCascade && it != event.genParticles.end(); ++it ){
+				if( it->motherIndex == -1 ){
+					printChildren( std::distance<susy::ParticleCollection::const_iterator>(event.genParticles.begin(), it ), event.genParticles );
+				}
 			}
+			continue;
 		}
 
 		if ( event.isRealData )
@@ -695,6 +701,10 @@ void TreeWriter::Loop() {
 		// For data, the weight is 1. Else take the pileup weight.
 		weight = event.isRealData ? 1. : getPileUpWeight();
 
+		// Particles needed for jet matching
+		std::vector<tree::Particle> genQuarkLike;
+		genQuarkLike.clear();
+
 		// genParticles
 		tree::Particle thisGenParticle;
 		for( std::vector<susy::Particle>::const_iterator it = event.genParticles.begin(); it != event.genParticles.end(); ++it ) {
@@ -707,13 +717,18 @@ void TreeWriter::Loop() {
 			thisGenParticle.pt = it->momentum.Pt();
 			thisGenParticle.eta = it->momentum.Eta();
 			thisGenParticle.phi = it->momentum.Phi();
-			switch( std::abs(it->pdgId) ) {
+			int pdgId = std::abs(it->pdgId);
+			switch( pdgId ) {
 				case 22: // photon
 					genPhotons.push_back( thisGenParticle );
 					break;
 				case 11: // electron
 					genElectrons.push_back( thisGenParticle );
 					break;
+			}
+			if( pdgId < 7 // quarks
+				|| (pdgId > 99 && pdgId < 6000) ) {// hadrons
+				genQuarkLike.push_back( thisGenParticle );
 			}
 		}
 
@@ -799,12 +814,15 @@ void TreeWriter::Loop() {
 			// Fill matching histograms only for photon-like objects
 			if( splitting && !isPhotonOrElectron && !isPhotonJet ) continue;
 
-			if( matchLorentzToGenVector( it->momentum, genPhotons, hist2D["matchPhoton"], 1e6, .1) )
+			if( matchLorentzToGenVector( it->momentum, genPhotons, &hist2D["matchPhoton"], .1 ) )
 				photonToTree.setGen( tree::kGenPhoton );
-			if( matchLorentzToGenVector( it->momentum, genElectrons, hist2D["matchElectron"], 1e6, .1 ) )
+			if( matchLorentzToGenVector( it->momentum, genElectrons, &hist2D["matchElectron"], .1 ) )
 				photonToTree.setGen( tree::kGenElectron );
-			if( matchLorentzToGenVector( it->momentum, electrons, hist2D["matchLepton"], 1e6 ) ||
-					matchLorentzToGenVector( it->momentum, muons, hist2D["matchLepton"], 1e6 ) )
+			if( matchLorentzToGenVector( it->momentum, genQuarkLike, NULL, .3 ) )
+				photonToTree.setGen( tree::kGenJet );
+
+			if( matchLorentzToGenVector( it->momentum, electrons, &hist2D["matchLepton"], .3 ) ||
+					matchLorentzToGenVector( it->momentum, muons, &hist2D["matchLepton"], .3 ) )
 				photonToTree.setGen( tree::kNearLepton );
 
 			getPtFromMatchedJet( photonToTree, photonToTree.isGen( tree::kGenPhoton) );
