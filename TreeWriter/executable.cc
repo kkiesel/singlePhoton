@@ -2,7 +2,7 @@
 
 int main( int argc, char** argv ) {
 
-	if( argc < 2 ) {
+	if( argc < 3 ) {
 		std::cout << "usage: ./execute outputFileName.root input1.root input2.root ..." << std::endl;
 		return 1;
 	}
