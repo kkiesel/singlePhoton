@@ -256,6 +256,7 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 	hist1D["fMet"] = TH1F("", ";met;", 50, 0, 500 );
 	hist1D["fMetUp"] = TH1F("", ";met;", 50, 0, 500 );
 	hist1D["fMetDown"] = TH1F("", ";met;", 50, 0, 500 );
+	hist1D["matchJetRelPt"] = TH1F("", ";p_{T,jet}/p_{T,#gamma};", 1500, 0, 1500 );
 
 	// Define two dimensional histograms
 	hist2D["matchJet"] = TH2F("", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
@@ -473,11 +474,13 @@ void TreeWriter::getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton=true
 			hist2D["matchJet"].Fill( deltaR_, eRel, weight );
 		else
 			hist2D["matchJetFO"].Fill( deltaR_, eRel, weight );
-		if( deltaR_ < .35 )
+		if( deltaR_ < .30 )
 			hist2D["matchJetPt"].Fill( myPhoton.pt, jet->pt, weight );
+		if( deltaR_ < .30 )
+			hist2D["matchJetRelPt"].Fill( jet->pt/myPhoton.pt, weight );
 
 		// Define the selection criteria
-		if (deltaR_ > 0.35 ) continue;
+		if (deltaR_ > 0.30  && eRel < 4 ) continue;
 		jet->setMatch( tree::kJetAllPhoton );
 
 		// If only one jet is found, we would be done here
@@ -891,7 +894,6 @@ void TreeWriter::Loop() {
 				hist1D["fMet"].Fill( met, weight*qcdWeight );
 				hist1D["fMetUp"].Fill( met, weight*qcdWeightUp );
 				hist1D["fMetDown"].Fill( met, weight*qcdWeightDown );
-				std::cout<< "Event " << eventNumber << " is a photonJet Event and in file " << inputTree.GetFile()->GetName() << std::endl;
 			}
 			if( isPhotonElectronEvent ) {
 				photonElectronTree.Fill();
