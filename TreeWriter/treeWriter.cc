@@ -356,7 +356,7 @@ void TreeWriter::SetQcdWeightFile( std::string const & filename ) {
 
 	TFile qcdFile( filename.c_str() );
 	if( qcdFile.IsZombie() )
-		std::cerr << "ERROR: Could not read pileup weight file " << filename << std::endl;
+		std::cerr << "ERROR: Could not read qcd weight file " << filename << std::endl;
 
 	std::string histogramName = "qcdWeight";
 	if( qcdFile.GetListOfKeys()->Contains( histogramName.c_str() ) )
@@ -747,6 +747,8 @@ void TreeWriter::Loop() {
 		// The jets have to be filled before looping over the photons and searching
 		// for jet photon matches.
 		fillJets();
+		if( loggingVerbosity > 1 )
+			std::cout << "Found " << jets.size() << " uncleaned jets" << std::endl;
 
 		// photons
 		std::vector<susy::Photon> photonVector = event.photons["photons"];
@@ -758,6 +760,7 @@ void TreeWriter::Loop() {
 			photonToTree.chargedIso = chargedHadronIso_corrected(*it, event.rho25);
 			photonToTree.neutralIso = neutralHadronIso_corrected(*it, event.rho25);
 			photonToTree.photonIso = photonIso_corrected(*it, event.rho25);
+			photonToTree.pt = it->momentum.Pt();
 			photonToTree.eta = it->momentum.Eta();
 			photonToTree.phi = it->momentum.Phi();
 			photonToTree.r9 = it->r9;
@@ -783,7 +786,18 @@ void TreeWriter::Loop() {
 				&& photonToTree.neutralIso < 35+0.4*photonToTree.pt && photonToTree.neutralIso > 0.35+0.004*photonToTree.neutralIso
 				&& photonToTree.photonIso < 13+0.05*photonToTree.pt && photonToTree.photonIso > 0.13+0.0005*photonToTree.pt;
 
-			if( splitting && ( !isPhotonOrElectron || !isPhotonJet ) ) continue;
+			// print photon information
+			if( loggingVerbosity > 2 ) {
+				if( isPhotonOrElectron && !photonToTree.pixelseed )
+					std::cout << " photon pT = " << photonToTree.pt << std::endl;
+				if( isPhotonOrElectron && photonToTree.pixelseed )
+					std::cout << " photonElectron pT = " << photonToTree.pt << std::endl;
+				if( isPhotonJet )
+					std::cout << " photonJet pT = " << photonToTree.pt << std::endl;
+			}
+
+			// Fill matching histograms only for photon-like objects
+			if( splitting && !isPhotonOrElectron && !isPhotonJet ) continue;
 
 			if( matchLorentzToGenVector( it->momentum, genPhotons, hist2D["matchPhoton"], 1e6, .1) )
 				photonToTree.setGen( tree::kGenPhoton );
@@ -794,7 +808,9 @@ void TreeWriter::Loop() {
 				photonToTree.setGen( tree::kNearLepton );
 
 			getPtFromMatchedJet( photonToTree, photonToTree.isGen( tree::kGenPhoton) );
-			photonToTree.pt = it->momentum.Pt();
+			if( loggingVerbosity > 2 )
+				std::cout << "  ->jet pT = " << photonToTree._ptJet << std::endl;
+
 			if( photonToTree.ptJet() < photonPtThreshold ) continue;
 
 			if( splitting ) {
@@ -807,9 +823,6 @@ void TreeWriter::Loop() {
 						photonJets.push_back( photonToTree );
 			} else // no splitting, put everything in the vector 'photons'
 				photons.push_back( photonToTree );
-
-			if( loggingVerbosity > 2 )
-				std::cout << " p_T, gamma = " << photonToTree.pt << std::endl;
 		}
 		std::sort( photons.begin(), photons.end(), tree::EtGreater );
 		std::sort( photonElectrons.begin(), photonElectrons.end(), tree::EtGreater );
@@ -852,16 +865,15 @@ void TreeWriter::Loop() {
 			if( isPhotonEvent ) {
 				photonTree.Fill();
 				hist1D["gMet"].Fill( met, weight );
-				if( ht < photons.at(0).ptJet() ) std::cout << "HT<pt in " << inputTree.GetFile()->GetName() << " with event number " << eventNumber << std::endl;
 			}
 			if( isPhotonJetEvent) {
-				if( ht < photonJets.at(0).ptJet() ) std::cout << "loose HT<pt in " << inputTree.GetFile()->GetName() << " with event number " << eventNumber << std::endl;
 				photonJetTree.Fill();
 				float qcdWeight=0, qcdWeightUp=0, qcdWeightDown=0;
 				getQcdWeights( photonJets.at(0).ptJet(), ht, qcdWeight, qcdWeightUp, qcdWeightDown );
 				hist1D["fMet"].Fill( met, weight*qcdWeight );
 				hist1D["fMetUp"].Fill( met, weight*qcdWeightUp );
 				hist1D["fMetDown"].Fill( met, weight*qcdWeightDown );
+				std::cout<< "Event " << eventNumber << " is a photonJet Event and in file " << inputTree.GetFile()->GetName() << std::endl;
 			}
 			if( isPhotonElectronEvent ) {
 				photonElectronTree.Fill();
