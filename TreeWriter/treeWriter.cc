@@ -251,20 +251,19 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 	eventNumbers.GetXaxis()->SetBinLabel(1,"Number of generated events");
 
 	// Define one dimensional histograms
-	hist1D["gMet"] = TH1F("", ";met;", 50, 0, 500 );
-	hist1D["eMet"] = TH1F("", ";met;", 50, 0, 500 );
-	hist1D["fMet"] = TH1F("", ";met;", 50, 0, 500 );
-	hist1D["fMetUp"] = TH1F("", ";met;", 50, 0, 500 );
-	hist1D["fMetDown"] = TH1F("", ";met;", 50, 0, 500 );
-	hist1D["matchJetRelPt"] = TH1F("", ";p_{T,jet}/p_{T,#gamma};", 1500, 0, 1500 );
+	hist1D["gMet"] = TH1F("", ";met;", 60, 0, 600 );
+	hist1D["eMet"] = TH1F("", ";met;", 60, 0, 600 );
+	hist1D["fMet"] = TH1F("", ";met;", 60, 0, 600 );
+	hist1D["fMetUp"] = TH1F("", ";met;", 60, 0, 600 );
+	hist1D["fMetDown"] = TH1F("", ";met;", 60, 0, 600 );
+	hist1D["matchJetRelPt"] = TH1F("", ";p_{T,jet}/p_{T,#gamma};", 1500, 0, 30 );
 
 	// Define two dimensional histograms
 	hist2D["matchJet"] = TH2F("", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
 	hist2D["matchJetFO"] = TH2F("", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
 	hist2D["matchJetPt"] = TH2F("", "photon-jet matching;p_{T,#gamma};p_{T, jet}", 100, 0, 1000, 100, 0, 1000 );
-	hist2D["matchPhoton"] = TH2F("", ";#DeltaR;#Delta p_{T}/p_{T}", 100, 0, 1, 200, -2, 2 );
-	hist2D["matchElectron"] = TH2F("", ";#DeltaR;#Delta p_{T}/p_{T}", 100, 0, 1, 200, -2, 2 );
-	hist2D["matchLepton"] = TH2F("", ";", 1, 0, 1, 1, 0, 1 );
+	hist2D["matchPhoton"] = TH2F("", ";#DeltaR;#Delta p_{T}/p_{T}", 100, 0, .5, 200, -2, 2 );
+	hist2D["matchElectron"] = TH2F("", ";#DeltaR;#Delta p_{T}/p_{T}", 100, 0, .5, 200, -2, 2 );
 
 	// Set the keyName as histogram name for one and two dimensional histograms
 	for( std::map<std::string, TH1F>::iterator it = hist1D.begin();
@@ -474,13 +473,13 @@ void TreeWriter::getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton=true
 			hist2D["matchJet"].Fill( deltaR_, eRel, weight );
 		else
 			hist2D["matchJetFO"].Fill( deltaR_, eRel, weight );
-		if( deltaR_ < .30 )
+		if( deltaR_ < .3 )
 			hist2D["matchJetPt"].Fill( myPhoton.pt, jet->pt, weight );
-		if( deltaR_ < .30 )
-			hist2D["matchJetRelPt"].Fill( jet->pt/myPhoton.pt, weight );
+		if( deltaR_ < .3 )
+			hist1D["matchJetRelPt"].Fill( jet->pt/myPhoton.pt, weight );
 
 		// Define the selection criteria
-		if (deltaR_ > 0.30  && eRel < 4 ) continue;
+		if (deltaR_ > 0.30  && eRel > .95 ) continue;
 		jet->setMatch( tree::kJetAllPhoton );
 
 		// If only one jet is found, we would be done here
@@ -634,6 +633,7 @@ void TreeWriter::SetBranches( TTree& tree ) {
 	tree.Branch("runNumber", &runNumber, "runNumber/i");
 	tree.Branch("eventNumber", &eventNumber, "eventNumber/i");
 	tree.Branch("luminosityBlockNumber", &luminosityBlockNumber, "luminosityBlockNumber/i");
+	tree.Branch("metFilterBit", &metFilterBit, "metFilterBit/I");
 }
 
 void TreeWriter::Loop() {
@@ -824,8 +824,8 @@ void TreeWriter::Loop() {
 			if( matchLorentzToGenVector( it->momentum, genQuarkLike, NULL, .3 ) )
 				photonToTree.setGen( tree::kGenJet );
 
-			if( matchLorentzToGenVector( it->momentum, electrons, &hist2D["matchLepton"], .3 ) ||
-					matchLorentzToGenVector( it->momentum, muons, &hist2D["matchLepton"], .3 ) )
+			if( matchLorentzToGenVector( it->momentum, electrons, NULL, .3 ) ||
+					matchLorentzToGenVector( it->momentum, muons, NULL, .3 ) )
 				photonToTree.setGen( tree::kNearLepton );
 
 			getPtFromMatchedJet( photonToTree, photonToTree.isGen( tree::kGenPhoton) );
@@ -863,6 +863,7 @@ void TreeWriter::Loop() {
 
 		ht = getHt();
 		nGoodJets = countGoodJets( splitting );
+		metFilterBit = event.metFilterBit;
 
 		if( splitting && hadronicSelection && ( nGoodJets < 2 || ht < 500 ) ) continue;
 

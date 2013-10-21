@@ -103,4 +103,5 @@ class TreeWriter {
 		unsigned int runNumber;
 		unsigned int eventNumber;
 		unsigned int luminosityBlockNumber;
+		int metFilterBit;
 };
