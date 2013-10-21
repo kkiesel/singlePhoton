@@ -222,6 +222,11 @@ void printChildren( int index, susy::ParticleCollection&  particles, int level=0
 }
 
 void fillMetFilterBitHistogram( TH1F& hist, int filterBit ) {
+	/* Store the information about the filtered events in a histogram.
+	 *
+	 * If the event is clean, the 0 bin will be incremented.
+	 * The other filters are filled in the order in susy::MetFilters + 1
+	 */
 	bool eventClean = true;
 	for( int filterIndex = 0; filterIndex < susy::nMetFilters; ++filterIndex )
 		if( !(filterBit & (1 << filterIndex)) ) {
@@ -267,13 +272,13 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 	hist1D["fMet"] = TH1F("", ";met;", 60, 0, 600 );
 	hist1D["fMetUp"] = TH1F("", ";met;", 60, 0, 600 );
 	hist1D["fMetDown"] = TH1F("", ";met;", 60, 0, 600 );
-	hist1D["matchJetRelPt"] = TH1F("", ";p_{T,jet}/p_{T,#gamma};", 1500, 0, 30 );
 	hist1D["metFilters"] = TH1F("", "", 19, -.5, 18.5 );
 
 	// Define two dimensional histograms
 	hist2D["matchJet"] = TH2F("", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
 	hist2D["matchJetFO"] = TH2F("", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
 	hist2D["matchJetPt"] = TH2F("", "photon-jet matching;p_{T,#gamma};p_{T, jet}", 100, 0, 1000, 100, 0, 1000 );
+	hist2D["matchJetPtFO"] = TH2F("", "photon-jet matching;p_{T,#gamma};p_{T, jet}", 100, 0, 1000, 100, 0, 1000 );
 	hist2D["matchPhoton"] = TH2F("", ";#DeltaR;#Delta p_{T}/p_{T}", 100, 0, .5, 200, -2, 2 );
 	hist2D["matchElectron"] = TH2F("", ";#DeltaR;#Delta p_{T}/p_{T}", 100, 0, .5, 200, -2, 2 );
 
@@ -461,7 +466,7 @@ void TreeWriter::getQcdWeights( float pt, float ht_, float & qcdWeight, float & 
 	qcdWeightDown = qcdWeight - error;
 }
 
-void TreeWriter::getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton=true ) {
+void TreeWriter::getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton=false, bool isPhotonJet=false ) {
 	/**
 	 * \brief Takes jet p_T as photon p_T
 	 *
@@ -480,18 +485,19 @@ void TreeWriter::getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton=true
 
 		float deltaR_ = myPhoton.DeltaR( *jet );
 		float eRel = jet->pt / myPhoton.pt;
+
 		// Fill in matching histograms
 		if( isPhoton )
 			hist2D["matchJet"].Fill( deltaR_, eRel, weight );
-		else
-			hist2D["matchJetFO"].Fill( deltaR_, eRel, weight );
-		if( deltaR_ < .3 )
+		if( isPhoton && deltaR_ < .2 )
 			hist2D["matchJetPt"].Fill( myPhoton.pt, jet->pt, weight );
-		if( deltaR_ < .3 )
-			hist1D["matchJetRelPt"].Fill( jet->pt/myPhoton.pt, weight );
+		if( isPhotonJet )
+			hist2D["matchJetFO"].Fill( deltaR_, eRel, weight );
+		if( isPhotonJet && deltaR_ < .2 )
+			hist2D["matchJetPtFO"].Fill( myPhoton.pt, jet->pt, weight );
 
 		// Define the selection criteria
-		if (deltaR_ > 0.30  && eRel > .95 ) continue;
+		if( deltaR_ > 0.2  && eRel > 3 ) continue;
 		jet->setMatch( tree::kJetAllPhoton );
 
 		// If only one jet is found, we would be done here
@@ -539,9 +545,9 @@ void TreeWriter::fillJets() {
 
 		if( std::abs(corrP4.Eta()) > 3 ) continue;
 		if( corrP4.Pt() < 30 ) continue;
+		if( passLooseJetId( *it ) ) continue;
 
 		jetToTree.matchInformation = 0;
-		if( passLooseJetId( *it ) ) jetToTree.setMatch( tree::kJetGoodId );
 		jetToTree.pt = corrP4.Pt();
 		jetToTree.eta = corrP4.Eta();
 		jetToTree.phi = corrP4.Phi();
@@ -579,11 +585,11 @@ float TreeWriter::getHt() const {
 	for(std::vector<tree::Jet>::const_iterator jet = jets.begin();
 			jet != jets.end(); ++jet ) {
 
-		if( !jet->isMatch( tree::kJetGoodId ) && !jet->isMatch( tree::kJetPhoton ) ) continue;
 		if( jet->pt < 40 || jet->eta > 3. ) continue;
 
 		returnedHt += jet->pt;
 	}
+
 	for( std::vector<tree::Photon>::const_iterator photon = photons.begin();
 			photon != photons.end(); ++photon ) {
 		if( photon->_ptJet == 0 )
@@ -599,7 +605,6 @@ float TreeWriter::getHt() const {
 		if( photon->_ptJet == 0 )
 			returnedHt += photon->pt;
 	}
-
 	return returnedHt;
 }
 
@@ -614,7 +619,6 @@ unsigned int TreeWriter::countGoodJets( bool clean ) const {
 	for(std::vector<tree::Jet>::const_iterator jet = jets.begin();
 			jet != jets.end(); ++jet ) {
 		if( jet->pt < 30 || jet->eta > 2.5 ) continue;
-		if( !jet->isMatch( tree::kJetGoodId ) ) continue;
 
 		if( isAdjacentToParticles<tree::Particle>( *jet, electrons ) ) continue;
 		if( isAdjacentToParticles<tree::Particle>( *jet, muons ) ) continue;
@@ -677,7 +681,6 @@ void TreeWriter::Loop() {
 	tree::Photon photonToTree;
 	tree::Particle electronToTree;
 	tree::Particle muonToTree;
-	processNEvents = 2000;
 
 	for (long jentry=0; jentry < processNEvents; ++jentry) {
 		if ( loggingVerbosity>1 || jentry%reportEvery==0 ) std::cout << jentry << " / " << processNEvents << std::endl;
@@ -808,6 +811,9 @@ void TreeWriter::Loop() {
 				&& photonToTree.neutralIso < 3.5+0.04*photonToTree.pt
 				&& photonToTree.photonIso < 1.3+0.005*photonToTree.pt;
 
+			bool isPhoton = isPhotonOrElectron && !photonToTree.pixelseed;
+			bool isPhotonElectron = isPhotonOrElectron && photonToTree.pixelseed;
+
 			// photonJet definition
 			bool isPhotonJet = !photonToTree.pixelseed
 				&& photonToTree.hadTowOverEm < 0.05
@@ -818,12 +824,9 @@ void TreeWriter::Loop() {
 
 			// print photon information
 			if( loggingVerbosity > 2 ) {
-				if( isPhotonOrElectron && !photonToTree.pixelseed )
-					std::cout << " photon pT = " << photonToTree.pt << std::endl;
-				if( isPhotonOrElectron && photonToTree.pixelseed )
-					std::cout << " photonElectron pT = " << photonToTree.pt << std::endl;
-				if( isPhotonJet )
-					std::cout << " photonJet pT = " << photonToTree.pt << std::endl;
+				if( isPhoton )         std::cout << " photon pT = " << photonToTree.pt << std::endl;
+				if( isPhotonElectron ) std::cout << " photonElectron pT = " << photonToTree.pt << std::endl;
+				if( isPhotonJet )      std::cout << " photonJet pT = " << photonToTree.pt << std::endl;
 			}
 
 			// Fill matching histograms only for photon-like objects
@@ -840,9 +843,12 @@ void TreeWriter::Loop() {
 					matchLorentzToGenVector( it->momentum, muons, NULL, .3 ) )
 				photonToTree.setGen( tree::kNearLepton );
 
-			getPtFromMatchedJet( photonToTree, photonToTree.isGen( tree::kGenPhoton) );
+			getPtFromMatchedJet( photonToTree, isPhoton, isPhotonJet );
 			if( loggingVerbosity > 2 )
 				std::cout << "  ->jet pT = " << photonToTree._ptJet << std::endl;
+
+			// If no jet is found for a loose photon, the photon is rejected
+			if( isPhotonJet && !photonToTree._ptJet ) continue;
 
 			if( photonToTree.ptJet() < photonPtThreshold ) continue;
 
@@ -866,6 +872,9 @@ void TreeWriter::Loop() {
 					<< photonElectrons.size() << " photon electrons." << std::endl;
 		nPhotons.Fill( photons.size(), photonJets.size(), photonElectrons.size() );
 
+		// filter out events with no photons
+		if( !photons.size() && !photonJets.size() && !photonElectrons.size() ) continue;
+
 		// met
 		met = event.metMap["pfMet"].met();
 		type0met = event.metMap["pfType01CorrectedMet"].met();
@@ -879,8 +888,7 @@ void TreeWriter::Loop() {
 		//if( event.passMetFilters() ) continue;
 		if( splitting && hadronicSelection && ( nGoodJets < 2 || ht < 500 ) ) continue;
 
-		if( photons.size() || photonJets.size() || photonElectrons.size() )
-			fillMetFilterBitHistogram( hist1D.at("metFilters"), event.metFilterBit );
+		fillMetFilterBitHistogram( hist1D.at("metFilters"), event.metFilterBit );
 		if( !event.passMetFilters() ) continue;
 
 		if( splitting ) {
