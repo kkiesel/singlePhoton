@@ -221,6 +221,17 @@ void printChildren( int index, susy::ParticleCollection&  particles, int level=0
 	}
 }
 
+void fillMetFilterBitHistogram( TH1F& hist, int filterBit ) {
+	bool eventClean = true;
+	for( int filterIndex = 0; filterIndex < susy::nMetFilters; ++filterIndex )
+		if( !(filterBit & (1 << filterIndex)) ) {
+			hist.AddBinContent( filterIndex+1 );
+			eventClean = false;
+		}
+	if( eventClean )
+		hist.AddBinContent( 0 );
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Here the class implementation begins ///////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -257,6 +268,7 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 	hist1D["fMetUp"] = TH1F("", ";met;", 60, 0, 600 );
 	hist1D["fMetDown"] = TH1F("", ";met;", 60, 0, 600 );
 	hist1D["matchJetRelPt"] = TH1F("", ";p_{T,jet}/p_{T,#gamma};", 1500, 0, 30 );
+	hist1D["metFilters"] = TH1F("", "", 19, -.5, 18.5 );
 
 	// Define two dimensional histograms
 	hist2D["matchJet"] = TH2F("", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
@@ -633,7 +645,6 @@ void TreeWriter::SetBranches( TTree& tree ) {
 	tree.Branch("runNumber", &runNumber, "runNumber/i");
 	tree.Branch("eventNumber", &eventNumber, "eventNumber/i");
 	tree.Branch("luminosityBlockNumber", &luminosityBlockNumber, "luminosityBlockNumber/i");
-	tree.Branch("metFilterBit", &metFilterBit, "metFilterBit/I");
 }
 
 void TreeWriter::Loop() {
@@ -666,6 +677,7 @@ void TreeWriter::Loop() {
 	tree::Photon photonToTree;
 	tree::Particle electronToTree;
 	tree::Particle muonToTree;
+	processNEvents = 2000;
 
 	for (long jentry=0; jentry < processNEvents; ++jentry) {
 		if ( loggingVerbosity>1 || jentry%reportEvery==0 ) std::cout << jentry << " / " << processNEvents << std::endl;
@@ -683,7 +695,7 @@ void TreeWriter::Loop() {
 		}
 
 		if ( event.isRealData )
-			if ( !isGoodLumi() || !passTrigger() || !event.passMetFilters() ) continue;
+			if ( !isGoodLumi() || !passTrigger()) continue;
 
 		// vertices
 		nVertex = numberOfGoodVertexInCollection( event.vertices );
@@ -863,9 +875,13 @@ void TreeWriter::Loop() {
 
 		ht = getHt();
 		nGoodJets = countGoodJets( splitting );
-		metFilterBit = event.metFilterBit;
 
+		//if( event.passMetFilters() ) continue;
 		if( splitting && hadronicSelection && ( nGoodJets < 2 || ht < 500 ) ) continue;
+
+		if( photons.size() || photonJets.size() || photonElectrons.size() )
+			fillMetFilterBitHistogram( hist1D.at("metFilters"), event.metFilterBit );
+		if( !event.passMetFilters() ) continue;
 
 		if( splitting ) {
 			// Assing event to the leading photonObject
