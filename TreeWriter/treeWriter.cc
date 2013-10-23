@@ -242,7 +242,7 @@ void fillMetFilterBitHistogram( TH1F& hist, int filterBit ) {
 ///////////////////////////////////////////////////////////////////////////////
 
 TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputName) :
-	reportEvery(20000),
+	reportEvery(200000),
 	processNEvents(-1),
 	loggingVerbosity(0),
 	splitting(true),
@@ -272,7 +272,7 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 	hist1D["fMet"] = TH1F("", ";met;", 60, 0, 600 );
 	hist1D["fMetUp"] = TH1F("", ";met;", 60, 0, 600 );
 	hist1D["fMetDown"] = TH1F("", ";met;", 60, 0, 600 );
-	hist1D["metFilters"] = TH1F("", "", 19, -.5, 18.5 );
+	hist1D["metFilters"] = TH1F("", ";met Filter number;Entries", 19, -.5, 18.5 );
 
 	// Define two dimensional histograms
 	hist2D["matchJet"] = TH2F("", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
