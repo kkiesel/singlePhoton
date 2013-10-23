@@ -52,7 +52,7 @@ datasets=(
 )
 
 # settings
-version="32"
+version="34"
 outputFolder=/scratch/hh/dust/naf/cms/user/kiesel
 files_per_job=20
 
@@ -70,7 +70,7 @@ for dataset in "${datasets[@]}"; do
     files=( $(srmls -offset 0 -count 999 $dataset|grep root|awk '{print $2 }') )
     # Ugly hack to get more than 1000 files (up to 2000).
     files+=( $(srmls -offset 1000 -count 1999 $dataset|grep root|awk '{print $2 }') )
-    number_of_jobs=$(expr ${#files[@]} / $files_per_job + 1 )
+    number_of_jobs=$(expr ${#files[@]} / $files_per_job )
 
 
 
