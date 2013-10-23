@@ -545,7 +545,7 @@ void TreeWriter::fillJets() {
 
 		if( std::abs(corrP4.Eta()) > 3 ) continue;
 		if( corrP4.Pt() < 30 ) continue;
-		if( passLooseJetId( *it ) ) continue;
+		if( !passLooseJetId( *it ) ) continue;
 
 		jetToTree.matchInformation = 0;
 		jetToTree.pt = corrP4.Pt();
