@@ -99,6 +99,7 @@ class TreeWriter {
 		float ht;
 		float weight;
 		unsigned int nGoodJets;
+		unsigned int nGenChargedParticles;
 		unsigned int nVertex;
 		unsigned int runNumber;
 		unsigned int eventNumber;
