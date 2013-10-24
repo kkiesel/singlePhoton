@@ -272,7 +272,9 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 	hist1D["fMet"] = TH1F("", ";met;", 60, 0, 600 );
 	hist1D["fMetUp"] = TH1F("", ";met;", 60, 0, 600 );
 	hist1D["fMetDown"] = TH1F("", ";met;", 60, 0, 600 );
-	hist1D["metFilters"] = TH1F("", ";met Filter number;Entries", 19, -.5, 18.5 );
+	hist1D["metFilters"] = TH1F("", ";met Filter number;Entries", susy::nMetFilters+1, .5, susy::nMetFilters+1.5 );
+
+	hist1D["metFilters"].Fill( 0., 0. ); // Allows the histograms to be merged
 
 	// Define two dimensional histograms
 	hist2D["matchJet"] = TH2F("", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
