@@ -8,6 +8,7 @@
 #include "TFile.h"
 #include "TTree.h"
 #include "TChain.h"
+#include "TVector3.h"
 #include "TH1F.h"
 #include "TH2F.h"
 #include "TH3I.h"
@@ -44,8 +45,9 @@ class TreeWriter {
 		bool passTrigger();
 		bool isGoodLumi() const;
 		float getPileUpWeight();
-		void getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton, bool isPhotonJet );
+		void getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton, bool isPhotonJet, bool isPhotonElectron );
 		float getHt() const;
+		float getMht() const;
 		void fillJets();
 		unsigned int countGoodJets( bool clean ) const;
 		void getQcdWeights( float pt, float ht, float & qcdWeight, float & qcdWeightUp, float & qcdWeightDown );
@@ -94,6 +96,7 @@ class TreeWriter {
 		std::vector<tree::Particle> genPhotons;
 
 		float met;
+		float mht;
 		float type1met;
 		float type0met;
 		float ht;
