@@ -16,7 +16,8 @@ enum genParticles {
 
 enum jetMatches {
 	kJetPhoton,
-	kJetAllPhoton
+	kJetAllPhoton,
+	kJetCount
 };
 
 class Particle {
