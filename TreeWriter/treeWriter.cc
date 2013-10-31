@@ -155,10 +155,10 @@ bool passLooseJetId( const susy::PFJet& jet ) {
 	return jet.neutralHadronEnergy / energy < 0.99
 			&& jet.neutralEmEnergy / energy < 0.99
 			&& jet.nConstituents > 1
-			&& ( std::abs(jet.momentum.Eta())>=2.4
+			&& ( std::abs(jet.momentum.Eta()) >= 2.4
 				|| ( jet.chargedHadronEnergy / energy > 0
 					&& jet.chargedMultiplicity > 0
-					&& jet.chargedEmEnergy < 0.99 ) );
+					&& jet.chargedEmEnergy / energy < 0.99 ) );
 }
 
 bool goodVertex( const susy::Vertex& vtx ) {
@@ -510,7 +510,7 @@ void TreeWriter::getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton=fals
 		}
 
 		// Define the selection criteria
-		if( deltaR_ > 0.2  && eRel > 3 ) continue;
+		if( deltaR_ > 0.2  || eRel > 3 ) continue;
 		jet->setMatch( tree::kJetAllPhoton );
 
 		// If only one jet is found, we would be done here
