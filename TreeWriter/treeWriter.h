@@ -49,7 +49,7 @@ class TreeWriter {
 		float getHt() const;
 		float getMht() const;
 		void fillJets();
-		unsigned int countGoodJets( bool clean ) const;
+		unsigned int countGoodJets( bool clean );
 		void getQcdWeights( float pt, float ht, float & qcdWeight, float & qcdWeightUp, float & qcdWeightDown );
 
 		// Command line output settings

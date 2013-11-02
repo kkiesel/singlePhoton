@@ -155,10 +155,10 @@ bool passLooseJetId( const susy::PFJet& jet ) {
 	return jet.neutralHadronEnergy / energy < 0.99
 			&& jet.neutralEmEnergy / energy < 0.99
 			&& jet.nConstituents > 1
-			&& ( std::abs(jet.momentum.Eta())>=2.4
+			&& ( std::abs(jet.momentum.Eta()) >= 2.4
 				|| ( jet.chargedHadronEnergy / energy > 0
 					&& jet.chargedMultiplicity > 0
-					&& jet.chargedEmEnergy < 0.99 ) );
+					&& jet.chargedEmEnergy / energy < 0.99 ) );
 }
 
 bool goodVertex( const susy::Vertex& vtx ) {
@@ -516,7 +516,7 @@ void TreeWriter::getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton=fals
 		}
 
 		// Define the selection criteria
-		if( deltaR_ > 0.2  && eRel > 3 ) continue;
+		if( deltaR_ > 0.2  || eRel > 3 ) continue;
 		jet->setMatch( tree::kJetAllPhoton );
 
 		// If only one jet is found, we would be done here
@@ -556,7 +556,7 @@ void TreeWriter::fillJets() {
 	jets.clear();
 	tree::Jet jetToTree;
 
-	std::vector<susy::PFJet> jetVector = event.pfJets.find("ak5")->second;
+	std::vector<susy::PFJet> jetVector = event.pfJets.find("ak5chs")->second;
 	for(std::vector<susy::PFJet>::const_iterator it = jetVector.begin();
 			it != jetVector.end(); ++it) {
 
@@ -662,7 +662,7 @@ float TreeWriter::getHt() const {
 	return returnedHt;
 }
 
-unsigned int TreeWriter::countGoodJets( bool clean ) const {
+unsigned int TreeWriter::countGoodJets( bool clean ) {
 	/* Count the number of good jets.
 	 * They
 	 * * have different pt and eta criteria as the jet collection
@@ -670,7 +670,7 @@ unsigned int TreeWriter::countGoodJets( bool clean ) const {
 	 * * cleared of electorns, muons, photonObjects
 	 */
 	unsigned int number = 0;
-	for(std::vector<tree::Jet>::const_iterator jet = jets.begin();
+	for(std::vector<tree::Jet>::iterator jet = jets.begin();
 			jet != jets.end(); ++jet ) {
 		if( jet->pt < 30 || jet->eta > 2.5 ) continue;
 
@@ -681,6 +681,7 @@ unsigned int TreeWriter::countGoodJets( bool clean ) const {
 			if( isAdjacentToParticles<tree::Photon>( *jet, photonElectrons ) ) continue;
 			if( isAdjacentToParticles<tree::Photon>( *jet, photonJets ) ) continue;
 		}
+		jet->setMatch( tree::kJetCount );
 		++number;
 	}
 	return number;
