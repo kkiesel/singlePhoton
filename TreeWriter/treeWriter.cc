@@ -941,11 +941,10 @@ void TreeWriter::Loop() {
 		ht = getHt();
 		nGoodJets = countGoodJets( splitting );
 
-		//if( event.passMetFilters() ) continue;
 		if( splitting && hadronicSelection && ( nGoodJets < 2 || ht < 500 ) ) continue;
 
 		fillMetFilterBitHistogram( hist1D.at("metFilters"), event.metFilterBit );
-		if( !event.passMetFilters() ) continue;
+		if( !event.passMetFilters() || !event.passMetFilter( susy::kEcalLaserCorr) ) continue;
 
 		if( splitting ) {
 			// Assing event to the leading photonObject
