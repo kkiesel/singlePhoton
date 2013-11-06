@@ -144,7 +144,7 @@ bool isVetoElectron( const susy::Electron& electron, const susy::Event& event, c
 	return isElectron;
 }
 
-bool passLooseJetId( const susy::PFJet& jet ) {
+bool isLooseJet( const susy::PFJet& jet ) {
 	/**
 	 * \brief Apply loose cut on jets.
 	 *
@@ -152,7 +152,7 @@ bool passLooseJetId( const susy::PFJet& jet ) {
 	 * for more information.
 	 */
 	double energy = jet.momentum.E();
-	return jet.neutralHadronEnergy / energy < 0.99
+	return (jet.neutralHadronEnergy+jet.HFHadronEnergy()) / energy < 0.99
 			&& jet.neutralEmEnergy / energy < 0.99
 			&& jet.nConstituents > 1
 			&& ( std::abs(jet.momentum.Eta()) >= 2.4
@@ -558,7 +558,7 @@ void TreeWriter::fillJets() {
 
 		if( std::abs(corrP4.Eta()) > 3 ) continue;
 		if( corrP4.Pt() < 30 ) continue;
-		if( !passLooseJetId( *it ) ) continue;
+		if( !isLooseJet( *it ) ) continue;
 
 		jetToTree.matchInformation = 0;
 		jetToTree.pt = corrP4.Pt();
