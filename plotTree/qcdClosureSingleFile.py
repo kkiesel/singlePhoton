@@ -5,9 +5,6 @@ from multiplot import Multihisto
 from treeFunctions import *
 from sys import stdout
 
-# variable to reweight
-reweightVar = "ht"
-
 def writeWeight2DToFile( fileName, tree, h_weight, weightTreeName ):
 	"""Write weight for a tree in another tree in a given file.
 	This tree can be added to the original tree via 'AddFriend()'.
@@ -29,7 +26,7 @@ def writeWeight2DToFile( fileName, tree, h_weight, weightTreeName ):
 			stdout.write( "\r%s: %s / %s"%(fileName, event.GetReadEntry(), event.GetEntries() ) )
 			stdout.flush()
 
-		b = h_weight.FindBin( event.photons.at(0).ptJet(), eval("event.%s"%reweightVar) )
+		b = h_weight.FindBin( event.photons.at(0).ptJet(), event.ht )
 		weight[0] = h_weight.GetBinContent( b )
 		weight_error[0] = h_weight.GetBinError( b )
 		weightTree.Fill()
@@ -40,7 +37,7 @@ def writeWeight2DToFile( fileName, tree, h_weight, weightTreeName ):
 	weightTree.Write()
 	f.Close()
 
-def getMixedWeigthHisto( filenames, predFilenames, commonCut ):
+def getMixedWeigthHisto( filenames, predFilenames, commonCut, control=True ):
 	"""Calculate #photons/#photonFakes in bins of photons.ptJet and a second
 	(global) variable.
 
@@ -48,15 +45,17 @@ def getMixedWeigthHisto( filenames, predFilenames, commonCut ):
 	predFilenames: files containing fakes
 	"""
 
+	regionCut = "met<100" if control else "met>=100"
+
 	xVar = "photons[0].ptJet()"
-	yVar = reweightVar
+	yVar = "ht"
 	xlabel, xunit, xbinning = readAxisConf( xVar )
 	ylabel, yunit, ybinning = readAxisConf( yVar )
 
 	numerator = None
 	for fileName in filenames:
 		gTree = readTree( fileName, "photonTree" )
-		num = createHistoFromTree2D( gTree, yVar+":"+xVar, "weight*(met<100&&%s)"%commonCut, xbinning, ybinning )
+		num = createHistoFromTree2D( gTree, yVar+":"+xVar, "weight*( %s && %s )"%(regionCut, commonCut), xbinning, ybinning )
 		if numerator:
 			numerator.Add( num )
 		else:
@@ -65,7 +64,7 @@ def getMixedWeigthHisto( filenames, predFilenames, commonCut ):
 	denominator = None
 	for fileName in predFilenames:
 		foTree = readTree( fileName, "photonJetTree" )
-		den = createHistoFromTree2D( foTree, yVar+":"+xVar, "weight*(met<100&&%s)"%commonCut, xbinning, ybinning )
+		den = createHistoFromTree2D( foTree, yVar+":"+xVar, "weight*( %s && %s )"%(regionCut, commonCut), xbinning, ybinning )
 		if denominator:
 			denominator.Add( den )
 		else:
@@ -73,28 +72,35 @@ def getMixedWeigthHisto( filenames, predFilenames, commonCut ):
 
 	weight2D = divideHistos( numerator, denominator )
 
-	# Set the weight and error for empty bins to one.
+	# Set the weight and error for empty bins above the diagonal to one.
 	for i in range( weight2D.GetXaxis().GetNbins()+1 ):
 		for j in range( weight2D.GetYaxis().GetNbins()+1 ):
-			if not weight2D.GetBinContent( i, j ):
+			if not weight2D.GetBinContent( i, j ) and weight2D.GetXaxis().GetBinLowEdge(i) < weight2D.GetYaxis().GetBinUpEdge(j):
 				weight2D.SetBinContent( i, j, 1 )
 				weight2D.SetBinError( i, j, 1 )
 
-	drawWeightHisto( weight2D, numerator, denominator )
+	drawWeightHisto( weight2D, numerator, denominator, control, shortName( filenames ) )
 	return weight2D
 
-def drawWeightHisto( weight2D, numerator, denominator ):
+def drawWeightHisto( weight2D, numerator, denominator, control, saveName ):
+	regionString = "control" if control else "signal"
 	# Draw the histograms
-	info = PlotCaption(control=True)
+	info = PlotCaption(control=control, signal=not control)
 
 	# Display the weight errors as 2D histograms.
+	weight2D1 = divideHistos( numerator, denominator )
 	weightErrors = weight2D.Clone( randomName() )
+	weightErrors1 = weight2D.Clone( randomName() )
 	weightRelErrors = weight2D.Clone( randomName() )
+	weightRelErrors1 = weight2D.Clone( randomName() )
 	for i in range( weight2D.GetXaxis().GetNbins()+1 ):
 		for j in range( weight2D.GetYaxis().GetNbins()+1 ):
-			weightErrors.SetBinContent( i, j, weight2D.GetBinError( i, j ) )
-			if weight2D.GetBinContent( i, j ):
+			if weight2D1.GetBinContent( i, j ):
 				weightRelErrors.SetBinContent( i, j, weight2D.GetBinError( i, j )/weight2D.GetBinContent( i, j ) )
+				weightRelErrors1.SetBinContent( i, j, weight2D1.GetBinError( i, j )/weight2D1.GetBinContent( i, j ) )
+
+			weightErrors.SetBinContent( i, j, weight2D.GetBinError( i, j ) )
+			weightErrors1.SetBinContent( i, j, weight2D1.GetBinError( i, j ) )
 
 	# Draw histograms
 	Styles.tdrStyle2D()
@@ -103,21 +109,29 @@ def drawWeightHisto( weight2D, numerator, denominator ):
 	can2D.cd()
 	for hist, name in [
 			(numerator,"numerator"),
-			(denominator, "denominator"),
-			(weight2D, "weight2D"),
-			(weightErrors, "weightError"),
-			(weightRelErrors, "weightRelError") ]:
+			(denominator, "denominator")]:
 		hist.Draw("colz text")
 		info.Draw()
-		SaveAs(can2D, "qcd_preWeight_%s_%s"%(name,reweightVar) )
+		SaveAs(can2D, "qcd_preWeight_%s_%s_%s"%(saveName, name,regionString) )
+
+	for hist, hist1, name in [
+			(weight2D,weight2D1, "weight2D"),
+			(weightErrors,weightErrors1, "weightError"),
+			(weightRelErrors,weightRelErrors1, "weightRelError") ]:
+		hist1.Draw("colz")
+		hist.Draw("same text")
+		info.Draw()
+		SaveAs(can2D, "qcd_preWeight_%s_%s_%s"%(saveName,name,regionString) )
+
 	Styles.tdrStyle()
 
-	weightFile = ROOT.TFile( "qcdWeight.root", "recreate" )
-	weightFile.cd()
-	weight2D.SetName("qcdWeight")
-	weight2D.Write()
-	weightErrors.Write()
-	weightFile.Close()
+	if control:
+		weightFile = ROOT.TFile( "qcdWeight.root", "recreate" )
+		weightFile.cd()
+		weight2D.SetName("qcdWeight")
+		weight2D.Write()
+		weightErrors.Write()
+		weightFile.Close()
 
 def photonHisto( filenames, plot, cut, modifyEmptyBins ):
 	gHist = None
@@ -136,15 +150,25 @@ def predictionHistos( filenames, plot, cut, modifyEmptyBins ):
 	for filename in filenames:
 		fTree = readTree( filename, "photonJetTree" )
 		fTree.AddFriend( "foWeights", filename )
+
+		# Prediction + statistical uncertainty coming from the loose control region
 		hist = getHisto( fTree, plot, weight="weight*w_qcd", cut=cut, color=46, firstBin=1, lastBin=1, fillEmptyBins=modifyEmptyBins )
-		histUp = getHisto( fTree, plot, weight="weight*(w_qcd+w_qcd_error)", cut=cut, color=hist.GetLineColor(), firstBin=1, lastBin=1, fillEmptyBins=modifyEmptyBins )
-		histDown = getHisto( fTree, plot, weight="weight*(w_qcd-w_qcd_error)", cut=cut, color=hist.GetLineColor(), firstBin=1, lastBin=1, fillEmptyBins=modifyEmptyBins )
-		sHist = histUp.Clone( randomName() )
-		for bin in range( histUp.GetNbinsX()+2 ):
-			up = histUp.GetBinContent(bin)
-			down = histDown.GetBinContent(bin)
-			sHist.SetBinContent( bin, (up+down)/2 )
-			sHist.SetBinError( bin, (up-down)/2 )
+
+		# This histogram contains the uncertainty due to the weight for small met
+		# Here, the bin content is the uncertainty, the bin error is meaningless.
+		sHist = getHisto( fTree, plot, weight="weight*w_qcd_error", cut=cut, color=46, firstBin=1, lastBin=1, fillEmptyBins=modifyEmptyBins )
+
+		# You can also do an approximation to calculate the error of the weight:
+		doWeightApproximation = False
+		if doWeightApproximation:
+			sHistUp = getHisto( fTree, plot, weight="weight*(w_qcd_error+w_qcd)",
+					cut=cut, color=46, firstBin=1, lastBin=1, fillEmptyBins=modifyEmptyBins )
+			sHistDown = getHisto( fTree, plot, weight="weight*(w_qcd-w_qcd_error)",
+					cut=cut, color=46, firstBin=1, lastBin=1, fillEmptyBins=modifyEmptyBins )
+			for bin in range( sHistUp.GetNbinsX()+2 ):
+				sHistUp.SetBinContent( bin, 0.5*(sHistUp.GetBinContent(bin)-sHistDown.GetBinContent(bin)))
+			sHist = sHistUp
+		# Approximation end ###################################################
 
 		if fHist:
 			fHist.Add( hist )
@@ -161,73 +185,64 @@ def predictionHistos( filenames, plot, cut, modifyEmptyBins ):
 	return fHist, sysHist
 
 
-def drawClosure( filenames, predFilenames, plot, commonCut, can, infoText, additionalLabel, modifyEmptyBins=False ):
+def drawClosure( filenames, predFilenames, plot, commonCut, infoText, additionalLabel, modifyEmptyBins=True ):
 
 	gHist = photonHisto( filenames, plot, commonCut, modifyEmptyBins )
 	fHist, sysHist = predictionHistos( predFilenames, plot, commonCut, modifyEmptyBins )
-	fewkHist, sysewkHist = predictionHistos( predFilenames+["slimTTJets_V02.22_tree.root", "slimWJets_V02.22_tree.root"], plot, commonCut, modifyEmptyBins )
-	for h in [ fewkHist, sysewkHist]:
-		h.SetLineColor(3)
-		h.SetMarkerColor(3)
-	sysewkHist.SetFillColor(3)
-	sysewkHist.SetFillStyle(3254)
-	sysewkHist.SetMarkerSize(0)
 
-	fDatasetAbbrs = []
-	for f in predFilenames:
-		fDatasetAbbrs.append( getDatasetAbbr( f ) )
+	for bin in range( sysHist.GetNbinsX()+2 ):
+		sysHist.SetBinError( bin, sysHist.GetBinContent(bin) )
+		sysHist.SetBinContent( bin, fHist.GetBinContent(bin) )
 
 
-	fullDatasetAbbr = mergeDatasetAbbr( fDatasetAbbrs )
+	signalAbbrs = mergeDatasetAbbr( [ getDatasetAbbr(x) for x in filenames ] )
+	predAbbrs =  mergeDatasetAbbr( [ getDatasetAbbr(x) for x in predFilenames ] )
 
 	muhisto = Multihisto()
-	muhisto.leg.SetHeader( ",".join( [ datasetToLatex(x) for x in fullDatasetAbbr ] ) )
+	muhisto.leg.SetHeader( ",".join( [ datasetToLatex(x) for x in signalAbbrs ] ) )
 	muhisto.addHisto( gHist, "#gamma", draw="hist e0" )
 	muhisto.addHisto( fHist, "#gamma_{jet}#upointw", draw="hist e0")
 	muhisto.addHisto( sysHist, "#sigma_{w}", draw="e2")
-	muhisto.addHisto( fewkHist, "pred with ewk", draw="hist e0")
-	muhisto.addHisto( fewkHist, "pred with ewk", draw="e2")
 
-	hPad = ROOT.TPad("hPad", "Histogram", 0, 0.2, 1, 1)
-	hPad.cd()
+	can = ROOT.TCanvas()
+	can.cd()
+
 	muhisto.Draw()
 
-	ratioPad = ROOT.TPad("ratioPad", "Ratio", 0, 0, 1, 0.2)
-	ratioPad.cd()
-	ratioPad.SetLogy( False )
-	from myRatio import Ratio
-	r = Ratio( "#gamma/#gamma_{pred ewk}", gHist, fewkHist )
-	ratio, sys, one = r.draw(0,2)
-	ratio.Draw("same e0")
-	sys.Draw("same e2")
-	one.Draw()
+	fHistSumError = fHist.Clone( randomName() )
+	for bin in range( fHistSumError.GetNbinsX()+2 ):
+		fHistSumError.SetBinError( bin, sqrt( fHistSumError.GetBinError(bin)**2+sysHist.GetBinError(bin)**2 ) )
+		gHist.SetBinError( bin, sqrt( gHist.GetBinError(bin)**2 + fHist.GetBinError(bin)**2 ) )
 
-	can.cd()
-	hPad.Draw()
-	ratioPad.Draw()
+	from myRatio import Ratio
+	#r = Ratio( "#gamma/#gamma_{pred}", gHist, fHistSumError )
+	r = Ratio( "#gamma/#gamma_{pred}", gHist, sysHist )
+	r.draw(0.75,1.25)
 	infoText.Draw()
 	saveLabelZeroBinError = "errorEmptyBin" if modifyEmptyBins else "normal"
-	SaveAs(can, "qcdClosure_%s_%s_%s_%s"%("".join( fullDatasetAbbr)+additionalLabel, plot, saveLabelZeroBinError, reweightVar) )
-	ROOT.SetOwnership( hPad, False )
-	ROOT.SetOwnership( ratioPad, False )
+	SaveAs(can, "qcdClosure_%s_%s"%("".join(signalAbbrs)+additionalLabel, plot) )
+
+	# Since root is too stupid to clear the canvas before python is ending, clean
+	# the canvas yourself
+	ROOT.SetOwnership( can, False )
+	del can
 
 
 
 def qcdClosure( filenames, predFilenames, plots ):
 	signalCut = "met>=100"
 	controlCut = "!(%s)"%signalCut
-	commonCut = "!photons.isGen(1) && @photons.size()"
-	commonCut = "1"
+	commonCut = "photons[0].ptJet()>110 && met < 100 && met > 50"
+	#commonCut += " && photons[0].isGen(2)"
+	#commonCut = "!photons[0].isGen(0) && !photons[0].isGen(1)"
 
 	# Definition of labels
 	infoControl = PlotCaption( control=True )
 	infoSignal = PlotCaption( signal=True )
 	info = PlotCaption()
 
-	can = ROOT.TCanvas()
-	can.cd()
-
 	weights = getMixedWeigthHisto( filenames, predFilenames, commonCut )
+	getMixedWeigthHisto( filenames, predFilenames, commonCut, False )
 
 	for fileName in predFilenames:
 		foTree = readTree( fileName, "photonJetTree" )
@@ -235,10 +250,9 @@ def qcdClosure( filenames, predFilenames, plots ):
 
 	for plot in plots:
 		if plot != "met":
-			drawClosure( filenames, predFilenames, plot, commonCut+"&&"+signalCut, can, infoSignal, "_signal" )
-			drawClosure( filenames, predFilenames, plot, commonCut+"&&"+controlCut, can, infoControl, "_control" )
-		drawClosure( filenames, predFilenames, plot, commonCut, can, info,  "" )
-		drawClosure( filenames, predFilenames, plot, commonCut, can, info, "", True )
+			drawClosure( filenames, predFilenames, plot, commonCut+"&&"+signalCut, infoSignal, "_signal" )
+			drawClosure( filenames, predFilenames, plot, commonCut+"&&"+controlCut, infoControl, "_control" )
+		drawClosure( filenames, predFilenames, plot, commonCut, info, "", True )
 
 if __name__ == "__main__":
 	arguments = argparse.ArgumentParser()
@@ -248,7 +262,7 @@ if __name__ == "__main__":
 	opts = arguments.parse_args()
 
 	if opts.plot == ["all"]:
-		opts.plot = [ "met", "ht", "photons[0].ptJet()","Length$(jets.pt)", "Length$(photons.pt)"]
+		opts.plot = [ "met", "ht", "photons[0].ptJet()","nGoodJets" ]
 	if not opts.prediction:
 		opts.prediction = opts.filenames
 
