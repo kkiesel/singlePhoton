@@ -152,7 +152,7 @@ bool isLooseJet( const susy::PFJet& jet ) {
 	 * for more information.
 	 */
 	double energy = jet.momentum.E();
-	return (jet.neutralHadronEnergy+jet.HFHadronEnergy()) / energy < 0.99
+	return (jet.neutralHadronEnergy+jet.HFHadronEnergy) / energy < 0.99
 			&& jet.neutralEmEnergy / energy < 0.99
 			&& jet.nConstituents > 1
 			&& ( std::abs(jet.momentum.Eta()) >= 2.4
@@ -196,7 +196,7 @@ bool matchLorentzToGenVector( TLorentzVector& lvec, std::vector<tree::Particle>&
 			it != genParticles.end(); ++it ) {
 		a.SetPtEtaPhiE( it->pt, it->eta, it->phi, 1  );
 		dR = lvec.DeltaR( a );
-		dPt = 2*(it->pt-lvec.Pt())/(it->pt+lvec.Pt());
+		dPt = it->pt / lvec.Pt(); // gen / reconstructed
 
 		if( hist ) hist->Fill( dR, dPt );
 
@@ -285,8 +285,8 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 	hist2D["matchPhotonJetToJetPt"]      = TH2F("", "photon-jet matching;p_{T,#gamma};p_{T, jet}", 100, 0, 1000, 100, 0, 1000 );
 	hist2D["matchPhotonElectronToJetPt"] = TH2F("", "photon-jet matching;p_{T,#gamma};p_{T, jet}", 100, 0, 1000, 100, 0, 1000 );
 
-	hist2D["matchGenPhoton"]   = TH2F("", ";#DeltaR;#Delta p_{T}/p_{T}", 100, 0, .5, 200, -2, 2 );
-	hist2D["matchGenElectron"] = TH2F("", ";#DeltaR;#Delta p_{T}/p_{T}", 100, 0, .5, 200, -2, 2 );
+	hist2D["matchGenPhoton"]   = TH2F("", ";#DeltaR;p_{T gen}/p_{T}", 100, 0, .5, 200, 0, 2 );
+	hist2D["matchGenElectron"] = TH2F("", ";#DeltaR;p_{T_gen}/p_{T}", 100, 0, .5, 200, 0, 2 );
 
 	// Set the keyName as histogram name for one and two dimensional histograms
 	for( std::map<std::string, TH1F>::iterator it = hist1D.begin();
@@ -451,13 +451,15 @@ float TreeWriter::getPileUpWeight(){
 	 * current event is computed.
 	 */
 
-	float trueNumInteractions = -1;
+	float thisWeight = 0;
 	for( susy::PUSummaryInfoCollection::const_iterator iBX = event.pu.begin();
-			iBX != event.pu.end() && trueNumInteractions < 0; ++iBX) {
-		if (iBX->BX == 0)
-			trueNumInteractions = iBX->trueNumInteractions;
+			iBX != event.pu.end(); ++iBX) {
+		if (iBX->BX == 0) { // find bunch crossing for this event
+			float trueNumInteractions = iBX->trueNumInteractions;
+			thisWeight = pileupHisto.GetBinContent( pileupHisto.FindBin( trueNumInteractions ) );
+			break;
+		}
 	}
-	float thisWeight = pileupHisto.GetBinContent( pileupHisto.FindBin( trueNumInteractions ) );
 
 	if( loggingVerbosity > 2 )
 		std::cout << "Pile-up weight = " << thisWeight << std::endl;
