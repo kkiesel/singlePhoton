@@ -152,7 +152,7 @@ bool isLooseJet( const susy::PFJet& jet ) {
 	 * for more information.
 	 */
 	double energy = jet.momentum.E();
-	return (jet.neutralHadronEnergy+jet.HFHadronEnergy()) / energy < 0.99
+	return (jet.neutralHadronEnergy+jet.HFHadronEnergy) / energy < 0.99
 			&& jet.neutralEmEnergy / energy < 0.99
 			&& jet.nConstituents > 1
 			&& ( std::abs(jet.momentum.Eta()) >= 2.4
@@ -702,7 +702,7 @@ void TreeWriter::SetBranches( TTree& tree ) {
 	tree.Branch("weight", &weight, "weight/F");
 	tree.Branch("nVertex", &nVertex, "nVertex/I");
 	tree.Branch("nGoodJets", &nGoodJets, "nGoodJets/i");
-	tree.Branch("nGenChargedParticles", &nGenChargedParticles, "nGenChargedParticles/i");
+	tree.Branch("nTracks", &nTracks, "nTracks/i");
 	tree.Branch("runNumber", &runNumber, "runNumber/i");
 	tree.Branch("eventNumber", &eventNumber, "eventNumber/i");
 	tree.Branch("luminosityBlockNumber", &luminosityBlockNumber, "luminosityBlockNumber/i");
@@ -780,13 +780,11 @@ void TreeWriter::Loop() {
 		std::vector<tree::Particle> genQuarkLike;
 		genQuarkLike.clear();
 
-		nGenChargedParticles = 0;
+		nTracks = event.tracks.size();
 
 		// genParticles
 		tree::Particle thisGenParticle;
 		for( std::vector<susy::Particle>::const_iterator it = event.genParticles.begin(); it != event.genParticles.end(); ++it ) {
-			if( it->status == 1 && it->charge )
-				++nGenChargedParticles;
 
 			// status 3: particles in matrix element
 			// status 2: intermediate particles
