@@ -285,8 +285,8 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 	hist2D["matchPhotonJetToJetPt"]      = TH2F("", "photon-jet matching;p_{T,#gamma};p_{T, jet}", 100, 0, 1000, 100, 0, 1000 );
 	hist2D["matchPhotonElectronToJetPt"] = TH2F("", "photon-jet matching;p_{T,#gamma};p_{T, jet}", 100, 0, 1000, 100, 0, 1000 );
 
-	hist2D["matchGenPhoton"]   = TH2F("", ";#DeltaR;(p_{T}^{gen}-p_{T})/p_{T}^{gen}", 100, 0, .5, 200, 0, 2 );
-	hist2D["matchGenElectron"] = TH2F("", ";#DeltaR;(p_{T}^{gen}-p_{T})/p_{T}^{gen}", 100, 0, .5, 200, 0, 2 );
+	hist2D["matchGenPhoton"]   = TH2F("", ";#DeltaR;(p_{T}^{gen}-p_{T})/p_{T}^{gen}", 100, 0, .5, 200, -2, 2 );
+	hist2D["matchGenElectron"] = TH2F("", ";#DeltaR;(p_{T}^{gen}-p_{T})/p_{T}^{gen}", 100, 0, .5, 200, -2, 2 );
 
 	// Set the keyName as histogram name for one and two dimensional histograms
 	for( std::map<std::string, TH1F>::iterator it = hist1D.begin();
