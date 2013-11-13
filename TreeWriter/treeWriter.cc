@@ -196,7 +196,7 @@ bool matchLorentzToGenVector( TLorentzVector& lvec, std::vector<tree::Particle>&
 			it != genParticles.end(); ++it ) {
 		a.SetPtEtaPhiE( it->pt, it->eta, it->phi, 1  );
 		dR = lvec.DeltaR( a );
-		dPt = it->pt / lvec.Pt(); // gen / reconstructed
+		dPt = (it->pt-lvec.Pt()) / it->pt;
 
 		if( hist ) hist->Fill( dR, dPt );
 
@@ -285,8 +285,8 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 	hist2D["matchPhotonJetToJetPt"]      = TH2F("", "photon-jet matching;p_{T,#gamma};p_{T, jet}", 100, 0, 1000, 100, 0, 1000 );
 	hist2D["matchPhotonElectronToJetPt"] = TH2F("", "photon-jet matching;p_{T,#gamma};p_{T, jet}", 100, 0, 1000, 100, 0, 1000 );
 
-	hist2D["matchGenPhoton"]   = TH2F("", ";#DeltaR;p_{T gen}/p_{T}", 100, 0, .5, 200, 0, 2 );
-	hist2D["matchGenElectron"] = TH2F("", ";#DeltaR;p_{T_gen}/p_{T}", 100, 0, .5, 200, 0, 2 );
+	hist2D["matchGenPhoton"]   = TH2F("", ";#DeltaR;(p_{T}^{gen}-p_{T})/p_{T}^{gen}", 100, 0, .5, 200, -2, 2 );
+	hist2D["matchGenElectron"] = TH2F("", ";#DeltaR;(p_{T}^{gen}-p_{T})/p_{T}^{gen}", 100, 0, .5, 200, -2, 2 );
 
 	hist2D["metSigma"] = TH2F("", ";#slash{E}_{T};#sigma_{i#etai#eta}", 50, 0, 500, 440, 0, 0.022 );
 	hist2D["metChIso"] = TH2F("", ";#slash{E}_{T};Iso^{#pm}",           50, 0, 500, 300, 0, 30 );
@@ -756,8 +756,9 @@ void TreeWriter::Loop() {
 			continue;
 		}
 
-		if ( event.isRealData )
-			if ( !isGoodLumi() || !passTrigger()) continue;
+		//if ( event.isRealData )
+			//if ( !passTrigger()) continue;
+			//if ( !isGoodLumi() || !passTrigger()) continue;
 
 		// vertices
 		nVertex = numberOfGoodVertexInCollection( event.vertices );
@@ -908,9 +909,9 @@ void TreeWriter::Loop() {
 			// Fill matching histograms only for photon-like objects
 			if( splitting && !isPhotonOrElectron && !isPhotonJet ) continue;
 
-			if( matchLorentzToGenVector( it->momentum, genPhotons, &hist2D["matchGenPhoton"], .1 ) )
+			if( matchLorentzToGenVector( it->momentum, genPhotons, &hist2D["matchGenPhoton"], .1, .1 ) )
 				photonToTree.setGen( tree::kGenPhoton );
-			if( matchLorentzToGenVector( it->momentum, genElectrons, &hist2D["matchGenElectron"], .1 ) )
+			if( matchLorentzToGenVector( it->momentum, genElectrons, &hist2D["matchGenElectron"], .1, .1 ) )
 				photonToTree.setGen( tree::kGenElectron );
 			if( matchLorentzToGenVector( it->momentum, genQuarkLike, NULL, .3 ) )
 				photonToTree.setGen( tree::kGenJet );
