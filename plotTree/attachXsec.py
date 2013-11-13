@@ -9,13 +9,18 @@ def modify( inputFileName, printOnly ):
 	"""Key function of splitCanidates.py. The main loop and object selection is
 	defined here."""
 	datasetAbbr = getDatasetAbbr( inputFileName, slim=False )
+	if "Data" in datasetAbbr:
+		return
+
+	if inputFileName.startswith("slim"):
+		print "File %s already processed?"%inputFileName
+		return
 
 	eventHisto = readHisto( inputFileName )
 	processNEvents = eventHisto.GetBinContent(1)
 	lumiWeight = getLumiWeight( datasetAbbr, processNEvents )
-	print datasetAbbr, processNEvents, lumiWeight
 	if printOnly:
-		return
+		return datasetAbbr, processNEvents, lumiWeight
 
 	treeNames = []
 	histNames = []
@@ -47,7 +52,7 @@ def modify( inputFileName, printOnly ):
 			change.weight = lumiWeight * event.weight
 			tree.Fill()
 		fout.cd()
-		tree.Write()
+		tree.AutoSave("overwrite")
 
 	for histName in histNames:
 		h = readHisto( inputFileName, histName )
@@ -57,6 +62,8 @@ def modify( inputFileName, printOnly ):
 
 	fout.Close()
 
+	return datasetAbbr, processNEvents, lumiWeight
+
 if __name__ == "__main__":
 
 	arguments = argparse.ArgumentParser( description="Slim tree" )
@@ -64,6 +71,17 @@ if __name__ == "__main__":
 	arguments.add_argument("--printOnly", action="store_true" )
 	opts = arguments.parse_args()
 
+	rawTable = []
 	for inName in opts.filenames:
-		modify( inName, opts.printOnly )
+		out = modify( inName, opts.printOnly )
+		if out:
+			abbr, nGen, w = out
+			s = w*nGen/19800
+			rawTable.append( (abbr, s, nGen ) )
+
+	print
+	print "Sample name  &  $\sigma$ [pb]  &  nGen [1e6]"
+	for abbr, s, nGen in rawTable:
+		niceAbbr = abbr.replace("GJets","#gammaJets").replace("TTJets","t#bar{t}").replace("ZGamma", "#gammaZ")
+		print "\\verb|%s|  &  %.1f  &  %i \\\\"%(abbr, s, round(nGen/1e6) )
 
