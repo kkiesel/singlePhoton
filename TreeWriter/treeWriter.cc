@@ -1,7 +1,5 @@
 #include "treeWriter.h"
 
-using namespace std;
-
 float effectiveAreaElectron( float eta ) {
 	/** Returns the effective area for the isolation criteria for electrons.
 	 * See https://twiki.cern.ch/twiki/bin/view/CMS/EgammaEARhoCorrection
@@ -550,6 +548,13 @@ void TreeWriter::fillJets() {
 	jets.clear();
 	tree::Jet jetToTree;
 
+	std::string jecDir("../../CMSSW/CMSSW_5_3_8_patch3/src/SUSYPhotonAnalysis/SusyNtuplizer/jec/");
+	FactorizedJetCorrector jecCHS("L1FastJet:L2Relative:L3Absolute:L2Relative",
+		jecDir + "FT_53_V21_AN5_L1FastJet_AK5PFchs.txt:" +
+		jecDir + "FT_53_V21_AN5_L2Relative_AK5PFchs.txt:" +
+		jecDir + "FT_53_V21_AN5_L3Absolute_AK5PFchs.txt:" +
+		jecDir + "FT_53_V21_AN5_L2RelativeL3AbsoluteResidual_AK5PFchs.txt" );
+
 	std::vector<susy::PFJet> jetVector = event.pfJets.find("ak5chs")->second;
 	for(std::vector<susy::PFJet>::const_iterator it = jetVector.begin();
 			it != jetVector.end(); ++it) {
@@ -559,6 +564,21 @@ void TreeWriter::fillJets() {
 		if( std::abs(corrP4.Eta()) > 3 ) continue;
 		if( corrP4.Pt() < 30 ) continue;
 		if( !passLooseJetId( *it ) ) continue;
+
+		/*std::cout << "\nNew Jet with " << it->momentum.Pt()<<"\n";
+		std::cout << "area = " << it->jetArea << " rho = " << event.rho << std::endl;
+		std::cout << "nTuple scale = " << it->jecScaleFactors.at("L1FastL2L3") <<std::endl;
+		jecCHS.setJetEta(it->momentum.Eta());
+		jecCHS.setJetPt(it->momentum.Pt());
+		jecCHS.setJetA(it->jetArea);
+		jecCHS.setRho(event.rho);
+		std::vector<float> subcorr = jecCHS.getSubCorrections();
+		std::cout << "uncorrected pt = " << it->momentum.Pt() << "   1" << std::endl;
+		std::cout << "L1corrected pt = " << it->momentum.Pt()*subcorr.at(0) << "   " << subcorr.at(0) <<  std::endl;
+		std::cout << "L2corrected pt = " << it->momentum.Pt()*subcorr.at(1) << "   " << subcorr.at(1) <<  std::endl;
+		std::cout << "L3corrected pt = " << it->momentum.Pt()*subcorr.at(2) << "   " << subcorr.at(2) <<  std::endl;
+		std::cout << "LRcorrected pt = " << it->momentum.Pt()*subcorr.at(3) << "   " << subcorr.at(3) <<  std::endl;
+		*/
 
 		jetToTree.matchInformation = 0;
 		jetToTree.pt = corrP4.Pt();
