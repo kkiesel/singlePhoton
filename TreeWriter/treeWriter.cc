@@ -698,7 +698,7 @@ void TreeWriter::SetBranches( TTree& tree ) {
 	tree.Branch("weight", &weight, "weight/F");
 	tree.Branch("nVertex", &nVertex, "nVertex/I");
 	tree.Branch("nGoodJets", &nGoodJets, "nGoodJets/i");
-	tree.Branch("nGenChargedParticles", &nGenChargedParticles, "nGenChargedParticles/i");
+	tree.Branch("nTracksPV", &nTracksPV, "nTracksPV/i");
 	tree.Branch("runNumber", &runNumber, "runNumber/i");
 	tree.Branch("eventNumber", &eventNumber, "eventNumber/i");
 	tree.Branch("luminosityBlockNumber", &luminosityBlockNumber, "luminosityBlockNumber/i");
@@ -777,13 +777,16 @@ void TreeWriter::Loop() {
 		std::vector<tree::Particle> genQuarkLike;
 		genQuarkLike.clear();
 
-		nGenChargedParticles = 0;
+		nTracksPV = 0;
+		for( susy::TrackCollection::const_iterator track = event.tracks.begin(); track != event.tracks.end(); ++track ) {
+			if( track->vertexIndex == 0 )
+				nTracksPV++;
+		}
 
 		// genParticles
 		tree::Particle thisGenParticle;
 		for( std::vector<susy::Particle>::const_iterator it = event.genParticles.begin(); it != event.genParticles.end(); ++it ) {
 			if( it->status == 1 && it->charge )
-				++nGenChargedParticles;
 
 			// status 3: particles in matrix element
 			// status 2: intermediate particles
