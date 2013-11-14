@@ -92,7 +92,7 @@ bool isAdjacentToParticles( const susy::PFJet& jet, const std::vector<Particle>&
 }
 
 template <typename Particle>
-bool isAdjacentToParticles( const tree::Jet& jet, const std::vector<Particle>& particles, float deltaR_ = 0.3 ) {
+bool isAdjacentToParticles( const tree::Particle& jet, const std::vector<Particle>& particles, float deltaR_ = 0.3 ) {
 	/** Particles near the jet are searched.
 	 *
 	 * Returns true if a particle is found in a certain radius near the jet.
@@ -285,6 +285,14 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 
 	hist2D["matchGenPhoton"]   = TH2F("", ";#DeltaR;(p_{T}^{gen}-p_{T})/p_{T}^{gen}", 100, 0, .5, 200, -2, 2 );
 	hist2D["matchGenElectron"] = TH2F("", ";#DeltaR;(p_{T}^{gen}-p_{T})/p_{T}^{gen}", 100, 0, .5, 200, -2, 2 );
+
+	hist2D["metSigma"] = TH2F("", ";#slash{E}_{T};#sigma_{i#etai#eta}", 50, 0, 500, 440, 0, 0.022 );
+	hist2D["metChIso"] = TH2F("", ";#slash{E}_{T};Iso^{#pm}",           50, 0, 500, 300, 0, 30 );
+	hist2D["metNeIso"] = TH2F("", ";#slash{E}_{T};Iso^{0}-.04p_{T}",             50, 0, 500, 300, 0, 30 );
+	hist2D["metPhIso"] = TH2F("", ";#slash{E}_{T};Iso^{#gamma}-.005p_{T}",        50, 0, 500, 300, 0, 30 );
+	hist2D["metHE"]    = TH2F("", ";#slash{E}_{T};H/E",                    50, 0, 500, 100, 0, .5 );
+
+
 
 	// Set the keyName as histogram name for one and two dimensional histograms
 	for( std::map<std::string, TH1F>::iterator it = hist1D.begin();
@@ -831,33 +839,6 @@ void TreeWriter::Loop() {
 			}
 		}
 
-		// electrons
-		std::vector<susy::Electron> eVector = event.electrons["gsfElectrons"];
-		for(std::vector<susy::Electron>::const_iterator it = eVector.begin(); it < eVector.end(); ++it) {
-			if( it->momentum.Pt() < 15 || std::abs(it->momentum.Eta()) > 2.6 || !isVetoElectron( *it, event, loggingVerbosity ) )
-				continue;
-			electronToTree.pt = it->momentum.Pt();
-			electronToTree.eta = it->momentum.Eta();
-			electronToTree.phi = it->momentum.Phi();
-			electrons.push_back( electronToTree );
-		}
-		if( loggingVerbosity > 1 )
-			std::cout << "Found " << electrons.size() << " electrons" << std::endl;
-
-		// muons
-		std::vector<susy::Muon> mVector = event.muons["muons"];
-		for( std::vector<susy::Muon>::const_iterator it = mVector.begin(); it != mVector.end(); ++it) {
-			// see https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuideMuonId#Loose_Muon
-			if( it->momentum.Pt() < 15 || std::abs(it->momentum.Eta()) > 2.6 || !(it->isPFMuon() && (it->isGlobalMuon() || it->isTrackerMuon())) )
-				continue;
-			muonToTree.pt = it->momentum.Et();
-			muonToTree.eta = it->momentum.Eta();
-			muonToTree.phi = it->momentum.Phi();
-			muons.push_back( muonToTree );
-		}
-		if( loggingVerbosity > 1 )
-			std::cout << "Found " << muons.size() << " muons" << std::endl;
-
 		// The jets have to be filled before looping over the photons and searching
 		// for jet photon matches.
 		fillJets();
@@ -921,9 +902,11 @@ void TreeWriter::Loop() {
 			// dependencies on met
 			if( !photonToTree.pixelseed && photonToTree.sigmaIetaIeta < 0.012 && photonToTree.chargedIso < 2.6 && photonToTree.neutralIso < 3.5+0.04*photonToTree.pt && photonToTree.photonIso < 1.3+0.005*photonToTree.pt ) hist2D["metHE"].Fill( met, photonToTree.hadTowOverEm, weight );
 			if( !photonToTree.pixelseed && photonToTree.hadTowOverEm < 0.05 && photonToTree.chargedIso < 2.6 && photonToTree.neutralIso < 3.5+0.04*photonToTree.pt && photonToTree.photonIso < 1.3+0.005*photonToTree.pt ) hist2D["metSigma"].Fill( met, photonToTree.sigmaIetaIeta , weight );
-			if( !photonToTree.pixelseed && photonToTree.hadTowOverEm < 0.05 && photonToTree.sigmaIetaIeta < 0.012 && photonToTree.neutralIso < 3.5+0.04*photonToTree.pt && photonToTree.photonIso < 1.3+0.005*photonToTree.pt ) hist2D["metChIso"].Fill( met, photonToTree.chargedIso ,weight );
-			if( !photonToTree.pixelseed && photonToTree.hadTowOverEm < 0.05 && photonToTree.sigmaIetaIeta < 0.012 && photonToTree.chargedIso < 2.6 && photonToTree.photonIso < 1.3+0.005*photonToTree.pt ) hist2D["metNeIso"].Fill( met, photonToTree.neutralIso , weight );
-			if( !photonToTree.pixelseed && photonToTree.hadTowOverEm < 0.05 && photonToTree.sigmaIetaIeta < 0.012 && photonToTree.chargedIso < 2.6 && photonToTree.neutralIso < 3.5+0.04*photonToTree.pt ) hist2D["metPhIso"].Fill( met, photonToTree.photonIso , weight );
+			if( !photonToTree.pixelseed && photonToTree.hadTowOverEm < 0.05 && photonToTree.sigmaIetaIeta < 0.012 ) {
+				hist2D["metChIso"].Fill( met, photonToTree.chargedIso ,weight );
+				hist2D["metNeIso"].Fill( met, photonToTree.neutralIso , weight );
+				hist2D["metPhIso"].Fill( met, photonToTree.photonIso , weight );
+			}
 
 			// Fill matching histograms only for photon-like objects
 			if( splitting && !isPhotonOrElectron && !isPhotonJet ) continue;
@@ -970,6 +953,44 @@ void TreeWriter::Loop() {
 
 		// filter out events with no photons
 		if( !photons.size() && !photonJets.size() && !photonElectrons.size() ) continue;
+
+		// electrons
+		std::vector<susy::Electron> eVector = event.electrons["gsfElectrons"];
+		for(std::vector<susy::Electron>::const_iterator it = eVector.begin(); it < eVector.end(); ++it) {
+			if( it->momentum.Pt() < 15 || std::abs(it->momentum.Eta()) > 2.6 || !isVetoElectron( *it, event, loggingVerbosity ) )
+				continue;
+			electronToTree.pt = it->momentum.Pt();
+			electronToTree.eta = it->momentum.Eta();
+			electronToTree.phi = it->momentum.Phi();
+			if( isAdjacentToParticles<tree::Photon>( electronToTree, photons ) ) continue;
+			if( isAdjacentToParticles<tree::Photon>( electronToTree, photonJets ) ) continue;
+			if( isAdjacentToParticles<tree::Photon>( electronToTree, photonElectrons ) ) continue;
+			electrons.push_back( electronToTree );
+		}
+		if( loggingVerbosity > 1 )
+			std::cout << "Found " << electrons.size() << " electrons" << std::endl;
+
+		// muons
+		std::vector<susy::Muon> mVector = event.muons["muons"];
+		for( std::vector<susy::Muon>::const_iterator it = mVector.begin(); it != mVector.end(); ++it) {
+			// see https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuideMuonId#Loose_Muon
+			if( it->momentum.Pt() < 15 || std::abs(it->momentum.Eta()) > 2.6 || !(it->isPFMuon() && (it->isGlobalMuon() || it->isTrackerMuon())) )
+				continue;
+			muonToTree.pt = it->momentum.Et();
+			muonToTree.eta = it->momentum.Eta();
+			muonToTree.phi = it->momentum.Phi();
+			muons.push_back( muonToTree );
+		}
+		if( loggingVerbosity > 1 )
+			std::cout << "Found " << muons.size() << " muons" << std::endl;
+
+
+		// met
+		met = event.metMap["pfMet"].met();
+		type0met = event.metMap["pfType01CorrectedMet"].met();
+		type1met = event.metMap["pfType1CorrectedMet"].met();
+		if( loggingVerbosity > 2 )
+			std::cout << " met = " << met << std::endl;
 
 		mht = getMht();
 		ht = getHt();
