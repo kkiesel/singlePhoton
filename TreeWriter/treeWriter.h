@@ -17,6 +17,7 @@
 #include "SusyEvent.h"
 #include "TreeObjects.h"
 
+//#include "../../CMSSW/CMSSW_5_3_8_patch3/src/CondFormats/JetMETObjects/interface/FactorizedJetCorrector.h" // to access the JEC scales
 class TreeWriter {
 	public :
 		TreeWriter( int nFiles, char** fileList, std::string const& );
