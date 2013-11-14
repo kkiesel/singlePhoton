@@ -558,12 +558,13 @@ void TreeWriter::fillJets() {
 	jets.clear();
 	tree::Jet jetToTree;
 
-	std::string jecDir("../../CMSSW/CMSSW_5_3_8_patch3/src/SUSYPhotonAnalysis/SusyNtuplizer/jec/");
+	/*std::string jecDir("../../CMSSW/CMSSW_5_3_8_patch3/src/SUSYPhotonAnalysis/SusyNtuplizer/jec/");
 	FactorizedJetCorrector jecCHS("L1FastJet:L2Relative:L3Absolute:L2Relative",
 		jecDir + "FT_53_V21_AN5_L1FastJet_AK5PFchs.txt:" +
 		jecDir + "FT_53_V21_AN5_L2Relative_AK5PFchs.txt:" +
 		jecDir + "FT_53_V21_AN5_L3Absolute_AK5PFchs.txt:" +
 		jecDir + "FT_53_V21_AN5_L2RelativeL3AbsoluteResidual_AK5PFchs.txt" );
+	*/
 
 	std::vector<susy::PFJet> jetVector = event.pfJets.find("ak5chs")->second;
 	for(std::vector<susy::PFJet>::const_iterator it = jetVector.begin();
