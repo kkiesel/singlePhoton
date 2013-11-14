@@ -817,6 +817,14 @@ void TreeWriter::Loop() {
 		if( loggingVerbosity > 1 )
 			std::cout << "Found " << jets.size() << " uncleaned jets" << std::endl;
 
+		// met
+		met = event.metMap["pfMet"].met();
+		type0met = event.metMap["pfType01CorrectedMet"].met();
+		type1met = event.metMap["pfType1CorrectedMet"].met();
+		if( loggingVerbosity > 2 )
+			std::cout << " met = " << met << std::endl;
+
+
 		// photons
 		std::vector<susy::Photon> photonVector = event.photons["photons"];
 		for(std::vector<susy::Photon>::iterator it = photonVector.begin();
@@ -862,6 +870,13 @@ void TreeWriter::Loop() {
 				if( isPhotonElectron ) std::cout << " photonElectron pT = " << photonToTree.pt << std::endl;
 				if( isPhotonJet )      std::cout << " photonJet pT = " << photonToTree.pt << std::endl;
 			}
+
+			// dependencies on met
+			if( !photonToTree.pixelseed && photonToTree.sigmaIetaIeta < 0.012 && photonToTree.chargedIso < 2.6 && photonToTree.neutralIso < 3.5+0.04*photonToTree.pt && photonToTree.photonIso < 1.3+0.005*photonToTree.pt ) hist2D["metHE"].Fill( met, photonToTree.hadTowOverEm, weight );
+			if( !photonToTree.pixelseed && photonToTree.hadTowOverEm < 0.05 && photonToTree.chargedIso < 2.6 && photonToTree.neutralIso < 3.5+0.04*photonToTree.pt && photonToTree.photonIso < 1.3+0.005*photonToTree.pt ) hist2D["metSigma"].Fill( met, photonToTree.sigmaIetaIeta , weight );
+			if( !photonToTree.pixelseed && photonToTree.hadTowOverEm < 0.05 && photonToTree.sigmaIetaIeta < 0.012 && photonToTree.neutralIso < 3.5+0.04*photonToTree.pt && photonToTree.photonIso < 1.3+0.005*photonToTree.pt ) hist2D["metChIso"].Fill( met, photonToTree.chargedIso ,weight );
+			if( !photonToTree.pixelseed && photonToTree.hadTowOverEm < 0.05 && photonToTree.sigmaIetaIeta < 0.012 && photonToTree.chargedIso < 2.6 && photonToTree.photonIso < 1.3+0.005*photonToTree.pt ) hist2D["metNeIso"].Fill( met, photonToTree.neutralIso , weight );
+			if( !photonToTree.pixelseed && photonToTree.hadTowOverEm < 0.05 && photonToTree.sigmaIetaIeta < 0.012 && photonToTree.chargedIso < 2.6 && photonToTree.neutralIso < 3.5+0.04*photonToTree.pt ) hist2D["metPhIso"].Fill( met, photonToTree.photonIso , weight );
 
 			// Fill matching histograms only for photon-like objects
 			if( splitting && !isPhotonOrElectron && !isPhotonJet ) continue;
