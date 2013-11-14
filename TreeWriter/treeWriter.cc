@@ -94,7 +94,7 @@ bool isAdjacentToParticles( const susy::PFJet& jet, const std::vector<Particle>&
 }
 
 template <typename Particle>
-bool isAdjacentToParticles( const tree::Jet& jet, const std::vector<Particle>& particles, float deltaR_ = 0.3 ) {
+bool isAdjacentToParticles( const tree::Particle& jet, const std::vector<Particle>& particles, float deltaR_ = 0.3 ) {
 	/** Particles near the jet are searched.
 	 *
 	 * Returns true if a particle is found in a certain radius near the jet.
@@ -811,33 +811,6 @@ void TreeWriter::Loop() {
 			}
 		}
 
-		// electrons
-		std::vector<susy::Electron> eVector = event.electrons["gsfElectrons"];
-		for(std::vector<susy::Electron>::const_iterator it = eVector.begin(); it < eVector.end(); ++it) {
-			if( it->momentum.Pt() < 15 || std::abs(it->momentum.Eta()) > 2.6 || !isVetoElectron( *it, event, loggingVerbosity ) )
-				continue;
-			electronToTree.pt = it->momentum.Pt();
-			electronToTree.eta = it->momentum.Eta();
-			electronToTree.phi = it->momentum.Phi();
-			electrons.push_back( electronToTree );
-		}
-		if( loggingVerbosity > 1 )
-			std::cout << "Found " << electrons.size() << " electrons" << std::endl;
-
-		// muons
-		std::vector<susy::Muon> mVector = event.muons["muons"];
-		for( std::vector<susy::Muon>::const_iterator it = mVector.begin(); it != mVector.end(); ++it) {
-			// see https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuideMuonId#Loose_Muon
-			if( it->momentum.Pt() < 15 || std::abs(it->momentum.Eta()) > 2.6 || !(it->isPFMuon() && (it->isGlobalMuon() || it->isTrackerMuon())) )
-				continue;
-			muonToTree.pt = it->momentum.Et();
-			muonToTree.eta = it->momentum.Eta();
-			muonToTree.phi = it->momentum.Phi();
-			muons.push_back( muonToTree );
-		}
-		if( loggingVerbosity > 1 )
-			std::cout << "Found " << muons.size() << " muons" << std::endl;
-
 		// The jets have to be filled before looping over the photons and searching
 		// for jet photon matches.
 		fillJets();
@@ -935,6 +908,37 @@ void TreeWriter::Loop() {
 
 		// filter out events with no photons
 		if( !photons.size() && !photonJets.size() && !photonElectrons.size() ) continue;
+
+		// electrons
+		std::vector<susy::Electron> eVector = event.electrons["gsfElectrons"];
+		for(std::vector<susy::Electron>::const_iterator it = eVector.begin(); it < eVector.end(); ++it) {
+			if( it->momentum.Pt() < 15 || std::abs(it->momentum.Eta()) > 2.6 || !isVetoElectron( *it, event, loggingVerbosity ) )
+				continue;
+			electronToTree.pt = it->momentum.Pt();
+			electronToTree.eta = it->momentum.Eta();
+			electronToTree.phi = it->momentum.Phi();
+			if( isAdjacentToParticles<tree::Photon>( electronToTree, photons ) ) continue;
+			if( isAdjacentToParticles<tree::Photon>( electronToTree, photonJets ) ) continue;
+			if( isAdjacentToParticles<tree::Photon>( electronToTree, photonElectrons ) ) continue;
+			electrons.push_back( electronToTree );
+		}
+		if( loggingVerbosity > 1 )
+			std::cout << "Found " << electrons.size() << " electrons" << std::endl;
+
+		// muons
+		std::vector<susy::Muon> mVector = event.muons["muons"];
+		for( std::vector<susy::Muon>::const_iterator it = mVector.begin(); it != mVector.end(); ++it) {
+			// see https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuideMuonId#Loose_Muon
+			if( it->momentum.Pt() < 15 || std::abs(it->momentum.Eta()) > 2.6 || !(it->isPFMuon() && (it->isGlobalMuon() || it->isTrackerMuon())) )
+				continue;
+			muonToTree.pt = it->momentum.Et();
+			muonToTree.eta = it->momentum.Eta();
+			muonToTree.phi = it->momentum.Phi();
+			muons.push_back( muonToTree );
+		}
+		if( loggingVerbosity > 1 )
+			std::cout << "Found " << muons.size() << " muons" << std::endl;
+
 
 		// met
 		met = event.metMap["pfMet"].met();
