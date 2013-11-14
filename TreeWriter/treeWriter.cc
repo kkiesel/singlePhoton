@@ -288,12 +288,6 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 	hist2D["matchGenPhoton"]   = TH2F("", ";#DeltaR;(p_{T}^{gen}-p_{T})/p_{T}^{gen}", 100, 0, .5, 200, -2, 2 );
 	hist2D["matchGenElectron"] = TH2F("", ";#DeltaR;(p_{T}^{gen}-p_{T})/p_{T}^{gen}", 100, 0, .5, 200, -2, 2 );
 
-	hist2D["metSigma"] = TH2F("", ";#slash{E}_{T};#sigma_{i#etai#eta}", 50, 0, 500, 440, 0, 0.022 );
-	hist2D["metChIso"] = TH2F("", ";#slash{E}_{T};Iso^{#pm}",           50, 0, 500, 300, 0, 30 );
-	hist2D["metNeIso"] = TH2F("", ";#slash{E}_{T};Iso^{0}-.04p_{T}",             50, 0, 500, 300, 0, 30 );
-	hist2D["metPhIso"] = TH2F("", ";#slash{E}_{T};Iso^{#gamma}-.005p_{T}",        50, 0, 500, 300, 0, 30 );
-	hist2D["metHE"]    = TH2F("", ";#slash{E}_{T};H/E",                    50, 0, 500, 100, 0, .5 );
-
 	// Set the keyName as histogram name for one and two dimensional histograms
 	for( std::map<std::string, TH1F>::iterator it = hist1D.begin();
 			it!= hist1D.end(); ++it ) {
@@ -704,7 +698,7 @@ void TreeWriter::SetBranches( TTree& tree ) {
 	tree.Branch("weight", &weight, "weight/F");
 	tree.Branch("nVertex", &nVertex, "nVertex/I");
 	tree.Branch("nGoodJets", &nGoodJets, "nGoodJets/i");
-	tree.Branch("nTracks", &nTracks, "nTracks/i");
+	tree.Branch("nTracksPV", &nTracksPV, "nTracksPV/i");
 	tree.Branch("runNumber", &runNumber, "runNumber/i");
 	tree.Branch("eventNumber", &eventNumber, "eventNumber/i");
 	tree.Branch("luminosityBlockNumber", &luminosityBlockNumber, "luminosityBlockNumber/i");
@@ -783,11 +777,16 @@ void TreeWriter::Loop() {
 		std::vector<tree::Particle> genQuarkLike;
 		genQuarkLike.clear();
 
-		nTracks = event.tracks.size();
+		nTracksPV = 0;
+		for( susy::TrackCollection::const_iterator track = event.tracks.begin(); track != event.tracks.end(); ++track ) {
+			if( track->vertexIndex == 0 )
+				nTracksPV++;
+		}
 
 		// genParticles
 		tree::Particle thisGenParticle;
 		for( std::vector<susy::Particle>::const_iterator it = event.genParticles.begin(); it != event.genParticles.end(); ++it ) {
+			if( it->status == 1 && it->charge )
 
 			// status 3: particles in matrix element
 			// status 2: intermediate particles
