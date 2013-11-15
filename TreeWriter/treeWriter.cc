@@ -621,7 +621,7 @@ float TreeWriter::getMht() const {
 	for(std::vector<tree::Jet>::const_iterator jet = jets.begin();
 			jet != jets.end(); ++jet ) {
 
-		if( jet->pt < 40 || jet->eta > 3. ) continue;
+		if( jet->pt < 40 || std::abs(jet->eta) > 3. ) continue;
 		adding.SetPtEtaPhi( jet->pt, jet->eta, jet->phi );
 		sum += adding;
 	}
@@ -697,7 +697,7 @@ unsigned int TreeWriter::countGoodJets( bool clean ) {
 	unsigned int number = 0;
 	for(std::vector<tree::Jet>::iterator jet = jets.begin();
 			jet != jets.end(); ++jet ) {
-		if( jet->pt < 30 || jet->eta > 2.5 ) continue;
+		if( jet->pt < 30 || std::abs(jet->eta) > 2.5 ) continue;
 
 		if( isAdjacentToParticles<tree::Particle>( *jet, electrons ) ) continue;
 		if( isAdjacentToParticles<tree::Particle>( *jet, muons ) ) continue;
