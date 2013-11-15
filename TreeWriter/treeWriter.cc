@@ -779,9 +779,8 @@ void TreeWriter::Loop() {
 			continue;
 		}
 
-		//if ( event.isRealData )
-			//if ( !passTrigger()) continue;
-			//if ( !isGoodLumi() || !passTrigger()) continue;
+		if ( event.isRealData )
+			if ( !isGoodLumi() || !passTrigger()) continue;
 
 		// vertices
 		nVertex = numberOfGoodVertexInCollection( event.vertices );
