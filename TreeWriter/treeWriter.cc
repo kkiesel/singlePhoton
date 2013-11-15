@@ -779,9 +779,8 @@ void TreeWriter::Loop() {
 			continue;
 		}
 
-		//if ( event.isRealData )
-			//if ( !passTrigger()) continue;
-			//if ( !isGoodLumi() || !passTrigger()) continue;
+		if ( event.isRealData )
+			if ( !isGoodLumi() || !passTrigger()) continue;
 
 		// vertices
 		nVertex = numberOfGoodVertexInCollection( event.vertices );
@@ -811,11 +810,12 @@ void TreeWriter::Loop() {
 			if( track->vertexIndex == 0 )
 				nTracksPV++;
 		}
+		if( loggingVerbosity > 2 )
+			std::cout << " nTracksPV = " << nTracksPV << std::endl;
 
 		// genParticles
 		tree::Particle thisGenParticle;
 		for( std::vector<susy::Particle>::const_iterator it = event.genParticles.begin(); it != event.genParticles.end(); ++it ) {
-			if( it->status == 1 && it->charge )
 
 			// status 3: particles in matrix element
 			// status 2: intermediate particles
@@ -839,6 +839,10 @@ void TreeWriter::Loop() {
 				genQuarkLike.push_back( thisGenParticle );
 			}
 		}
+		if( loggingVerbosity > 1 )
+			std::cout << "Found " << genPhotons.size() << " generated photons and "
+			<< genElectrons.size() << " generated electrons" << std::endl;
+
 
 		// The jets have to be filled before looping over the photons and searching
 		// for jet photon matches.
