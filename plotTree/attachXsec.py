@@ -4,18 +4,23 @@ from sys import stdout
 from treeFunctions import *
 import re
 
-def modify( inputFileName, processNEvents, genMatch=False ):
-	if genMatch:
-		print "not implemented yet"
+
+def modify( inputFileName, printOnly ):
 	"""Key function of splitCanidates.py. The main loop and object selection is
 	defined here."""
 	datasetAbbr = getDatasetAbbr( inputFileName, slim=False )
-	print "Processing file %s with %s configuration"%(inputFileName, datasetAbbr)
+	if "Data" in datasetAbbr:
+		return
+
+	if inputFileName.startswith("slim"):
+		print "File %s already processed?"%inputFileName
+		return
 
 	eventHisto = readHisto( inputFileName )
-	if processNEvents < 0:
-		processNEvents = eventHisto.GetBinContent(1)
+	processNEvents = eventHisto.GetBinContent(1)
 	lumiWeight = getLumiWeight( datasetAbbr, processNEvents )
+	if printOnly:
+		return datasetAbbr, processNEvents, lumiWeight
 
 	treeNames = []
 	histNames = []
@@ -47,7 +52,7 @@ def modify( inputFileName, processNEvents, genMatch=False ):
 			change.weight = lumiWeight * event.weight
 			tree.Fill()
 		fout.cd()
-		tree.Write()
+		tree.AutoSave("overwrite")
 
 	for histName in histNames:
 		h = readHisto( inputFileName, histName )
@@ -57,17 +62,26 @@ def modify( inputFileName, processNEvents, genMatch=False ):
 
 	fout.Close()
 
+	return datasetAbbr, processNEvents, lumiWeight
+
 if __name__ == "__main__":
 
 	arguments = argparse.ArgumentParser( description="Slim tree" )
 	arguments.add_argument("filenames", nargs="+", type=isValidFile )
-	arguments.add_argument("--test", action="store_true" )
-	arguments.add_argument("--genMatch", action="store_true" )
+	arguments.add_argument("--printOnly", action="store_true" )
 	opts = arguments.parse_args()
 
-	# set limit for number of events for testing reason
-	processNEvents = 10000 if opts.test else -1
-
+	rawTable = []
 	for inName in opts.filenames:
-		modify( inName, processNEvents, opts.genMatch )
+		out = modify( inName, opts.printOnly )
+		if out:
+			abbr, nGen, w = out
+			s = w*nGen/19800
+			rawTable.append( (abbr, s, nGen ) )
+
+	print
+	print "Sample name  &  $\sigma$ [pb]  &  nGen [1e6]"
+	for abbr, s, nGen in rawTable:
+		niceAbbr = abbr.replace("GJets","#gammaJets").replace("TTJets","t#bar{t}").replace("ZGamma", "#gammaZ")
+		print "\\verb|%s|  &  %.1f  &  %i \\\\"%(abbr, s, round(nGen/1e6) )
 

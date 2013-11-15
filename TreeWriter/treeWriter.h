@@ -8,6 +8,7 @@
 #include "TFile.h"
 #include "TTree.h"
 #include "TChain.h"
+#include "TVector3.h"
 #include "TH1F.h"
 #include "TH2F.h"
 #include "TH3I.h"
@@ -16,10 +17,10 @@
 #include "SusyEvent.h"
 #include "TreeObjects.h"
 
+//#include "../../CMSSW/CMSSW_5_3_8_patch3/src/CondFormats/JetMETObjects/interface/FactorizedJetCorrector.h" // to access the JEC scales
 class TreeWriter {
 	public :
-		TreeWriter(std::string inputName, std::string outputName, int loggingVerbosity_=0 );
-		TreeWriter(TChain* inputName, std::string outputName, int loggingVerbosity_=0 );
+		TreeWriter( int nFiles, char** fileList, std::string const& );
 		virtual ~TreeWriter();
 		virtual void Loop();
 
@@ -41,15 +42,15 @@ class TreeWriter {
 		void SetQcdWeightFile( std::string const & filename );
 
 	private:
-		void Init( std::string outputName, int loggingVerbosity_ );
 		void SetBranches( TTree& tree );
 		bool passTrigger();
 		bool isGoodLumi() const;
-		float getPileUpWeight() const;
-		float getPtFromMatchedJet( const susy::Photon& myPhoton, bool isPhoton );
-		float getHtHLT() const;
+		float getPileUpWeight();
+		void getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton, bool isPhotonJet, bool isPhotonElectron );
 		float getHt() const;
-		std::vector<tree::Jet> getJets( bool clean ) const;
+		float getMht() const;
+		void fillJets();
+		unsigned int countGoodJets( bool clean );
 		void getQcdWeights( float pt, float ht, float & qcdWeight, float & qcdWeightUp, float & qcdWeightDown );
 
 		// Command line output settings
@@ -64,24 +65,26 @@ class TreeWriter {
 		float photonPtThreshold;
 
 		// Additional information for producing the output
-		TH1F* pileupHisto;
-		TH2F* qcdWeightHisto;
+		TH1F pileupHisto;
+		TH2F qcdWeightHisto;
 		std::map<unsigned, std::set<unsigned> > goodLumiList;
 		std::vector<const char*> triggerNames;
 
-		TChain* inputTree;
-		susy::Event* event;
-
+		TChain inputTree;
+		susy::Event event;
 
 		// Objects which can be saved to the file
-		TFile* outFile;
-		TTree* photonTree;
-		TTree* photonElectronTree;
-		TTree* photonJetTree;
-		TH1F* eventNumbers;
-		TH3I* nPhotons;
-		std::map< std::string, TH2F* > hist2D;
-		std::map< std::string, TH1F* > hist1D;
+		// photons: All tight photons (signal photons)
+		// photonJets: All loose photons (qcd fake object)
+		// photonElectrons: All photons with pixel seeds (ewk fake object)
+		TFile outFile;
+		TTree photonTree;
+		TTree photonElectronTree;
+		TTree photonJetTree;
+		TH1F eventNumbers;
+		TH3I nPhotons;
+		std::map< std::string, TH2F > hist2D;
+		std::map< std::string, TH1F > hist1D;
 
 		// Variables which will be stored in the tree
 		std::vector<tree::Photon> photons;
@@ -94,11 +97,13 @@ class TreeWriter {
 		std::vector<tree::Particle> genPhotons;
 
 		float met;
+		float mht;
 		float type1met;
 		float type0met;
-		float htHLT;
 		float ht;
 		float weight;
+		unsigned int nGoodJets;
+		unsigned int nTracksPV;
 		unsigned int nVertex;
 		unsigned int runNumber;
 		unsigned int eventNumber;
