@@ -12,7 +12,7 @@ int main( int argc, char** argv ) {
 	// common settings
 	tw.SplitTree( true );
 	tw.FinalDistriputionsOnly( false );
-	tw.SetPhotonPtThreshold( 80 );
+	tw.SetPhotonPtThreshold( 110 );
 	tw.ApplyHadronicSelection( true );
 
 	tw.SetQcdWeightFile("../plotTree/qcdWeight.root");
