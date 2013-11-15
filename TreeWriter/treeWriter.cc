@@ -238,7 +238,7 @@ void TreeWriter::Init( std::string outputName, int loggingVerbosity_ ) {
 	if (loggingVerbosity_ > 0)
 		std::cout << "Set Branch Address of susy::Event" << std::endl;
 	event = new susy::Event;
-	event->setInput( *inputTree );
+	inputTree->SetBranchAddress("susyEvent", &event );
 
 	// Here the number of proceeded events will be stored. For plotting, simply use L*sigma/eventNumber
 	eventNumbers = new TH1F("eventNumbers", "Histogram containing number of generated events", 1, 0, 1);
@@ -496,7 +496,7 @@ std::vector<tree::Jet> TreeWriter::getJets( bool clean ) const {
 	for(std::vector<susy::PFJet>::iterator it = jetVector.begin();
 			it != jetVector.end(); ++it) {
 		if( !looseJetId( *it ) ) continue;
-		if( !it->passPuJetIdLoose( susy::kPUJetIdFull ) ) continue;
+		if( !it->passPuJetIdLoose( 0 ) ) continue;
 
 		TLorentzVector corrP4 = it->jecScaleFactors.at("L1FastL2L3") * it->momentum;
 
@@ -545,7 +545,7 @@ float TreeWriter::getHt() const {
 			it != jetVector.end(); ++it) {
 
 		if( !looseJetId( *it ) ) continue;
-		if( !it->passPuJetIdLoose( susy::kPUJetIdFull ) ) continue;
+		if( !it->passPuJetIdLoose( 0 ) ) continue;
 
 		TLorentzVector corrP4 = it->jecScaleFactors.at("L1FastL2L3") * it->momentum;
 
@@ -575,7 +575,7 @@ float TreeWriter::getHtHLT() const {
 			it != jetVector.end(); ++it) {
 
 		if( !looseJetId( *it ) ) continue;
-		if( !it->passPuJetIdLoose( susy::kPUJetIdFull ) ) continue;
+		if( !it->passPuJetIdLoose( 0 ) ) continue;
 
 		TLorentzVector corrP4 = it->jecScaleFactors.at("L1FastL2L3") * it->momentum;
 		if( corrP4.Pt() < 40 || std::abs(corrP4.Eta()) > 3. )
@@ -640,7 +640,7 @@ void TreeWriter::Loop() {
 
 	for (long jentry=0; jentry < processNEvents; ++jentry) {
 		if ( loggingVerbosity>1 || jentry%reportEvery==0 ) std::cout << jentry << " / " << processNEvents << std::endl;
-		event->getEntry(jentry);
+		inputTree->GetEntry(jentry);
 
 		if ( event->isRealData )
 			if ( !isGoodLumi() || !passTrigger() || !event->passMetFilters() ) continue;
@@ -726,9 +726,9 @@ void TreeWriter::Loop() {
 				bool isPhotonJet = eta < susy::etaGapBegin
 					&& it->hadTowOverEm < 0.05
 					&& it->sigmaIetaIeta < 0.012
-					&& photonToTree.chargedIso < 26 && photonToTree.chargedIso > 0
-					&& photonToTree.neutralIso < 35+0.4*photonToTree.pt && photonToTree.neutralIso > 0
-					&& photonToTree.photonIso < 13+0.05*photonToTree.pt && photonToTree.photonIso > 1.3+0.005*photonToTree.pt;
+					&& photonToTree.chargedIso < 26 && photonToTree.chargedIso > 0.26
+					&& photonToTree.neutralIso < 35+0.4*photonToTree.pt && photonToTree.neutralIso > 0.35+0.004*photonToTree.pt
+					&& photonToTree.photonIso < 13+0.05*photonToTree.pt && photonToTree.photonIso > 0.013+0.0005*photonToTree.pt;
 
 					if( isPhotonOrElectron ) {
 						if( photonToTree.pixelseed )
