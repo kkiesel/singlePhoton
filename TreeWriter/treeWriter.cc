@@ -894,7 +894,7 @@ void TreeWriter::Loop() {
 				&& photonToTree.hadTowOverEm < 0.05
 				&& photonToTree.sigmaIetaIeta < 0.012
 				&& photonToTree.chargedIso < 26 && photonToTree.chargedIso > 0.26
-				&& photonToTree.neutralIso < 35+0.4*photonToTree.pt && photonToTree.neutralIso > 0.35+0.004*photonToTree.neutralIso
+				&& photonToTree.neutralIso < 35+0.4*photonToTree.pt && photonToTree.neutralIso > 0.35+0.004*photonToTree.pt
 				&& photonToTree.photonIso < 13+0.05*photonToTree.pt && photonToTree.photonIso > 0.13+0.0005*photonToTree.pt;
 
 			// print photon information
