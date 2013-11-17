@@ -268,10 +268,9 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 	hist1D["gMet"] = TH1F("", ";met;", 60, 0, 600 );
 	hist1D["eMet"] = TH1F("", ";met;", 60, 0, 600 );
 	hist1D["fMet"] = TH1F("", ";met;", 60, 0, 600 );
-	hist1D["fMetUp"] = TH1F("", ";met;", 60, 0, 600 );
-	hist1D["fMetDown"] = TH1F("", ";met;", 60, 0, 600 );
-	hist1D["metFilters"] = TH1F("", ";met Filter number;Entries", susy::nMetFilters+1, .5, susy::nMetFilters+1.5 );
+	hist1D["fMetError"] = TH1F("", ";met;", 60, 0, 600 );
 
+	hist1D["metFilters"] = TH1F("", ";met Filter number;Entries", susy::nMetFilters+1, .5, susy::nMetFilters+1.5 );
 	hist1D["metFilters"].Fill( 0., 0. ); // Allows the histograms to be merged
 
 	// Define two dimensional histograms
@@ -472,12 +471,10 @@ float TreeWriter::getPileUpWeight(){
 	return thisWeight;
 }
 
-void TreeWriter::getQcdWeights( float pt, float ht_, float & qcdWeight, float & qcdWeightUp, float & qcdWeightDown ){
+void TreeWriter::getQcdWeights( float pt, float ht_, float & qcdWeight, float & qcdWeightError ){
 	int bin = qcdWeightHisto.FindBin( pt, ht_ );
-	float error = qcdWeightHisto.GetBinError(bin);
 	qcdWeight = qcdWeightHisto.GetBinContent(bin);
-	qcdWeightUp = qcdWeight + error;
-	qcdWeightDown = qcdWeight - error;
+	qcdWeightError = qcdWeightHisto.GetBinError(bin);
 }
 
 void TreeWriter::getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton=false, bool isPhotonJet=false, bool isPhotonElectron=false ) {
@@ -711,6 +708,7 @@ unsigned int TreeWriter::countGoodJets( bool clean ) {
 	}
 	return number;
 }
+
 void TreeWriter::SetBranches( TTree& tree ) {
 	/* For each tree, the branches have to be set
 	 */
@@ -815,7 +813,7 @@ void TreeWriter::Loop() {
 
 		// genParticles
 		tree::Particle thisGenParticle;
-		for( std::vector<susy::Particle>::const_iterator it = event.genParticles.begin(); it != event.genParticles.end(); ++it ) {
+		for( susy::ParticleCollection::const_iterator it = event.genParticles.begin(); it != event.genParticles.end(); ++it ) {
 
 			// status 3: particles in matrix element
 			// status 2: intermediate particles
@@ -1029,11 +1027,10 @@ void TreeWriter::Loop() {
 			}
 			if( isPhotonJetEvent) {
 				photonJetTree.Fill();
-				float qcdWeight=0, qcdWeightUp=0, qcdWeightDown=0;
-				getQcdWeights( photonJets.at(0).ptJet(), ht, qcdWeight, qcdWeightUp, qcdWeightDown );
+				float qcdWeight=0, qcdWeightError=0;
+				getQcdWeights( photonJets.at(0).ptJet(), ht, qcdWeight, qcdWeightError );
 				hist1D["fMet"].Fill( met, weight*qcdWeight );
-				hist1D["fMetUp"].Fill( met, weight*qcdWeightUp );
-				hist1D["fMetDown"].Fill( met, weight*qcdWeightDown );
+				hist1D["fMetError"].Fill( met, weight*qcdWeightError );
 			}
 			if( isPhotonElectronEvent ) {
 				photonElectronTree.Fill();
