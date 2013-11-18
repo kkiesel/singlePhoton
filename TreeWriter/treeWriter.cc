@@ -863,9 +863,9 @@ void TreeWriter::Loop() {
 
 			if( std::abs( it->momentum.Eta() ) >= susy::etaGapBegin ) continue;
 
-			photonToTree.chargedIso = chargedHadronIso_corrected(*it, event.rho25);
-			photonToTree.neutralIso = neutralHadronIso_corrected(*it, event.rho25);
-			photonToTree.photonIso = photonIso_corrected(*it, event.rho25);
+			photonToTree.chargedIso = chargedHadronIso_corrected(*it, event.rho);
+			photonToTree.neutralIso = neutralHadronIso_corrected(*it, event.rho);
+			photonToTree.photonIso = photonIso_corrected(*it, event.rho);
 			photonToTree.pt = it->momentum.Pt();
 			photonToTree.eta = it->momentum.Eta();
 			photonToTree.phi = it->momentum.Phi();
