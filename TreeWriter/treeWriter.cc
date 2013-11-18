@@ -588,7 +588,7 @@ void TreeWriter::fillJets() {
 		std::cout << "LRcorrected pt = " << it->momentum.Pt()*subcorr.at(3) << "   " << subcorr.at(3) <<  std::endl;
 		*/
 
-		jetToTree.matchInformation = 0;
+		jetToTree.matchInformation = 0xffffffff;
 		jetToTree.pt = corrP4.Pt();
 		jetToTree.eta = corrP4.Eta();
 		jetToTree.phi = corrP4.Phi();
@@ -875,7 +875,7 @@ void TreeWriter::Loop() {
 			photonToTree.hadTowOverEm = it->hadTowOverEm;
 			photonToTree.pixelseed = it->nPixelSeeds;
 			photonToTree.conversionSafeVeto = it->passelectronveto;
-			photonToTree.genInformation = 0;
+			photonToTree.genInformation = 0xffffffff;
 
 			//photon definition barrel
 			bool isPhotonOrElectron = photonToTree.hadTowOverEm < 0.05
