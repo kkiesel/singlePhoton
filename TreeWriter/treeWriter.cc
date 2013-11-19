@@ -272,6 +272,9 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 
 	hist1D["metFilters"] = TH1F("", ";met Filter number;Entries", susy::nMetFilters+1, .5, susy::nMetFilters+1.5 );
 	hist1D["metFilters"].Fill( 0., 0. ); // Allows the histograms to be merged
+	hist1D["cIsoUncut"] = TH1F( "", ";Iso_{#pm};Entries", 100, 0, 30 );
+	hist1D["nIsoUncut"] = TH1F( "", ";Iso_{0};Entries", 100, 0, 30 );
+	hist1D["pIsoUncut"] = TH1F( "", ";Iso_{#gamma};Entries", 100, 0, 30 );
 
 	// Define two dimensional histograms
 	hist2D["matchPhotonToJet"]         = TH2F("", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
@@ -287,8 +290,8 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 
 	hist2D["metSigma"] = TH2F("", ";#slash{E}_{T};#sigma_{i#etai#eta}", 50, 0, 500, 440, 0, 0.022 );
 	hist2D["metChIso"] = TH2F("", ";#slash{E}_{T};Iso^{#pm}",           50, 0, 500, 300, 0, 30 );
-	hist2D["metNeIso"] = TH2F("", ";#slash{E}_{T};Iso^{0}-.04p_{T}",             50, 0, 500, 300, 0, 30 );
-	hist2D["metPhIso"] = TH2F("", ";#slash{E}_{T};Iso^{#gamma}-.005p_{T}",        50, 0, 500, 300, 0, 30 );
+	hist2D["metNeIso"] = TH2F("", ";#slash{E}_{T};Iso^{0}",             50, 0, 500, 300, 0, 30 );
+	hist2D["metPhIso"] = TH2F("", ";#slash{E}_{T};Iso^{#gamma}",        50, 0, 500, 300, 0, 30 );
 	hist2D["metHE"]    = TH2F("", ";#slash{E}_{T};H/E",                    50, 0, 500, 100, 0, .5 );
 
 
@@ -987,6 +990,8 @@ void TreeWriter::Loop() {
 		if( loggingVerbosity > 1 )
 			std::cout << "Found " << muons.size() << " muons" << std::endl;
 
+		if( electrons.size() || muons.size() ) continue;
+
 
 		// met
 		met = event.metMap["pfMet"].met();
@@ -998,6 +1003,15 @@ void TreeWriter::Loop() {
 		mht = getMht();
 		ht = getHt();
 		nGoodJets = countGoodJets( splitting );
+
+		if( ht >= 500 ) {
+			for( susy::PhotonCollection::const_iterator photon = photonVector.begin(); photon != photonVector.end(); ++photon )
+				if( !photon->nPixelSeeds && photon->hadTowOverEm < 0.05 && photon->sigmaIetaIeta < 0.012 ) {
+				hist1D["cIsoUncut"].Fill( chargedHadronIso_corrected(*photon, event.rho), weight );
+				hist1D["nIsoUncut"].Fill( neutralHadronIso_corrected(*photon, event.rho), weight );
+				hist1D["pIsoUncut"].Fill( photonIso_corrected(*photon, event.rho), weight );
+			}
+		}
 
 		if( splitting && hadronicSelection && ( nGoodJets < 2 || ht < 500 ) ) continue;
 
