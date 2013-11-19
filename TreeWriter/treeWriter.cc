@@ -544,7 +544,7 @@ void TreeWriter::getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton=fals
 		}
 		jets.at( myPhoton.matchedJetIndex ).setMatch( tree::kJetPhoton );
 	} else if( indices.size() == 1 ) {
-		jets.at(0).setMatch( tree::kJetPhoton );
+		jets.at( myPhoton.matchJetIndex ).setMatch( tree::kJetPhoton );
 	} else if( loggingVerbosity > 1 )
 		std::cout << "No matching jet found, do not change photon_pt." << std::endl;
 }
@@ -891,7 +891,8 @@ void TreeWriter::Loop() {
 			bool isPhotonElectron = isPhotonOrElectron && photonToTree.pixelseed;
 
 			// photonJet definition
-			bool isPhotonJet = !photonToTree.pixelseed
+			bool isPhotonJet = !isPhotonOrElectron
+				&& !photonToTree.pixelseed
 				&& photonToTree.hadTowOverEm < 0.05
 				&& photonToTree.sigmaIetaIeta < 0.012
 				&& photonToTree.chargedIso < 26 && photonToTree.chargedIso > 0.26
@@ -924,10 +925,6 @@ void TreeWriter::Loop() {
 			if( matchLorentzToGenVector( it->momentum, genQuarkLike, NULL, .3 ) )
 				photonToTree.setGen( tree::kGenJet );
 
-			if( matchLorentzToGenVector( it->momentum, electrons, NULL, .3 ) ||
-					matchLorentzToGenVector( it->momentum, muons, NULL, .3 ) )
-				photonToTree.setGen( tree::kNearLepton );
-
 			getPtFromMatchedJet( photonToTree, isPhoton, isPhotonJet, isPhotonElectron );
 			if( loggingVerbosity > 2 )
 				std::cout << "  ->jet pT = " << photonToTree._ptJet << std::endl;
@@ -938,13 +935,12 @@ void TreeWriter::Loop() {
 			if( photonToTree.ptJet() < photonPtThreshold ) continue;
 
 			if( splitting ) {
-					if( isPhotonOrElectron ) {
-						if( photonToTree.pixelseed )
-							photonElectrons.push_back( photonToTree );
-						else
-							photons.push_back( photonToTree );
-					} else if ( isPhotonJet )
-						photonJets.push_back( photonToTree );
+				if( isPhoton )
+					photons.push_back( photonToTree );
+				if( isPhotonElectron )
+					photonElectrons.push_back( photonToTree );
+				if( isPhotonJet )
+					photonJets.push_back( photonToTree );
 			} else // no splitting, put everything in the vector 'photons'
 				photons.push_back( photonToTree );
 		}
@@ -991,14 +987,6 @@ void TreeWriter::Loop() {
 			std::cout << "Found " << muons.size() << " muons" << std::endl;
 
 		if( electrons.size() || muons.size() ) continue;
-
-
-		// met
-		met = event.metMap["pfMet"].met();
-		type0met = event.metMap["pfType01CorrectedMet"].met();
-		type1met = event.metMap["pfType1CorrectedMet"].met();
-		if( loggingVerbosity > 2 )
-			std::cout << " met = " << met << std::endl;
 
 		mht = getMht();
 		ht = getHt();
