@@ -591,7 +591,7 @@ void TreeWriter::fillJets() {
 		std::cout << "LRcorrected pt = " << it->momentum.Pt()*subcorr.at(3) << "   " << subcorr.at(3) <<  std::endl;
 		*/
 
-		jetToTree.matchInformation = 0xffffffff;
+		jetToTree.matchInformation = 0;
 		jetToTree.pt = corrP4.Pt();
 		jetToTree.eta = corrP4.Eta();
 		jetToTree.phi = corrP4.Phi();
@@ -878,7 +878,7 @@ void TreeWriter::Loop() {
 			photonToTree.hadTowOverEm = it->hadTowOverEm;
 			photonToTree.pixelseed = it->nPixelSeeds;
 			photonToTree.conversionSafeVeto = it->passelectronveto;
-			photonToTree.genInformation = 0xffffffff;
+			photonToTree.genInformation = 0;
 
 			//photon definition barrel
 			bool isPhotonOrElectron = photonToTree.hadTowOverEm < 0.05
@@ -1086,6 +1086,239 @@ void TreeWriter::Loop() {
 	for( std::map<std::string, TH1F>::iterator it = hist1D.begin();
 			it!= hist1D.end(); ++it ) {
 		it->second.SetName( (it->second.GetName() + histoNameAppendix ).c_str() );
+		it->second.Write();
+	}
+}
+
+void TreeWriter::LoopElectronsOnly() {
+	/**
+	 * \brief Loops over input chain and fills tree
+	 *
+	 * This is the major function of treeWriter, which initialize the output, loops
+	 * over all events and fill the tree. In the end, the tree is saved to the
+	 * output File
+	 */
+
+	// get number of events to be proceeded
+	Long64_t nentries = inputTree.GetEntries();
+	// store them in histo
+	eventNumbers.Fill( "Number of generated events", nentries );
+
+	if(processNEvents <= 0 || processNEvents > nentries) processNEvents = nentries;
+	if( loggingVerbosity > 0 )
+		std::cout << "Processing " << processNEvents << " ouf of "
+			<< nentries << " events. " << std::endl;
+
+	photonTree.Branch( "photons", &photons );
+	photonElectronTree.Branch( "photons", &photonElectrons );
+	photonJetTree.Branch( "photons", &photonJets );
+	SetBranches( photonTree );
+	SetBranches( photonElectronTree );
+	SetBranches( photonJetTree );
+
+	// Declaration for objects saved in Tree
+	tree::Photon photonToTree;
+
+	for (long jentry=0; jentry < processNEvents; ++jentry) {
+		if ( loggingVerbosity>1 || jentry%reportEvery==0 ) std::cout << jentry << " / " << processNEvents << std::endl;
+		event.getEntry(jentry);
+
+		if ( event.isRealData )
+			if ( !isGoodLumi() || !passTrigger()) continue;
+
+		// vertices
+		nVertex = numberOfGoodVertexInCollection( event.vertices );
+		if( !nVertex ) continue;
+
+		photons.clear();
+		photonJets.clear();
+		photonElectrons.clear();
+		jets.clear();
+		electrons.clear();
+		muons.clear();
+		genElectrons.clear();
+		genPhotons.clear();
+		runNumber = event.runNumber;
+		eventNumber = event.eventNumber;
+		luminosityBlockNumber = event.luminosityBlockNumber;
+
+		// For data, the weight is 1. Else take the pileup weight.
+		weight = event.isRealData ? 1. : getPileUpWeight();
+
+		nTracksPV = 0;
+		for( susy::TrackCollection::const_iterator track = event.tracks.begin(); track != event.tracks.end(); ++track ) {
+			if( track->vertexIndex == 0 )
+				nTracksPV++;
+		}
+		if( loggingVerbosity > 2 )
+			std::cout << " nTracksPV = " << nTracksPV << std::endl;
+
+		// genParticles
+		tree::Particle thisGenParticle;
+		for( susy::ParticleCollection::const_iterator it = event.genParticles.begin(); it != event.genParticles.end(); ++it ) {
+
+			// status 3: particles in matrix element
+			// status 2: intermediate particles
+			// status 1: final particles (but can decay in geant, etc)
+			if( it->momentum.Pt() < 40 || it->status != 1) continue;
+
+			thisGenParticle.pt = it->momentum.Pt();
+			thisGenParticle.eta = it->momentum.Eta();
+			thisGenParticle.phi = it->momentum.Phi();
+			int pdgId = std::abs(it->pdgId);
+			switch( pdgId ) {
+				case 22: // photon
+					genPhotons.push_back( thisGenParticle );
+					break;
+				case 11: // electron
+					genElectrons.push_back( thisGenParticle );
+					break;
+			}
+		}
+		if( loggingVerbosity > 1 )
+			std::cout << "Found " << genPhotons.size() << " generated photons and "
+			<< genElectrons.size() << " generated electrons" << std::endl;
+
+		// The jets have to be filled before looping over the photons and searching
+		// for jet photon matches.
+		fillJets();
+		if( loggingVerbosity > 1 )
+			std::cout << "Found " << jets.size() << " uncleaned jets" << std::endl;
+
+		// met
+		met = event.metMap["pfMet"].met();
+		type0met = event.metMap["pfType01CorrectedMet"].met();
+		type1met = event.metMap["pfType1CorrectedMet"].met();
+		if( loggingVerbosity > 2 )
+			std::cout << " met = " << met << std::endl;
+
+
+		// photons
+		std::vector<susy::Photon> photonVector = event.photons["photons"];
+		for(std::vector<susy::Photon>::iterator it = photonVector.begin();
+				it != photonVector.end(); ++it ) {
+
+			if( std::abs( it->momentum.Eta() ) >= susy::etaGapBegin ) continue;
+
+			photonToTree.chargedIso = chargedHadronIso_corrected(*it, event.rho);
+			photonToTree.neutralIso = neutralHadronIso_corrected(*it, event.rho);
+			photonToTree.photonIso = photonIso_corrected(*it, event.rho);
+			photonToTree.pt = it->momentum.Pt();
+			photonToTree.eta = it->momentum.Eta();
+			photonToTree.phi = it->momentum.Phi();
+			photonToTree.r9 = it->r9;
+			photonToTree.sigmaIetaIeta = it->sigmaIetaIeta;
+			photonToTree.sigmaIphiIphi = it->sigmaIphiIphi;
+			photonToTree.hadTowOverEm = it->hadTowOverEm;
+			photonToTree.pixelseed = it->nPixelSeeds;
+			photonToTree.conversionSafeVeto = it->passelectronveto;
+			photonToTree.genInformation = 0;
+
+			//photon definition barrel
+			bool isPhotonOrElectron = photonToTree.hadTowOverEm < 0.05
+				&& photonToTree.sigmaIetaIeta < 0.012
+				&& photonToTree.chargedIso < 2.6
+				&& photonToTree.neutralIso < 3.5+0.04*photonToTree.pt
+				&& photonToTree.photonIso < 1.3+0.005*photonToTree.pt;
+
+			bool isPhoton = isPhotonOrElectron && !photonToTree.pixelseed;
+			bool isPhotonElectron = isPhotonOrElectron && photonToTree.pixelseed;
+
+			// photonJet definition
+			bool isPhotonJet = !photonToTree.pixelseed
+				&& photonToTree.hadTowOverEm < 0.05
+				&& photonToTree.sigmaIetaIeta < 0.012
+				&& photonToTree.chargedIso < 26 && photonToTree.chargedIso > 0.26
+				&& photonToTree.neutralIso < 35+0.4*photonToTree.pt && photonToTree.neutralIso > 0.35+0.004*photonToTree.pt
+				&& photonToTree.photonIso < 13+0.05*photonToTree.pt && photonToTree.photonIso > 0.13+0.0005*photonToTree.pt;
+
+			// print photon information
+			if( loggingVerbosity > 2 ) {
+				if( isPhoton )         std::cout << " photon pT = " << photonToTree.pt << std::endl;
+				if( isPhotonElectron ) std::cout << " photonElectron pT = " << photonToTree.pt << std::endl;
+				if( isPhotonJet )      std::cout << " photonJet pT = " << photonToTree.pt << std::endl;
+			}
+
+			// dependencies on met
+			if( !photonToTree.pixelseed && photonToTree.sigmaIetaIeta < 0.012 && photonToTree.chargedIso < 2.6 && photonToTree.neutralIso < 3.5+0.04*photonToTree.pt && photonToTree.photonIso < 1.3+0.005*photonToTree.pt ) hist2D["metHE"].Fill( met, photonToTree.hadTowOverEm, weight );
+			if( !photonToTree.pixelseed && photonToTree.hadTowOverEm < 0.05 && photonToTree.chargedIso < 2.6 && photonToTree.neutralIso < 3.5+0.04*photonToTree.pt && photonToTree.photonIso < 1.3+0.005*photonToTree.pt ) hist2D["metSigma"].Fill( met, photonToTree.sigmaIetaIeta , weight );
+			if( !photonToTree.pixelseed && photonToTree.hadTowOverEm < 0.05 && photonToTree.sigmaIetaIeta < 0.012 ) {
+				hist2D["metChIso"].Fill( met, photonToTree.chargedIso ,weight );
+				hist2D["metNeIso"].Fill( met, photonToTree.neutralIso , weight );
+				hist2D["metPhIso"].Fill( met, photonToTree.photonIso , weight );
+			}
+
+			if( matchLorentzToGenVector( it->momentum, genPhotons, &hist2D["matchGenPhoton"], .1, .1 ) )
+				photonToTree.setGen( tree::kGenPhoton );
+			if( matchLorentzToGenVector( it->momentum, genElectrons, &hist2D["matchGenElectron"], .1, .1 ) )
+				photonToTree.setGen( tree::kGenElectron );
+
+			if( matchLorentzToGenVector( it->momentum, electrons, NULL, .3 ) ||
+					matchLorentzToGenVector( it->momentum, muons, NULL, .3 ) )
+				photonToTree.setGen( tree::kNearLepton );
+
+			getPtFromMatchedJet( photonToTree, isPhoton, isPhotonJet, isPhotonElectron );
+			if( loggingVerbosity > 2 )
+				std::cout << "  ->jet pT = " << photonToTree._ptJet << std::endl;
+
+			if( isPhotonOrElectron ) {
+				if( photonToTree.pixelseed )
+						photonElectrons.push_back( photonToTree );
+					else
+						photons.push_back( photonToTree );
+			} else // no splitting, put everything in the vector 'photons'
+				photons.push_back( photonToTree );
+		}
+		std::sort( photons.begin(), photons.end(), tree::EtGreater );
+		std::sort( photonElectrons.begin(), photonElectrons.end(), tree::EtGreater );
+		std::sort( photonJets.begin(), photonJets.end(), tree::EtGreater );
+		if( loggingVerbosity > 1 )
+			std::cout << "Found " << photons.size() << " photons, "
+					<< photonJets.size() << " photon_{jets} and "
+					<< photonElectrons.size() << " photon electrons." << std::endl;
+		nPhotons.Fill( photons.size(), photonJets.size(), photonElectrons.size() );
+
+		// filter out events with no photons
+		if( !photons.size() && !photonJets.size() && !photonElectrons.size() ) continue;
+
+		// met
+		met = event.metMap["pfMet"].met();
+		type0met = event.metMap["pfType01CorrectedMet"].met();
+		type1met = event.metMap["pfType1CorrectedMet"].met();
+		if( loggingVerbosity > 2 )
+			std::cout << " met = " << met << std::endl;
+
+		mht = getMht();
+		ht = getHt();
+		nGoodJets = countGoodJets( splitting );
+
+		fillMetFilterBitHistogram( hist1D.at("metFilters"), event.metFilterBit );
+		if( !event.passMetFilters() || !event.passMetFilter( susy::kEcalLaserCorr) ) continue;
+
+		if( photons.size() )
+			photonTree.Fill();
+		if( photonElectrons.size() )
+			photonElectronTree.Fill();
+
+	} // for jentry
+
+	outFile.cd();
+	if( !onlyMetPlots ) {
+		photonTree.Write();
+		if( splitting ) {
+			photonElectronTree.Write();
+			photonJetTree.Write();
+			nPhotons.Write();
+		}
+		eventNumbers.Write();
+		for( std::map<std::string, TH2F>::const_iterator it = hist2D.begin();
+				it!= hist2D.end(); ++it )
+			it->second.Write();
+	}
+
+	// Append the signal information to the histogram name
+	for( std::map<std::string, TH1F>::iterator it = hist1D.begin();
+			it!= hist1D.end(); ++it ) {
 		it->second.Write();
 	}
 }

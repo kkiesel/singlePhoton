@@ -29,7 +29,8 @@ int main( int argc, char** argv ) {
 	tw.SetTriggerPaths( triggerNames );
 
 	double start_time = time(NULL);
-	tw.Loop();
+	//tw.Loop();
+	tw.LoopElectronsOnly();
 	double end_time = time(NULL);
 
 	std::cout << "Job needed " << 1.*(end_time - start_time)/3600 << " h real time." << std::endl;

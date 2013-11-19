@@ -23,6 +23,7 @@ class TreeWriter {
 		TreeWriter( int nFiles, char** fileList, std::string const& );
 		virtual ~TreeWriter();
 		virtual void Loop();
+		virtual void LoopElectronsOnly();
 
 		// Command line output settings
 		void SetProcessNEvents(int nEvents) { processNEvents = nEvents; }
