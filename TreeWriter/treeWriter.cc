@@ -150,6 +150,16 @@ bool isLooseJet( const susy::PFJet& jet ) {
 	 * for more information.
 	 */
 	double energy = jet.momentum.E();
+	if( false ) // for debugging
+		std::cout << "Jet Id\nNeutralHadron = " << (jet.neutralHadronEnergy+jet.HFHadronEnergy) / energy
+			<< "\nNeutralEM = " << jet.neutralEmEnergy / energy
+			<< "\nnConst = " << (int)jet.nConstituents
+			<< "\neta = " << std::abs(jet.momentum.Eta())
+			<< "\nchargedHadron = " << jet.chargedHadronEnergy / energy
+			<< "\nnCharged = " << (int)jet.chargedMultiplicity
+			<< "\nchargedEm = " << jet.chargedEmEnergy / energy
+			<< std::endl;
+
 	return (jet.neutralHadronEnergy+jet.HFHadronEnergy) / energy < 0.99
 			&& jet.neutralEmEnergy / energy < 0.99
 			&& jet.nConstituents > 1
@@ -518,7 +528,7 @@ void TreeWriter::getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton=fals
 		}
 
 		// Define the selection criteria
-		if( deltaR_ > 0.2  || eRel > 3 ) continue;
+		if( deltaR_ > 0.2  || eRel > 3 || eRel < 0.8 ) continue;
 		jet->setMatch( tree::kJetAllPhoton );
 
 		// If only one jet is found, we would be done here
@@ -544,7 +554,7 @@ void TreeWriter::getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton=fals
 		}
 		jets.at( myPhoton.matchedJetIndex ).setMatch( tree::kJetPhoton );
 	} else if( indices.size() == 1 ) {
-		jets.at( myPhoton.matchJetIndex ).setMatch( tree::kJetPhoton );
+		jets.at( myPhoton.matchedJetIndex ).setMatch( tree::kJetPhoton );
 	} else if( loggingVerbosity > 1 )
 		std::cout << "No matching jet found, do not change photon_pt." << std::endl;
 }
