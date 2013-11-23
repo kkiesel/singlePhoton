@@ -150,8 +150,11 @@ bool isLooseJet( const susy::PFJet& jet ) {
 	 * for more information.
 	 */
 	double energy = jet.momentum.E();
-	if( false ) // for debugging
-		std::cout << "Jet Id\nNeutralHadron = " << (jet.neutralHadronEnergy+jet.HFHadronEnergy) / energy
+	bool debug = false;
+	// debug = true;
+	if( debug )
+		std::cout << "Jet Id with pt = " << jet.jecScaleFactors.at("L1FastL2L3") * jet.momentum.Pt()
+			<< "\nNeutralHadron = " << (jet.neutralHadronEnergy+jet.HFHadronEnergy) / energy
 			<< "\nNeutralEM = " << jet.neutralEmEnergy / energy
 			<< "\nnConst = " << (int)jet.nConstituents
 			<< "\neta = " << std::abs(jet.momentum.Eta())
@@ -816,11 +819,7 @@ void TreeWriter::Loop() {
 		std::vector<tree::Particle> genQuarkLike;
 		genQuarkLike.clear();
 
-		nTracksPV = 0;
-		for( susy::TrackCollection::const_iterator track = event.tracks.begin(); track != event.tracks.end(); ++track ) {
-			if( track->vertexIndex == 0 )
-				nTracksPV++;
-		}
+		nTracksPV = (int) event.vertices.at(0).tracksSize;
 		if( loggingVerbosity > 2 )
 			std::cout << " nTracksPV = " << nTracksPV << std::endl;
 
@@ -1001,6 +1000,11 @@ void TreeWriter::Loop() {
 		mht = getMht();
 		ht = getHt();
 		nGoodJets = countGoodJets( splitting );
+		if( loggingVerbosity > 1 ) {
+			std::cout << "H_T = " << ht << std::endl;
+			std::cout << "Found " << nGoodJets << " jets" << std::endl;
+		}
+
 
 		if( ht >= 500 ) {
 			for( susy::PhotonCollection::const_iterator photon = photonVector.begin(); photon != photonVector.end(); ++photon )
