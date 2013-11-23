@@ -1147,11 +1147,7 @@ void TreeWriter::LoopElectronsOnly() {
 		// For data, the weight is 1. Else take the pileup weight.
 		weight = event.isRealData ? 1. : getPileUpWeight();
 
-		nTracksPV = 0;
-		for( susy::TrackCollection::const_iterator track = event.tracks.begin(); track != event.tracks.end(); ++track ) {
-			if( track->vertexIndex == 0 )
-				nTracksPV++;
-		}
+		nTracksPV = (int) event.vertices.at(0).tracksSize;
 		if( loggingVerbosity > 2 )
 			std::cout << " nTracksPV = " << nTracksPV << std::endl;
 
