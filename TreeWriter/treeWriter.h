@@ -18,12 +18,18 @@
 #include "TreeObjects.h"
 
 //#include "../../CMSSW/CMSSW_5_3_8_patch3/src/CondFormats/JetMETObjects/interface/FactorizedJetCorrector.h" // to access the JEC scales
+
+enum eventType {
+	kPhotonEvent,
+	kElectronEvent,
+	kJetEvent
+};
+
 class TreeWriter {
 	public :
 		TreeWriter( int nFiles, char** fileList, std::string const& );
 		virtual ~TreeWriter();
 		virtual void Loop();
-		virtual void LoopElectronsOnly();
 
 		// Command line output settings
 		void SetProcessNEvents(int nEvents) { processNEvents = nEvents; }
@@ -32,6 +38,7 @@ class TreeWriter {
 
 		// Configure output version
 		void SplitTree( bool v = true ) { splitting = v; }
+		void SkrinkTree( bool v = true ) { shrinkTree = v; }
 		void FinalDistriputionsOnly( bool v = true ) { onlyMetPlots = v; }
 		void ApplyHadronicSelection( bool v = true ) { hadronicSelection = v; }
 		void SetPhotonPtThreshold( float th = 80 ) { photonPtThreshold = th; }
@@ -46,6 +53,10 @@ class TreeWriter {
 		void SetBranches( TTree& tree );
 		bool passTrigger();
 		bool isGoodLumi() const;
+		eventType whichEventType( std::vector<tree::Photon>& photons,
+			std::vector<tree::Photon>& photonElectrons,
+			std::vector<tree::Photon>& photonJets );
+
 		float getPileUpWeight();
 		void getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton, bool isPhotonJet, bool isPhotonElectron );
 		float getHt() const;
@@ -63,6 +74,7 @@ class TreeWriter {
 		bool splitting;
 		bool onlyMetPlots;
 		bool hadronicSelection;
+		bool shrinkTree;
 		float photonPtThreshold;
 
 		// Additional information for producing the output
