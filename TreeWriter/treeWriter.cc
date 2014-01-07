@@ -302,6 +302,10 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 	hist1D["nIsoUncut"] = TH1F( "", ";Iso_{0};Entries", 100, 0, 30 );
 	hist1D["pIsoUncut"] = TH1F( "", ";Iso_{#gamma};Entries", 100, 0, 30 );
 
+	hist1D["gHt"] = TH1F("", ";H_{T} [GeV];Entries", 200, 0, 2000 );
+	hist1D["gNJets"] = TH1F("", ";n_{Jets};Entries", 10, -.5, 9.5 );
+	hist1D["gPt"] = TH1F("", ";p_{T^{*}};Entries", 200, 0, 2000 );
+
 	// Define two dimensional histograms
 	hist2D["matchPhotonToJet"]         = TH2F("", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
 	hist2D["matchPhotonJetToJet"]      = TH2F("", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
@@ -1078,6 +1082,9 @@ void TreeWriter::Loop() {
 			if( eType == kPhotonEvent ) {
 				photonTree.Fill();
 				hist1D["gMet"].Fill( met, weight );
+				hist1D["gHt"].Fill( ht, weight );
+				hist1D["gNJets"].Fill( nGoodJets, weight );
+				hist1D["gPt"] = TH1F( photons.at(0).ptJet(), weight );
 			}
 			if( eType == kJetEvent ) {
 				photonJetTree.Fill();
