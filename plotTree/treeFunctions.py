@@ -47,7 +47,7 @@ def createHistoFromTree2D(tree, variable, weight, nBinsX=[], nBinsY=[] ):
 			result = TH2F( name, variable, len(nBinsX)-1, xBins, len(nBinsY)-1, yBins )
 			result.Sumw2()
 			tree.Draw("%s>>%s"%(variable, name), weight, "goff")
-			result.Scale(1, "width")
+			#result.Scale(1, "width")
 	yLabel, xLabel = variable.split(":")
 	result.SetTitle(";%s;%s"%( getAxisTitle( xLabel ), getAxisTitle( yLabel ) ) )
 	return result
@@ -190,18 +190,25 @@ def getXMinXMax( histo_list ):
 		maxi = max( maxi, histo.GetBinLowEdge(lastBin)+histo.GetBinWidth(lastBin) )
 	return mini, maxi
 
-def getHisto( tree, plot, cut="1", overflow=0, weight="weight", color=1, nBins=20, firstBin=None, lastBin=None, fillEmptyBins=False ):
+def getHisto( tree, plot, cut="1", overflow=0, weight="weight", color=1, nBins=None, firstBin=None, lastBin=None, fillEmptyBins=False, appendOverflowBin=True ):
 	"""Creates a histogram and apply the axis settings
 	cut: cutstring applied to the tree
 	overflow: size of the overflow bin, if overflow>0
 	"""
+	if nBins == None:
+		nBins = 20
+		label, unit, binning = readAxisConf( plot )
+	else:
+		label, unit, binning = readAxisConf( plot )
+		binning = nBins
+
+
 	if firstBin != None and lastBin != None:
 		if "Length$(" in plot or "nVertex" == plot:
 			firstBin -= .5
 			lastBin += .5
 			nBins = int(lastBin-firstBin)
 
-	label, unit, binning = readAxisConf( plot )
 	if binning:
 		histo = createHistoFromTree( tree, plot, "%s*(%s)"%(weight, cut), nBins=binning)
 	else:
@@ -218,9 +225,15 @@ def getHisto( tree, plot, cut="1", overflow=0, weight="weight", color=1, nBins=2
 
 		for bin in range(1, histo.GetNbinsX()+2):
 			# if the bin left or right is not empty but the bin itself, set the error
-			if not histo.GetBinContent( bin ) and ( histo.GetBinContent( bin-1 ) or histo.GetBinContent( bin+1 ) ):
+			if not histo.GetBinContent( bin ) and ( histo.GetBinContent( bin-1 ) or histo.GetBinContent( bin+1 ) ) and histo.GetBinWidth(bin):
 				histo.SetBinError( bin, poissonZeroError*weight / histo.GetBinWidth(bin) )
 
+	if appendOverflowBin:
+		lastBin = histo.GetNbinsX()
+		histo.SetBinError( lastBin, sqrt(histo.GetBinError(lastBin)**2+histo.GetBinError(lastBin+1)**2) )
+		histo.SetBinContent( lastBin, histo.GetBinContent(lastBin) + histo.GetBinContent(lastBin+1) )
+		histo.SetBinContent( lastBin+1,0 )
+		histo.SetBinError( lastBin+1, 0 )
 	histo.SetLineColor( color )
 	histo.SetMarkerColor( color )
 	histo.SetLineWidth(2)
@@ -275,7 +288,7 @@ def getAxisTitle( plot ):
 			"photonIso": "Iso^{#gamma}"
 		}
 	import re
-	objVarExpr = "([a-zA-Z]+)\[{0,1}(\d*)\]{0,1}\.([a-zA-Z]+)" # matches eg photon.pt
+	objVarExpr = "([a-zA-Z]+)\[{0,1}(\d*)\]{0,1}\.([_a-zA-Z]+)" # matches eg photon.pt
 	if "Length$(" in plot:
 		obj, nObj, var = re.match( "Length\$\(%s\)"%objVarExpr, plot ).groups()
 		obj = reduce(lambda x, y: x.replace(y, objectReplacement[y]), objectReplacement, obj )
@@ -301,7 +314,7 @@ def getHistoTitle( histo, plot, label, unit, binning ):
 	if not label:
 		label = getAxisTitle( plot )
 	if binning:
-		ytitle+= " / Bin"
+		ytitle+= " / GeV"
 		if unit:
 			label+= " [%s]"%unit
 	else:
@@ -345,7 +358,7 @@ def applyFakeRateEWK( histo, fakeRate=None, fakeRateError=None ):
 	if not fakeRate:
 		fakeRate = 0.0084
 	if not fakeRateError:
-		fakeRateError = 0.0006 # stat
+		fakeRateError = 0.0008 # syst and stat
 
 	# correct fake rate, if it is estimated with yutaros method
 	fakeRateError = fakeRateError / (1-fakeRate)**2

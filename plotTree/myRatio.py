@@ -13,17 +13,18 @@ class Ratio:
 
 	def calculateRatio( self ):
 		for bin in range(self.numerator.GetNbinsX()+2):
-			if not self.denominator.GetBinContent(bin):
-				continue
-			self.ratio.SetBinContent( bin, self.numerator.GetBinContent(bin) / self.denominator.GetBinContent(bin) )
-			self.ratio.SetBinError( bin, self.numerator.GetBinError(bin) / self.denominator.GetBinContent(bin) )
-			if self.sysHisto:
-				self.ratioSys.SetBinContent( bin, self.sysHisto.GetBinContent(bin) / self.denominator.GetBinContent(bin) )
-				combinedError = sqrt( self.sysHisto.GetBinError(bin)**2 + self.denominator.GetBinError(bin)**2 )
-				self.ratioSys.SetBinError( bin, combinedError / self.denominator.GetBinContent(bin) )
-			else:
-				self.ratioSys.SetBinContent( bin, 1 )
-				self.ratioSys.SetBinError( bin, self.denominator.GetBinError(bin) / self.denominator.GetBinContent(bin) )
+			if self.denominator.GetBinContent(bin):
+				self.ratio.SetBinContent( bin, self.numerator.GetBinContent(bin) / self.denominator.GetBinContent(bin) )
+				self.ratio.SetBinError( bin, self.numerator.GetBinError(bin) / self.denominator.GetBinContent(bin) )
+				if self.sysHisto:
+					self.ratioSys.SetBinContent( bin, self.sysHisto.GetBinContent(bin) / self.denominator.GetBinContent(bin) )
+					combinedError = sqrt( self.sysHisto.GetBinError(bin)**2 + self.denominator.GetBinError(bin)**2 )
+					self.ratioSys.SetBinError( bin, combinedError / self.denominator.GetBinContent(bin) )
+				else:
+					self.ratioSys.SetBinContent( bin, 1 )
+					self.ratioSys.SetBinError( bin, self.denominator.GetBinError(bin) / self.denominator.GetBinContent(bin) )
+			elif self.numerator.GetBinContent(bin):
+				self.ratio.SetBinError( bin, 1.*self.numerator.GetBinError(bin)/self.numerator.GetBinContent(bin) )
 
 	def draw( self, yMin=None, yMax=None ):
 		self.calculateRatio()
@@ -31,43 +32,50 @@ class Ratio:
 		# If no minimum or maximum is specified, choose a minimum from 0 to .5
 		# and a maximum from 1.5 to 50
 		if yMin == None:
-			yMin = min( max(0,self.ratio.GetMinimum()), .5 )
+			#yMin = min( max(0, self.ratio.GetBinContent(self.ratio.GetMinimumBin())), .5 )
+			yMin = 0
 		if yMax == None:
-			yMax = min( max(1.5, self.ratio.GetMaximum()), 50 )
+			from math import ceil
+			yMax = min( max(1.5, ceil(self.ratio.GetBinContent(self.ratio.GetMaximumBin()))), 50 )
 
 		# Set ratio properties
-		self.ratio.GetYaxis().SetNdivisions(2, 0, 2)
-		self.ratio.SetTitleOffset(.9, "Y")
-		self.ratio.SetYTitle( self.title )
-		self.ratio.SetMinimum( yMin )
-		self.ratio.SetMaximum( yMax )
+		for hist in [ self.ratio, self.ratioSys ]:
+			hist.GetYaxis().SetNdivisions(2, 0, 2)
+			hist.SetTitleOffset(.9, "Y")
+			hist.SetYTitle( self.title )
+			hist.SetMinimum( yMin )
+			hist.SetMaximum( yMax )
 
-		self.ratioSys.SetFillStyle(3254)
+		self.ratioSys.SetFillStyle(3554)
 		self.ratioSys.SetMarkerSize(0)
 		self.ratioSys.SetFillColor(self.ratioSys.GetLineColor())
 
-		oneLine = ROOT.TLine( self.ratio.GetBinLowEdge(1), 1.0, self.ratio.GetBinLowEdge(self.ratio.GetNbinsX()+1), 1.0)
+		oneLine = ROOT.TLine()
 		oneLine.SetLineStyle(2)
 
 		# Delete label and title of all histograms in the current pad
 		for ding in ROOT.gPad.GetListOfPrimitives():
-			if isinstance( ding, ROOT.TH1 ):
-				ding.GetXaxis().SetLabelSize(0)
-				ding.GetXaxis().SetTitle("")
+			if isinstance( ding, ROOT.TH1 ) or isinstance( ding, ROOT.THStack ):
+				xaxis = ding.GetXaxis()
+				xaxis.SetNdivisions(0,50,0, True)
+				xaxis.SetLabelSize(0)
+				xaxis.SetLabelColor(0)
+				xaxis.SetLabelOffset(1000)
+				xaxis.SetTitle("")
+				xaxis.SetTitleColor(0)
+				xaxis.SetTitleSize(0)
 
 		csf = 0.2 # the ratio in which the pad is splitted
 		ROOT.gPad.SetBottomMargin( csf + (1-csf)*ROOT.gPad.GetBottomMargin() - csf*ROOT.gPad.GetTopMargin() )
 		rPad = ROOT.TPad( "rPad", "ratio", 0, 0, 1, 1 )
 		rPad.SetTopMargin( (1-csf) - (1-csf)*rPad.GetBottomMargin() + csf*rPad.GetTopMargin() )
-		rPad.SetFillStyle(0)
+		rPad.SetFillStyle(3955)
 		rPad.Draw()
 		rPad.cd()
 		rPad.SetLogy(0)
 
-		self.ratio.Draw("e")
-		self.ratioSys.Draw("same e2")
-		oneLine.Draw()
+		self.ratioSys.Draw("e2")
+		self.ratio.Draw("e same")
+		oneLine.DrawLine( self.ratio.GetBinLowEdge(1), 1.0, self.ratio.GetBinLowEdge(self.ratio.GetNbinsX()+1), 1.0 )
 
 
-
-		return self.ratio, self.ratioSys, oneLine
