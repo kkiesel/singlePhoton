@@ -282,7 +282,7 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 	splitting(true),
 	onlyMetPlots(false),
 	hadronicSelection(true),
-	shrinkTree(true),
+	shrinkTree(false),
 	photonPtThreshold(80),
 	inputTree("susyTree"),
 	event(),
