@@ -33,26 +33,38 @@ def mergeDatasetAbbr( datasetAbbrs ):
 	datasetAbbrs = replaceListElementsBy( datasetAbbrs, ["GJets_200_400", "GJets_400_inf"], "GJets" )
 	datasetAbbrs = replaceListElementsBy( datasetAbbrs, ["QCD_250_500", "QCD_500_1000", "QCD_1000_inf"], "QCD" )
 	datasetAbbrs = replaceListElementsBy( datasetAbbrs, ["GJets", "QCD"], "AllQCD" )
-	datasetAbbrs = replaceListElementsBy( datasetAbbrs, ["TTJets", "WJets"], "EWK" )
-	datasetAbbrs = replaceListElementsBy( datasetAbbrs, ["WGamma", "ZGamma"], "FSR" )
+	datasetAbbrs = replaceListElementsBy( datasetAbbrs, ["WJets_250_300", "WJets_300_400", "WJets_400_inf"], "W" )
+	datasetAbbrs = replaceListElementsBy( datasetAbbrs, ["WGamma_50_130", "WGamma_130_inf"], "WGamma" )
+	datasetAbbrs = replaceListElementsBy( datasetAbbrs, ["ZGammaNuNu", "ZGammaLL"], "ZGamma2" )
+	datasetAbbrs = replaceListElementsBy( datasetAbbrs, ["Data A", "Data B", "Data C", "Data D"], "Data" )
 	return datasetAbbrs
 
 
 def datasetToLatex( datasetAbbr ):
 	"""Translates the dataset name to a TLatex name"""
-	sets = { "AllQCD": "(#gamma+)QCD",
-			"GJets": "#gamma+QCD",
+	sets = { "AllQCD": "#gammaJet+QCD",
+			"GJets": "#gamma#text{Jets}",
 			"TTJets": "t#bar{t}",
 			"WJets": "W",
-			"QCD": "QCD"
+			"QCD": "QCD",
+			"WGamma": "#gamma W",
+			"TTGamma": "#gamma t#bar{t}",
+			"ZGamma": "#gamma#text{Z}",
+			"ZGammaLL": "#gammaZ#rightarrow#gammall",
+			"ZGammaNuNu": "#gamma#text{Z}",
+			"ZGammaNuNu3_400_inf": "Z"
 			}
-	#for part, label in sets.iteritems():
-	#	if part in datasetAbbr:
-	#		return label
 	try:
 		return sets[datasetAbbr]
 	except:
-		return datasetAbbr
+		# find out if it is a signal sample
+		from re import match
+		matchResult = match("([WB])_(\d{3,4})_(\d{3,4})_375", datasetAbbr)
+		if matchResult:
+			flavor, mg, mq = matchResult.groups()
+			return "%sino %s,%s"%(flavor,mg,mq)
+		else:
+			return datasetAbbr
 
 def createDatasetLabel( datasetAbbr ):
 	import ROOT
@@ -96,13 +108,18 @@ def myLegend( x1, y1, x2=0,y2=0 ):
 	leg.SetBorderSize(0)
 	return leg
 
+configurationFileName="axis.cfg"
+import ConfigParser
+configuration = ConfigParser.SafeConfigParser()
+configuration.read( configurationFileName )
+
 def readAxisConf( plot, configurationFileName="axis.cfg" ):
 	"""Read the configuration file for the axis.
 	returns the label, the unit and the binning as list if avaible
 	"""
-	import ConfigParser
-	configuration = ConfigParser.SafeConfigParser()
-	configuration.read( configurationFileName )
+	#import ConfigParser
+	#configuration = ConfigParser.SafeConfigParser()
+	#configuration.read( configurationFileName )
 	#brackets are identified as sections, so they have to be deleted
 	plot = plot.replace("[","").replace("]","")
 	if not configuration.has_section( plot ):
@@ -123,7 +140,26 @@ def getLumiWeight( datasetAbbr, nGenEvents, integratedLumi=19800, configName="da
 	if datasetConf.has_option( datasetAbbr, "crosssection" ):
 		crosssection = datasetConf.getfloat( datasetAbbr, "crosssection" )
 	else:
-		raise NameError( "Configuration for %s not found"%datasetAbbr )
+		import re
+		# Signal sample?
+		fileNameMatch = re.match("(.)_(\d+)_(\d+)_(\d+)", datasetAbbr )
+		if fileNameMatch:
+			nlsp, mg, mq, mNlsp = fileNameMatch.groups()
+			xSectionFile = "/home/knut/master/infos/Spectra_gsq_%s_8TeV.xsec"%nlsp
+			f = open( xSectionFile )
+			text = f.readlines()
+			f.close()
+
+			floatMatch = "\-{0,1}\d\.\d+e[+-]\d{2}"
+			crosssection = None
+			for t in text:
+				matches = re.match(" (\d+)\s+%s\s+%s\s+(\d+)\s+(\d+) LO: (%s) \+ (%s) \- (%s) NLO: (%s) \+ (%s) \- (%s)\n"%(mg, mq, floatMatch,floatMatch,floatMatch,floatMatch,floatMatch,floatMatch), t )
+				if matches:
+					crosssection = float(matches.groups()[6])
+			if not crosssection:
+				raise NameError( "Signal not in xsection file %s."%xSectionFile )
+		else:
+			raise NameError( "Configuration for %s not found"%datasetAbbr )
 
 	return 1. * integratedLumi * crosssection / nGenEvents
 
@@ -141,16 +177,21 @@ def SaveAs( can, name, folder="plots", endings=["pdf"] ):
 	for ending in endings:
 		can.SaveAs( folder+"/"+manipulateSaveName( name )+"."+ending )
 
+def SavePad( name, folder="plots", endings=["pdf"] ):
+	import ROOT
+	SaveAs( ROOT.gPad.GetCanvas(), name, folder, endings )
+
 class PlotCaption:
 	"""Creates the superscription for each plot, eg
 	'19fb^{-1} sqrt{s)=8TeV #geq1#gamma #geq2jets'
 	"""
-	def __init__( self, x0=.96, y0=.96, analysisInfo=True, option="ndc", signal=False, control=False ):
+	def __init__( self, x0=.96, y0=.965, treeName="photonTree", analysisInfo=True, option="ndc", signal=False, control=False ):
 		import ROOT
 		self.x0 = x0
 		self.text = ROOT.TLatex( x0, y0, "" )
 		self.text.SetTextSize(0.03)
 		self.text.SetNDC()
+		self.treeName = treeName
 		if analysisInfo:
 			self.addAnalysisInfo()
 		if signal:
@@ -158,7 +199,15 @@ class PlotCaption:
 		if control:
 			self.controlCut()
 
-	def addAnalysisInfo( self, lumi=19800, e=8, defaultcuts="#geq1#gamma,#geq2jets" ):
+	def addAnalysisInfo( self, lumi=19800, e=8 ):
+		photonNameAppendix = ""
+		if self.treeName == "photonTree":
+			photonNameAppendix = "_{tight}"
+		if self.treeName == "photonJetTree":
+			photonNameAppendix = "_{loose}"
+		elif self.treeName == "photonElectronTree":
+			photonNameAppendix = "_{pixel}"
+		defaultcuts = "#geq1#gamma%s,#geq2jets"%photonNameAppendix
 		self.text.SetText( self.text.GetX(), self.text.GetY(), "%.1ffb^{-1} #sqrt{s}=%sTeV %s"%( lumi/1000., e, defaultcuts ) )
 
 	def appendEnd( self, string ):
@@ -183,6 +232,26 @@ class PlotCaption:
 		self.text.SetX( self.x0-shiftNDC )
 		self.text.Draw()
 
+def readSignalPdfUncertainty( filename ):
+	"""Read xsection and other informations for various signal MC from a file
+	found at https://twiki.cern.ch/twiki/bin/viewauth/CMS/RA3PrivateSignalMC2012
+	The syntax is printf("%i %i %i %i %i %f %f\n",nevents,mgluino,msquark,mbino,mwino,xsecpdferrs,acceppdferrs
+	returns list[ (point1, point2) ] = ( xsecpdferrs,acceppdferrs )
+	"""
+	f = open( filename )
+	text = f.readlines()
+	f.close()
+
+	info = {}
+
+	import re
+	for t in text:
+		matches = re.match("(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)", t ).groups()
+
+		info[ (int(matches[2]), int(matches[1]) ) ] = ( float(matches[5]), float(matches[6]) )
+
+	return info
+
 def readSignalXSection( filename ):
 	"""Read xsection and other informations for various signal MC from a file
 	found at https://twiki.cern.ch/twiki/bin/viewauth/CMS/RA3PrivateSignalMC2012
@@ -204,4 +273,30 @@ def readSignalXSection( filename ):
 		info[ (int(matches[1]), int(matches[2]) ) ] = ( float(matches[8]), float(matches[9]), float(matches[10]) )
 
 	return info
+
+def getSaveNameFromDatasets( filenames ):
+	return "".join( mergeDatasetAbbr( [ getDatasetAbbr(x) for x in filenames ] ) )
+
+def shortName( filenames ):
+	# just an alias
+	return getSaveNameFromDatasets( filenames )
+
+def correctTiksPlot( filename, scale1=True ):
+	# TTexDump is not perfect now, so replace necessary things, like 10^{-2}
+	#  in Math mode
+	import fileinput, sys,re
+	for line in fileinput.FileInput( filename, inplace=1 ):
+
+		# each object with scale=0 is deleted
+		line = re.sub( ".*scale=0[^\.].*", "", line )
+		# expressions with 10^x will be in math mode now
+		line = re.sub( "[^\$](10\^\{-?[0-9]+\})[^\$]", "{$\\1$}", line )
+		# '%' without a leading \ will be replaced by \%
+		line = re.sub( "(.*[^\\\\])%(.*)", "\\1\%\\2", line )
+		if scale1:
+			# scale all objects to 1
+			line = re.sub( "(.*scale=)(\d*\.\d*)([, ]+.*)", "\\1 1 \\3", line )
+
+		# sys.stdout is redirected to the file
+		sys.stdout.write(line)
 

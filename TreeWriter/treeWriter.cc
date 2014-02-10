@@ -176,7 +176,7 @@ bool goodVertex( const susy::Vertex& vtx ) {
 	/** Definition of a good vertex. Returns true if the vertex is good.
 	 */
 	return (!vtx.isFake() &&
-		vtx.ndof > 4 &&
+		vtx.ndof >= 4 &&
 		std::abs((vtx.position).z()) < 24.0 &&
 		std::abs((vtx.position).Perp()) < 2.0 );
 }
@@ -191,6 +191,17 @@ unsigned int numberOfGoodVertexInCollection( const std::vector<susy::Vertex>& ve
 			number++;
 	}
 	return number;
+}
+
+unsigned int nTrackPrimaryVertex( const std::vector<susy::Vertex>& vertexVector ) {
+	/* Tracks coming from the first good vertex */
+	for( std::vector<susy::Vertex>::const_iterator vtx = vertexVector.begin();
+			vtx != vertexVector.end(); ++vtx ) {
+		if( goodVertex( *vtx ) )
+			return vtx->tracksSize;
+	}
+	// if no valid vertex was found
+	return 0;
 }
 
 bool matchLorentzToGenVector( TLorentzVector& lvec, std::vector<tree::Particle>& genParticles, TH2F* hist=NULL, float deltaR_=.3, float deltaPtRel_=1e6 ) {
@@ -298,9 +309,10 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 
 	hist1D["metFilters"] = TH1F("", ";met Filter number;Entries", susy::nMetFilters+1, .5, susy::nMetFilters+1.5 );
 	hist1D["metFilters"].Fill( 0., 0. ); // Allows the histograms to be merged
-	hist1D["cIsoUncut"] = TH1F( "", ";Iso_{#pm};Entries", 100, 0, 30 );
-	hist1D["nIsoUncut"] = TH1F( "", ";Iso_{0};Entries", 100, 0, 30 );
-	hist1D["pIsoUncut"] = TH1F( "", ";Iso_{#gamma};Entries", 100, 0, 30 );
+
+	hist1D["gHt"] = TH1F("", ";H_{T} [GeV];Entries", 200, 0, 2000 );
+	hist1D["gNJets"] = TH1F("", ";n_{Jets};Entries", 10, -.5, 9.5 );
+	hist1D["gPt"] = TH1F("", ";p_{T^{*}};Entries", 200, 0, 2000 );
 
 	// Define two dimensional histograms
 	hist2D["matchPhotonToJet"]         = TH2F("", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
@@ -490,9 +502,9 @@ eventType TreeWriter::whichEventType( std::vector<tree::Photon>& photons_,
 	if( gPt && gPt > fPt && gPt > ePt )
 		return kPhotonEvent;
 	else if( ePt && ePt > fPt && ePt > gPt )
-		return kPhotonEvent;
+		return kElectronEvent;
 	else if( fPt && fPt > ePt && fPt > gPt )
-		return kPhotonEvent;
+		return kJetEvent;
 	else{
 		std::cerr << "This should not happen" << std::endl;
 		return kPhotonEvent;
@@ -836,6 +848,9 @@ void TreeWriter::Loop() {
 		// vertices
 		nVertex = numberOfGoodVertexInCollection( event.vertices );
 		if( !nVertex ) continue;
+		nTracksPV = nTrackPrimaryVertex( event.vertices );
+		if( loggingVerbosity > 2 )
+			std::cout << " nTracksPV = " << nTracksPV << std::endl;
 
 		photons.clear();
 		photonJets.clear();
@@ -855,10 +870,6 @@ void TreeWriter::Loop() {
 		// Particles needed for jet matching
 		std::vector<tree::Particle> genQuarkLike;
 		genQuarkLike.clear();
-
-		nTracksPV = (int) event.vertices.at(0).tracksSize;
-		if( loggingVerbosity > 2 )
-			std::cout << " nTracksPV = " << nTracksPV << std::endl;
 
 		// genParticles
 		tree::Particle thisGenParticle;
@@ -976,7 +987,7 @@ void TreeWriter::Loop() {
 				std::cout << "  ->jet pT = " << photonToTree._ptJet << std::endl;
 
 			// If no jet is found for a loose photon, the photon is rejected
-			if( isPhotonJet && !photonToTree._ptJet ) continue;
+			// if( isPhotonJet && !photonToTree._ptJet ) continue;
 			if( photonToTree.ptJet() < photonPtThreshold ) continue;
 			if( splitting ) {
 				if( isPhoton )
@@ -1044,15 +1055,6 @@ void TreeWriter::Loop() {
 		}
 
 
-		if( ht >= 500 ) {
-			for( susy::PhotonCollection::const_iterator photon = photonVector.begin(); photon != photonVector.end(); ++photon )
-				if( !photon->nPixelSeeds && photon->hadTowOverEm < 0.05 && photon->sigmaIetaIeta < 0.012 ) {
-				hist1D["cIsoUncut"].Fill( chargedHadronIso_corrected(*photon, event.rho), weight );
-				hist1D["nIsoUncut"].Fill( neutralHadronIso_corrected(*photon, event.rho), weight );
-				hist1D["pIsoUncut"].Fill( photonIso_corrected(*photon, event.rho), weight );
-			}
-		}
-
 		if( splitting && hadronicSelection && ( nGoodJets < 2 || ht < 500 ) ) continue;
 
 		fillMetFilterBitHistogram( hist1D.at("metFilters"), event.metFilterBit );
@@ -1078,6 +1080,9 @@ void TreeWriter::Loop() {
 			if( eType == kPhotonEvent ) {
 				photonTree.Fill();
 				hist1D["gMet"].Fill( met, weight );
+				hist1D["gHt"].Fill( ht, weight );
+				hist1D["gNJets"].Fill( nGoodJets, weight );
+				hist1D["gPt"].Fill( photons.at(0).ptJet(), weight );
 			}
 			if( eType == kJetEvent ) {
 				photonJetTree.Fill();

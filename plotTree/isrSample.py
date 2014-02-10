@@ -22,12 +22,31 @@ colors = {
 		"WGamma_130_inf": ROOT.kRed-5,
 		"ZGamma": ROOT.kBlue,
 		"ZGammaNuNu": ROOT.kMagenta-3,
+		"ZGammaNuNu1_400_inf": ROOT.kMagenta-2,
+		"ZGammaNuNu2_400_inf": ROOT.kMagenta-4,
+		"ZGammaNuNu3_400_inf": ROOT.kMagenta-6,
 		"ZGammaLL": ROOT.kMagenta-2,
 		"TTGamma": ROOT.kRed,
 		"TTHadronic": ROOT.kGreen-6,
 		"TTFull": ROOT.kGreen,
 		"TTSemi": ROOT.kGreen-2
 		}
+
+info = PlotCaption()
+info = ROOT.TLatex(0,.97, "#text{CMS Private Work }#hspace{5cm}#SI{19.8}{fb^{-1}}#, #sqrt{s}=#SI{8}{TeV}#, #geq1#gamma,#geq2#text{jets}" )
+info.SetNDC()
+info.SetTextSize(1)
+
+ROOT.gStyle.SetCanvasDefH(1000)
+ROOT.gStyle.SetCanvasDefW(2000)
+ROOT.gStyle.SetPaperSize(14.65,50)
+
+# Margins:
+ROOT.gStyle.SetPadTopMargin(0.05)
+ROOT.gStyle.SetPadBottomMargin(0.13)
+ROOT.gStyle.SetPadLeftMargin(0.10)
+ROOT.gStyle.SetPadRightMargin(0.02)
+
 
 
 def getHists( filenames, plot="met", cut="1" ):
@@ -48,9 +67,8 @@ def compareBinnedSamples( histList1, histList2, plot="met" ):
 
 	mh = Multihisto()
 
-	if "ZGamma" in histList1[0]:
-		#cut += "&& photons[0].pt > 130"
-		mh.leg.SetHeader("p_{T, #gamma} > 130 GeV" )
+	#if "ZGamma" in histList1[0]:
+	#	mh.setMinimum(0.01)
 
 	# sum all histos in histList1
 	hist1 = None
@@ -71,18 +89,26 @@ def compareBinnedSamples( histList1, histList2, plot="met" ):
 
 	mh.Draw()
 
-	mh.stack.GetStack().Last().Draw("same e0")
+	stack = mh.stack.GetStack().Last()
+	stack.SetMarkerSize(0)
+	stack.Draw("same e0")
 	errorHist = mh.stack.GetStack().Last().Clone(randomName() )
 	errorHist.SetMarkerColor(1)
 	errorHist.Draw("same e")
+	if plot != "met":
+		datasetAbbr1 += plot
 	SavePad("compareBinned"+datasetAbbr1 )
 
 
-def inclusiveAndIsrSamples( fList1, fList2 ):
+def inclusiveAndIsrSamples( fList1, fList2, saveAffix="" ):
 
 	cut = "!@electrons.size() && !@muons.size()"
 	treeName = "photonTree"
 	plot = "met"
+
+	if saveAffix == "pt130":
+		cut += " && photons[0].pt>130"
+		saveAffix = "_"+saveAffix
 
 	mh = Multihisto()
 
@@ -97,17 +123,33 @@ def inclusiveAndIsrSamples( fList1, fList2 ):
 	for h in h1gen, h2gen:
 		h.SetLineStyle(2)
 
+	for h in [h2,h2gen,h1,h1gen]:
+		h.SetLabelSize( 1./31.5562/0.502113, "xyz" )
+		h.SetTitleSize( 1./31.5562/0.502113, "xyz" )
+		h.GetXaxis().SetTitleOffset(1.1)
+		h.GetYaxis().SetTitleOffset(0.85)
+		if plot == "met":
+			h.GetXaxis().SetTitle("#met#text{ [GeV]}")
+
 	abbr1 = shortName( fList1 )
 	abbr2 = shortName( fList2 )
 
 	mh = Multihisto()
+	mh.leg.SetX1(0.6)
+	mh.leg.SetY1(0.6)
 	mh.addHisto( h1, datasetToLatex( abbr1 ) )
-	mh.addHisto( h1gen, "match to gen #gamma" )
+	mh.addHisto( h1gen, "#text{match to gen }#gamma" )
 	mh.addHisto( h2, datasetToLatex( abbr2 ) )
-	mh.addHisto( h2gen, "match to gen #gamma" )
+	mh.addHisto( h2gen, "#text{match to gen }#gamma" )
 
 	mh.Draw()
+	info.SetTextSize(1./31.5562/0.502113)
+	info.Draw()
 	SavePad( "inclusiveAndIsrSample_%s"%abbr1 )
+
+	ROOT.gPad.SaveAs("/home/knut/master/documents/thesis/plots/inclusiveAndIsrSample_%s%s.tex"%(abbr1,saveAffix) )
+	correctTiksPlot( "/home/knut/master/documents/thesis/plots/inclusiveAndIsrSample_%s%s.tex"%(abbr1,saveAffix) )
+
 
 
 if __name__ == "__main__":
@@ -124,18 +166,36 @@ if __name__ == "__main__":
 
 	compareBinnedSamples(
 		[ "slimZGamma_V02.43_tree.root" ],
-		[ "slimZGammaLL_V02.43_tree.root", "slimZGammaNuNu_V02.43_tree.root" ]
+		[ "slimZGammaNuNu_V02.43_tree.root" ]
+		#[ "slimZGammaLL_V02.43_tree.root", "slimZGammaNuNu_V02.43_tree.root" ]
 		)
 
 	compareBinnedSamples(
 		[ "slimZGamma_V02.43_tree.root" ],
-		[ "slimZGammaLL_V02.43_tree.root", "slimZGammaNuNu_V02.43_tree.root" ],
-		"photons[0].pt"
+		[ "slimZGammaNuNu_V02.43_tree.root" ],
+		#[ "slimZGammaLL_V02.43_tree.root", "slimZGammaNuNu_V02.43_tree.root" ],
+		"photons[0].ptJet()"
 		)
 
 	compareBinnedSamples(
 		[ "slimTTJets_V02.43_tree.root" ],
 		[ "slimTTHadronic_V02.43_tree.root", "slimTTFull_V02.43_tree.root", "slimTTSemi_V02.43_tree.root"]
+		)
+
+	compareBinnedSamples(
+		[ "slimZGammaNuNu3_400_inf_V03.00_tree.root" ],
+		[ "slimZGamma_V02.43_tree.root" ],
+		)
+
+	inclusiveAndIsrSamples(
+		[ "slimZGammaNuNu3_400_inf_V03.00_tree.root" ],
+		[ "slimZGammaNuNu_V02.43_tree.root" ]
+		)
+
+	inclusiveAndIsrSamples(
+		[ "slimZGammaNuNu3_400_inf_V03.00_tree.root" ],
+		[ "slimZGammaNuNu_V02.43_tree.root" ],
+		"pt130"
 		)
 
 	inclusiveAndIsrSamples(
