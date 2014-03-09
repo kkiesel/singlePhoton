@@ -212,13 +212,21 @@ bool matchLorentzToGenVector( TLorentzVector& lvec, std::vector<tree::Particle>&
 	 * hist: fill the histogram with dR and relPt
 	 */
 	bool match = false;
-	float dR, dPt;
+	float dR, dPt, xSigma, resolution, eGen;
+	float eRec = lvec.E();
 	TLorentzVector a;
 	for( std::vector<tree::Particle>::const_iterator it = genParticles.begin();
 			it != genParticles.end(); ++it ) {
-		a.SetPtEtaPhiE( it->pt, it->eta, it->phi, 1  );
+
+		a.SetPtEtaPhiE( it->pt, it->eta, it->phi, 1 );
 		dR = lvec.DeltaR( a );
-		dPt = (it->pt-lvec.Pt()) / it->pt;
+
+		eGen = it->pt / sin(2*atan(exp(-it->eta)));
+		// see http://iopscience.iop.org/1748-0221/2/04/P04004/ for the resolution
+		resolution = eGen * sqrt( 7.84e-4/eGen + 0.0144/eGen/eGen + 9e-6 );
+		xSigma = (eRec - eGen) / resolution;
+		dPt = xSigma;
+		//dPt = (it->pt-lvec.Pt()) / it->pt;
 
 		if( hist ) hist->Fill( dR, dPt );
 
@@ -323,8 +331,8 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 	hist2D["matchPhotonJetToJetPt"]      = TH2F("", "photon-jet matching;p_{T,#gamma};p_{T, jet}", 100, 0, 1000, 100, 0, 1000 );
 	hist2D["matchPhotonElectronToJetPt"] = TH2F("", "photon-jet matching;p_{T,#gamma};p_{T, jet}", 100, 0, 1000, 100, 0, 1000 );
 
-	hist2D["matchGenPhoton"]   = TH2F("", ";#DeltaR;(p_{T}^{gen}-p_{T})/p_{T}^{gen}", 100, 0, .5, 200, -2, 2 );
-	hist2D["matchGenElectron"] = TH2F("", ";#DeltaR;(p_{T}^{gen}-p_{T})/p_{T}^{gen}", 100, 0, .5, 200, -2, 2 );
+	hist2D["matchGenPhoton"]   = TH2F("", ";#DeltaR;#Delta E / #sigma_{E}", 1000, 0, .5, 200, -20, 20 );
+	hist2D["matchGenElectron"] = TH2F("", ";#DeltaR;#Delta E / #sigma_{E}", 1000, 0, .5, 200, -20, 20 );
 
 	hist2D["metSigma"] = TH2F("", ";#slash{E}_{T};#sigma_{i#etai#eta}", 50, 0, 500, 440, 0, 0.022 );
 	hist2D["metChIso"] = TH2F("", ";#slash{E}_{T};Iso^{#pm}",           50, 0, 500, 300, 0, 30 );
