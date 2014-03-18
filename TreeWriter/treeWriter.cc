@@ -559,7 +559,7 @@ void TreeWriter::getQcdWeights( float pt, float ht_, float & qcdWeight, float & 
 }
 
 
-void TreeWriter::getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton=false, bool isPhotonJet=false, bool isPhotonElectron=false ) {
+void TreeWriter::getPtFromMatchedJet1( tree::Photon& myPhoton, bool isPhoton=false, bool isPhotonJet=false, bool isPhotonElectron=false ) {
 	/**
 	 * \brief Takes jet p_T as photon p_T
 	 *
@@ -617,7 +617,7 @@ void TreeWriter::getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton=fals
 }
 
 
-void TreeWriter::getPtFromMatchedJet1( tree::Photon& myPhoton, bool isPhoton=false, bool isPhotonJet=false, bool isPhotonElectron=false ) {
+void TreeWriter::getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton=false, bool isPhotonJet=false, bool isPhotonElectron=false ) {
 	/**
 	 * \brief Takes jet p_T as photon p_T
 	 *
