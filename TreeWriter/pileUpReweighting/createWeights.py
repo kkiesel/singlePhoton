@@ -2,7 +2,7 @@ import ROOT
 
 def readHisto( fileName, histoname, newName ):
 
-	f = ROOT.TFile( filename )
+	f = ROOT.TFile( fileName )
 	ROOT.gROOT.cd()
 
 	# This histogram is still associated with the file and will be lost after
@@ -27,7 +27,8 @@ if __name__ == "__main__":
 
 	histName = "pileup"
 
-	mcHist = readHisto( mcFileName, histName )
+
+	mcHist = readHisto( mcFileName, histName, "mcHisto" )
 	dataHist = readHisto( dataFileName, histName, "weight" )
 	dataHistUp = readHisto( dataFileNameUp, histName, "weightUp" )
 	dataHistDown = readHisto( dataFileNameDown, histName, "weightDown" )

@@ -6,10 +6,10 @@ PU_JSON=/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions12/8TeV/Pi
 PU_CALC=pileupCalc.py --calcMode true --maxPileupBin 60 --numPileupBins 60
 
 puWeights.root: PU_dist.root PU_dist_up.root PU_dist_down.root PU_dist_S10.root
-	python2 createWeights.py
+	python createWeights.py
 
 PU_dist_S10.root: createMChist.py
-	python2 $^ $@
+	python $^ $@
 
 PU_dist.root: $(ANA_JSON) $(PU_JSON) Makefile
 	$(PU_CALC) --minBiasXsec 69400 -i $(ANA_JSON) --inputLumiJSON $(PU_JSON) $@
