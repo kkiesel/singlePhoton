@@ -712,8 +712,6 @@ void TreeWriter::fillJets() {
 
 		if( std::abs(corrP4.Eta()) > 3 ) continue;
 		if( corrP4.Pt() < 30 ) continue;
-		if( isLooseJet( *it ) )
-			jetToTree.setMatch( tree::kJetId );
 
 		/*std::cout << "\nNew Jet with " << it->momentum.Pt()<<"\n";
 		std::cout << "area = " << it->jetArea << " rho = " << event.rho << std::endl;
@@ -731,6 +729,10 @@ void TreeWriter::fillJets() {
 		*/
 
 		jetToTree.matchInformation = 0;
+		if( isLooseJet( *it ) )
+			jetToTree.setMatch( tree::kJetId );
+
+
 		jetToTree.pt = corrP4.Pt();
 		jetToTree.eta = corrP4.Eta();
 		jetToTree.phi = corrP4.Phi();
@@ -1056,9 +1058,9 @@ void TreeWriter::Loop() {
 			// Fill matching histograms only for photon-like objects
 			if( splitting && !isPhotonOrElectron && !isPhotonJet ) continue;
 
-			if( matchLorentzToGenVector( it->momentum, genPhotons, &hist2D["matchGenPhoton"], .1, .1 ) )
+			if( matchLorentzToGenVector( it->momentum, genPhotons, &hist2D["matchGenPhoton"], .01, 5 ) )
 				photonToTree.setGen( tree::kGenPhoton );
-			if( matchLorentzToGenVector( it->momentum, genElectrons, &hist2D["matchGenElectron"], .1, .1 ) )
+			if( matchLorentzToGenVector( it->momentum, genElectrons, &hist2D["matchGenElectron"], .01, 5 ) )
 				photonToTree.setGen( tree::kGenElectron );
 			if( matchLorentzToGenVector( it->momentum, genQuarkLike, NULL, .3 ) )
 				photonToTree.setGen( tree::kGenJet );
