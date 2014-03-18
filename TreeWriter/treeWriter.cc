@@ -150,6 +150,7 @@ bool isLooseJet( const susy::PFJet& jet ) {
 	 * for more information.
 	 */
 	double energy = jet.momentum.E();
+	//double energy = jet.chargedHadronEnergy+jet.neutralHadronEnergy + jet.photonEnergy+jet.electronEnergy+jet.muonEnergy+jet.HFHadronEnergy+jet.HFEMEnergy;
 	bool debug = false;
 	// debug = true;
 	if( debug )
@@ -321,6 +322,16 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 	hist1D["gHt"] = TH1F("", ";H_{T} [GeV];Entries", 200, 0, 2000 );
 	hist1D["gNJets"] = TH1F("", ";n_{Jets};Entries", 10, -.5, 9.5 );
 	hist1D["gPt"] = TH1F("", ";p_{T^{*}};Entries", 200, 0, 2000 );
+
+	hist1D["matchMinDr"] = TH1F("", ";delta R;Entries", 200, 0, 0.3 );
+	hist1D["matchMinPtDiff"] = TH1F("", ";p_{T^{*}};Entries", 200, -200, 200 );
+	hist1D["matchMinPtRatio"] = TH1F("", ";p_{T^{*}};Entries", 200, 0, 5 );
+	hist1D["matchMinDrJet"] = TH1F("", ";delta R;Entries", 200, 0, 0.3 );
+	hist1D["matchMinPtDiffJet"] = TH1F("", ";p_{T^{*}};Entries", 200, -200, 200 );
+	hist1D["matchMinPtRatioJet"] = TH1F("", ";p_{T^{*}};Entries", 200, 0, 5 );
+	hist1D["matchMinDrE"] = TH1F("", ";delta R;Entries", 200, 0, 0.3 );
+	hist1D["matchMinPtDiffE"] = TH1F("", ";p_{T^{*}};Entries", 200, -200, 200 );
+	hist1D["matchMinPtRatioE"] = TH1F("", ";p_{T^{*}};Entries", 200, 0, 5 );
 
 	// Define two dimensional histograms
 	hist2D["matchPhotonToJet"]         = TH2F("", "photon-jet matching;#DeltaR;p_{T, jet}/p_{T, #gamma}", 100, 0, 1, 100, 0, 4 );
@@ -547,6 +558,7 @@ void TreeWriter::getQcdWeights( float pt, float ht_, float & qcdWeight, float & 
 	qcdWeightError = qcdWeightHisto.GetBinError(bin);
 }
 
+
 void TreeWriter::getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton=false, bool isPhotonJet=false, bool isPhotonElectron=false ) {
 	/**
 	 * \brief Takes jet p_T as photon p_T
@@ -557,6 +569,65 @@ void TreeWriter::getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton=fals
 
 	 * change _ptJet and matchedJetIndex
 	 */
+
+	/* Try out something new **************************************/
+	float drMin = 20;
+	float drMinPt = -10;
+	for(std::vector<tree::Jet>::iterator jet = jets.begin();
+			jet != jets.end(); ++jet) {
+
+		float deltaR_ = myPhoton.DeltaR( *jet );
+		if( deltaR_ < drMin ) {
+			drMin = deltaR_;
+			drMinPt = jet->pt;
+		}
+	}
+	if( isPhoton )
+		hist1D["matchMinDr"].Fill( drMin );
+	if( isPhotonJet )
+		hist1D["matchMinDrJet"].Fill( drMin );
+	if( isPhotonElectron )
+		hist1D["matchMinDrE"].Fill( drMin );
+
+	if( isPhoton )
+		hist2D["matchPhotonToJet"].Fill( drMin, drMinPt/myPhoton.pt, weight );
+	if( isPhotonJet )
+		hist2D["matchPhotonJetToJet"].Fill( drMin, drMinPt/myPhoton.pt, weight );
+	if( isPhotonElectron )
+		hist2D["matchPhotonElectronToJet"].Fill( drMin, drMinPt/myPhoton.pt, weight );
+
+
+	if ( drMin < 0.1 ) {
+		if( isPhoton )
+			hist1D["matchMinPtDiff"].Fill( drMinPt - myPhoton.pt );
+		if( isPhotonJet )
+			hist1D["matchMinPtDiffJet"].Fill( drMinPt - myPhoton.pt );
+		if( isPhotonElectron )
+			hist1D["matchMinPtDiffE"].Fill( drMinPt - myPhoton.pt );
+		if( isPhoton )
+			hist1D["matchMinPtRatio"].Fill( drMinPt/myPhoton.pt );
+		if( isPhotonJet )
+			hist1D["matchMinPtRatioJet"].Fill( drMinPt/myPhoton.pt );
+		if( isPhotonElectron )
+			hist1D["matchMinPtRatioE"].Fill( drMinPt/myPhoton.pt );
+
+		myPhoton._ptJet = drMinPt;
+
+	}
+}
+
+
+void TreeWriter::getPtFromMatchedJet1( tree::Photon& myPhoton, bool isPhoton=false, bool isPhotonJet=false, bool isPhotonElectron=false ) {
+	/**
+	 * \brief Takes jet p_T as photon p_T
+	 *
+	 * At first all jets with DeltaR < 0.3 (isolation cone) are searched.
+	 * If several jets are found, take the one with the minimal pt difference
+	 * compared to the photon. If no such jets are found, keep the photon_pt
+
+	 * change _ptJet and matchedJetIndex
+	 */
+
 	myPhoton._ptJet = 0;
 	myPhoton.matchedJetIndex = -1;
 	std::vector<short> indices;
@@ -641,7 +712,8 @@ void TreeWriter::fillJets() {
 
 		if( std::abs(corrP4.Eta()) > 3 ) continue;
 		if( corrP4.Pt() < 30 ) continue;
-		if( !isLooseJet( *it ) ) continue;
+		if( isLooseJet( *it ) )
+			jetToTree.setMatch( tree::kJetId );
 
 		/*std::cout << "\nNew Jet with " << it->momentum.Pt()<<"\n";
 		std::cout << "area = " << it->jetArea << " rho = " << event.rho << std::endl;
@@ -771,6 +843,7 @@ unsigned int TreeWriter::countGoodJets( bool clean ) {
 	unsigned int number = 0;
 	for(std::vector<tree::Jet>::iterator jet = jets.begin();
 			jet != jets.end(); ++jet ) {
+		if( !jet->isMatch( tree::kJetId )) continue;
 		if( jet->pt < 30 || std::abs(jet->eta) > 2.5 ) continue;
 
 		if( isAdjacentToParticles<tree::Particle>( *jet, electrons ) ) continue;
