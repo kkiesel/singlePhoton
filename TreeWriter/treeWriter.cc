@@ -1127,8 +1127,6 @@ void TreeWriter::Loop() {
 		if( loggingVerbosity > 1 )
 			std::cout << "Found " << muons.size() << " muons" << std::endl;
 
-		if( electrons.size() || muons.size() ) continue;
-
 		mht = getMht();
 		ht = getHt();
 		nGoodJets = countGoodJets( splitting );
