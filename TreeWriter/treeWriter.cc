@@ -428,7 +428,7 @@ void TreeWriter::SetPileUpWeightFile( std::string const & filename ) {
 	if( puFile.IsZombie() )
 		std::cerr << "ERROR: Could not read pileup weight file " << filename << std::endl;
 
-	std::string histogramName = "pileup";
+	std::string histogramName = "pileupWeight";
 	if( puFile.GetListOfKeys()->Contains( histogramName.c_str() ) )
 		pileupHisto = *((TH1F*) puFile.Get( histogramName.c_str() ));
 	else

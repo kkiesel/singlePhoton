@@ -27,11 +27,10 @@ if __name__ == "__main__":
 
 	histName = "pileup"
 
-
 	mcHist = readHisto( mcFileName, histName, "mcHisto" )
-	dataHist = readHisto( dataFileName, histName, "weight" )
-	dataHistUp = readHisto( dataFileNameUp, histName, "weightUp" )
-	dataHistDown = readHisto( dataFileNameDown, histName, "weightDown" )
+	dataHist = readHisto( dataFileName, histName, "pileupWeight" )
+	dataHistUp = readHisto( dataFileNameUp, histName, "pileupWeightUp" )
+	dataHistDown = readHisto( dataFileNameDown, histName, "pileupWeightDown" )
 
 	for h in [ mcHist, dataHist, dataHistUp, dataHistDown ]:
 		h.Scale( 1./h.Integral() )
