@@ -111,6 +111,7 @@ class TreeWriter {
 		std::vector<tree::Particle> genPhotons;
 
 		float met;
+		float metSig;
 		float mht;
 		float type1met;
 		float type0met;

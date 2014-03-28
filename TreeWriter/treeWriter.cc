@@ -870,6 +870,7 @@ void TreeWriter::SetBranches( TTree& tree ) {
 	tree.Branch("genPhotons", &genPhotons);
 	tree.Branch("genElectrons", &genElectrons);
 	tree.Branch("met", &met, "met/F");
+	tree.Branch("metSig", &metSig, "metSig/F");
 	tree.Branch("mht", &mht, "mht/F");
 	tree.Branch("type0met", &type0met, "type0met/F");
 	tree.Branch("type1met", &type1met, "type1met/F");
@@ -993,6 +994,7 @@ void TreeWriter::Loop() {
 
 		// met
 		met = event.metMap["pfMet"].met();
+		metSig = event.metMap["pfMet"].significance;
 		type0met = event.metMap["pfType01CorrectedMet"].met();
 		type1met = event.metMap["pfType1CorrectedMet"].met();
 		if( loggingVerbosity > 2 )
