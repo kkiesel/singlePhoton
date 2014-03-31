@@ -146,8 +146,10 @@ def tdrStyle2D():
 	style = tdrStyle()
 	style.SetOptLogy(0)
 	style.SetOptLogz(1)
-	style.SetPadRightMargin(0.15)
-	style.SetCanvasDefW(1400)  #Width of canvas
+	#style.SetPadBottomMargin(0.09)
+	style.SetPadRightMargin(0.16)
+	#style.SetPadLeftMargin(0.09)
+	style.SetCanvasDefW(1000)  #Width of canvas
 
 	style.cd()
 	return style

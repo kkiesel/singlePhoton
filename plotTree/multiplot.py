@@ -8,7 +8,13 @@ class Multihisto:
 		self.histosToStack = []
 		self.minimum = None
 		self.maximum = None
-		self.leg = myLegend(.7,.7,.95,.92)
+		self.leg = myLegend(.7,.7,.93,.92)
+
+	def setMinimum( self, m ):
+		self.minimum = m
+
+	def setMaximum( self, m ):
+		self.maximum = m
 
 	def addHisto( self, singleHisto, label=None, toStack=False, draw="hist" ):
 		if toStack:
@@ -35,11 +41,11 @@ class Multihisto:
 
 	def GetMinimum( self, histos ):
 		values = []
-		for hist, label, draw in histos:
-			if isinstance( hist, ROOT.THStack ) and hist.GetMinimum()>0:
-				values.append( hist.GetMinimum() )
-			else:
+
+		for hist, label, draw in histos + self.histosToStack:
+			if not isinstance( hist, ROOT.THStack ):
 				values.append( hist.GetMinimum(0) )
+
 		return min( values )
 
 	def GetMaximum( self, histos ):
@@ -55,6 +61,8 @@ class Multihisto:
 					legendOption = "l"
 				elif draw == "e2":
 					legendOption = "f"
+				if label == "Simulation":
+					legendOption = "pl"
 				self.leg.AddEntry( hist, label, legendOption )
 		for hist, label, draw in reversed(self.histosToStack):
 			if label:
@@ -74,9 +82,9 @@ class Multihisto:
 
 		maximum = self.GetMaximum( histosToDraw )
 		minimum = self.GetMinimum( histosToDraw )
-		if ROOT.gPad.GetLogy():
+		if not ROOT.gPad or ROOT.gPad.GetLogy():
 			maximum = 2.5*maximum
-			minimum = 0.5*minimum
+			minimum = 0.3*minimum
 		else:
 			maximum = maximum + (maximum-minimum)*.1
 			minimum = minimum - (maximum-minimum)*.1
@@ -95,5 +103,6 @@ class Multihisto:
 
 
 		self.fillLegend()
-		if self.leg.GetListOfPrimitives().GetSize():
+		if self.leg.GetNRows():
 			self.leg.Draw()
+

@@ -4,6 +4,22 @@
 from multiplot import Multihisto
 from treeFunctions import *
 
+info = PlotCaption()
+info = ROOT.TLatex(0,.97, "#text{CMS Private Work }#hspace{7cm}}#, #sqrt{s}=#SI{8}{TeV}#, #geq1#gamma,#geq2#text{jets}" )
+info.SetNDC()
+info.SetTextSize(1./15.8447)
+
+ROOT.gStyle.SetCanvasDefH(1000)
+ROOT.gStyle.SetCanvasDefW(2000)
+ROOT.gStyle.SetPaperSize(14.65,50)
+
+# Margins:
+ROOT.gStyle.SetPadTopMargin(0.05)
+ROOT.gStyle.SetPadBottomMargin(0.13)
+ROOT.gStyle.SetPadLeftMargin(0.10)
+ROOT.gStyle.SetPadRightMargin(0.02)
+
+
 def drawSignalContamination( filename, xy, split ):
 	import array
 	label, unit, binning = readAxisConf("met")
@@ -25,15 +41,20 @@ def drawSignalContamination( filename, xy, split ):
 	totalContamination.SetMarkerColor(1)
 
 	for h in [totalContamination, fContamination, eContamination]:
-		h.GetYaxis().SetTitleOffset( 1.85 )
-		h.SetTitle(";%s [%s];signal contamination"%(label,unit))
+		h.Scale(100.) # in %
+		h.GetYaxis().SetTitleOffset( 0.9 )
+		h.SetTitle(";%s [%s];Signal Contamination [%s]"%("#met",unit, "%"))
 		h.SetLineWidth(2)
+		h.SetMarkerSize(0)
+		h.SetLabelSize(1./15.8447, "xy")
+		h.SetTitleSize(1./15.8447, "xy")
 
 	mh = Multihisto()
+	mh.setMinimum(0)
 	if split:
 		mh.addHisto( totalContamination, "Total", draw="e0" )
-		mh.addHisto( eContamination, "#gamma_{e}", draw="e0" )
-		mh.addHisto( fContamination, "#gamma_{jet}", draw="e0" )
+		mh.addHisto( eContamination, "e#rightarrow#gamma", draw="hist" )
+		mh.addHisto( fContamination, "#text{QCD}", draw="hist" )
 	else:
 		mh.addHisto( totalContamination, "", draw="e0" )
 
@@ -41,14 +62,21 @@ def drawSignalContamination( filename, xy, split ):
 	can.cd()
 	can.SetLogy(False)
 	mh.Draw()
-	SaveAs(can, "signalContamination_%s_%s_%s_%s"%(xy+(split,filename[0:-4] )))
+	totalContamination.Draw("same")
+	info.Draw()
+	saveName = "signalContamination_%s_%s_%s_%s"%(xy+(split,filename[0:-4] ))
+	SaveAs(can, saveName )
+	ROOT.gPad.SaveAs("/home/knut/master/documents/thesis/plots/%stex"%saveName )
+	correctTiksPlot( "/home/knut/master/documents/thesis/plots/%stex"%saveName )
+
+
 
 
 
 if __name__ == "__main__":
 	arguments = argparse.ArgumentParser()
 	arguments.add_argument("filenames", nargs="+", type=isValidFile )
-	arguments.add_argument("--xy", nargs=2, default = [1200,1220], type=int )
+	arguments.add_argument("--xy", nargs=2, default = [1000,1220], type=int )
 	arguments.add_argument("--split", action="store_true" )
 	opts = arguments.parse_args()
 

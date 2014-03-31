@@ -1,6 +1,13 @@
 import ROOT
+import sys
 
 if __name__ == "__main__":
+
+	if len( sys.argv ) != 2:
+		print "Usage: python2 createMChist.py {outputfilename}"
+		sys.exit(1)
+	else:
+		fileName = sys.argv[1]
 
 	histo = ROOT.TH1F("pileup","pileup",60,0,60)
 	Summer2012_S10 = [
@@ -65,26 +72,11 @@ if __name__ == "__main__":
 				1.570E-05,
 				5.005E-06]
 
-	for i in range(1,61):
-		histo.SetBinContent(i,Summer2012_S10[i-1]);
+	for i in range( 1, 61 ):
+		histo.SetBinContent( i, Summer2012_S10[i-1] )
 
-
-	datafile = ROOT.TFile("PU_dist.root")
-	dataHist = datafile.Get("pileup")
-
-	for h in [dataHist, histo]:
-		h.Scale( 1./h.Integral() )
-
-	dataHist.Divide( histo )
-
-	weightFile = ROOT.TFile("puWeights.root", "recreate")
-	weightFile.cd()
-	dataHist.Write()
-	weightFile.Close()
-
-	file = ROOT.TFile("mc_PU_dist_S10.root","recreate")
-	file.cd()
+	outfile = ROOT.TFile( fileName, "recreate" )
+	outfile.cd()
 	histo.Write()
-	file.Close()
+	outfile.Close()
 
-	datafile.Close()

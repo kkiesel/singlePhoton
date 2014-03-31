@@ -43,6 +43,8 @@ def modify( inputFileName, printOnly ):
 
 	for treeName in treeNames:
 		inTree = readTree( inputFileName, treeName )
+		if not inTree.GetEntries():
+			continue
 		tree = inTree.CloneTree(0)
 		ROOT.gROOT.ProcessLine("struct variablesToChange { Float_t weight(1); };")
 		change = ROOT.variablesToChange()
