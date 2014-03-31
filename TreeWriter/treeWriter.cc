@@ -916,20 +916,6 @@ void TreeWriter::Loop() {
 	tree::Particle muonToTree;
 
 	for (long jentry=0; jentry < processNEvents; ++jentry) {
-<<<<<<< HEAD
-		if ( loggingVerbosity>1 || jentry%reportEvery==0 ) std::cout << jentry << " / " << processNEvents << std::endl;
-		inputTree.GetEntry(jentry);
-
-		bool printCascade = false;
-		if( printCascade ) {
-			std::cout << "=================================================" << std::endl;
-			for( susy::ParticleCollection::const_iterator it = event.genParticles.begin(); printCascade && it != event.genParticles.end(); ++it ){
-				if( it->motherIndex == -1 ){
-					printChildren( std::distance<susy::ParticleCollection::const_iterator>(event.genParticles.begin(), it ), event.genParticles );
-				}
-			}
-			continue;
-		}
 		event.getEntry(jentry);
 
 		// Just for testing purpose (leave this uncommented)
