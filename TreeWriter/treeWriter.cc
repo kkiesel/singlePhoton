@@ -806,6 +806,7 @@ float TreeWriter::getHt() const {
 			jet != jets.end(); ++jet ) {
 
 		if( jet->pt < 40 || std::abs(jet->eta) > 3. ) continue;
+		if( !jet->isMatch( tree::kJetId ) ) continue;
 		//std::cout << " add jet to HT " << jet->pt << std::endl;
 
 		returnedHt += jet->pt;
