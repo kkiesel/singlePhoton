@@ -280,7 +280,6 @@ void fillMetFilterBitHistogram( TH1F& hist, int filterBit ) {
 		hist.AddBinContent( 0 );
 }
 
-
 ///////////////////////////////////////////////////////////////////////////////
 // Here the class implementation begins ///////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -303,9 +302,10 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 	eventNumbers("eventNumbers", "Histogram containing number of generated events", 1, 0, 1),
 	nPhotons("nPhotons", ";#gamma;#gamma_{jet};#gamma_{e}", 3, -.5, 2.5, 3, -.5, 2.5, 3, -.5, 2.5 )
 {
-	event = susy::Event();
-	inputTree.SetBranchAddress("susyEvent", &event );
 
+	for( int i = 0; i<nFiles; ++i )
+		inputTree.Add( fileList[i] );
+	event.setInput( inputTree );
 
 	// Here the number of proceeded events will be stored. For plotting, simply use L*sigma/eventNumber
 	eventNumbers.GetXaxis()->SetBinLabel(1,"Number of generated events");

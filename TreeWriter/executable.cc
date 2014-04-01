@@ -11,7 +11,7 @@ int main( int argc, char** argv ) {
 
 	// common settings
 	tw.SplitTree( true );
-	tw.FinalDistriputionsOnly();
+	tw.FinalDistriputionsOnly( false );
 	tw.SetPhotonPtThreshold( 110 );
 	tw.ApplyHadronicSelection( true );
 
