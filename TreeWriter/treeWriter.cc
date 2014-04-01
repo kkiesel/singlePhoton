@@ -871,9 +871,7 @@ void TreeWriter::SetBranches( TTree& tree ) {
 	tree.Branch("genElectrons", &genElectrons);
 	tree.Branch("met", &met, "met/F");
 	tree.Branch("metSig", &metSig, "metSig/F");
-	tree.Branch("mht", &mht, "mht/F");
-	tree.Branch("type0met", &type0met, "type0met/F");
-	tree.Branch("type1met", &type1met, "type1met/F");
+	tree.Branch("metPhi", &metPhi, "metPhi/F");
 	tree.Branch("ht", &ht, "ht/F");
 	tree.Branch("weight", &weight, "weight/F");
 	tree.Branch("nVertex", &nVertex, "nVertex/I");
@@ -993,10 +991,10 @@ void TreeWriter::Loop() {
 			std::cout << "Found " << jets.size() << " uncleaned jets" << std::endl;
 
 		// met
-		met = event.metMap["pfMet"].met();
-		metSig = event.metMap["pfMet"].significance;
-		type0met = event.metMap["pfType01CorrectedMet"].met();
-		type1met = event.metMap["pfType1CorrectedMet"].met();
+		susy::MET pfMet = event.metMap["pfMet"];
+		met = pfMet.met();
+		metSig = pfMet.significance;
+		metPhi = pfMet.mEt.Phi();
 		if( loggingVerbosity > 2 )
 			std::cout << " met = " << met << std::endl;
 
@@ -1129,7 +1127,6 @@ void TreeWriter::Loop() {
 		if( loggingVerbosity > 1 )
 			std::cout << "Found " << muons.size() << " muons" << std::endl;
 
-		mht = getMht();
 		ht = getHt();
 		nGoodJets = countGoodJets( splitting );
 		if( loggingVerbosity > 1 ) {
@@ -1145,9 +1142,7 @@ void TreeWriter::Loop() {
 
 
 		if( shrinkTree ) {
-			mht = 0;
-			type1met = 0;
-			type0met = 0;
+			metPhi = 0;
 			runNumber = 0;
 			eventNumber = 0;
 			luminosityBlockNumber = 0;

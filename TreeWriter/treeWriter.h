@@ -112,9 +112,7 @@ class TreeWriter {
 
 		float met;
 		float metSig;
-		float mht;
-		float type1met;
-		float type0met;
+		float metPhi;
 		float ht;
 		float weight;
 		unsigned int nGoodJets;
