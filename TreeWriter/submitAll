@@ -1,7 +1,7 @@
 #!/bin/bash
 # This script submitts all jobs to naf, which are defined in dataset
 
-version="08"
+version="10"
 datasets=(
 
 ## QCD
@@ -121,7 +121,7 @@ for dataset in "${datasets[@]}"; do
         echo export SCRAM_ARCH="slc5_amd64_gcc462" > $script
         echo export VO_CMS_SW_DIR=/cvmfs/cms.cern.ch >> $script
         echo source $VO_CMS_SW_DIR/cmsset_default.sh >> $script
-        echo cd $HOME/CMSSW_5_3_8/src >> $script
+        echo cd $HOME/CMSSW_5_3_8_patch3/src >> $script
         echo cmsenv >> $script
         echo cd $HOME/treeWriter >> $script
         echo make >> $script

@@ -25,19 +25,27 @@ ZGammaNuNu2_200_400_V03
 ZGammaNuNu2_400_inf_V03
 ZGammaNuNu_V03
 )
-
+outputPath=/nfs/dust/cms/user/kiesel
 version=$1
 for dataset in "${datasets[@]}"; do
 
 	abbr=$dataset.$version
-	hadd -f -k /scratch/hh/dust/naf/cms/user/kiesel/${abbr}_tree.root /scratch/hh/dust/naf/cms/user/kiesel/${abbr}__*.root
-	#tar -cfa /scratch/hh/dust/naf/cms/user/kiesel/logs/scripts_${abbr}.tar.bz2 ${abbr}__*.sh
-	#tar -cfa /scratch/hh/dust/naf/cms/user/kiesel/logs/output_${abbr}.tar.bz2 ~/${abbr}__*.sh.o*
+	echo
+	echo get out put for $abbr
+	if ls $outputPath/${abbr}__*.root &> /dev/null; then
+		hadd -f -k $outputPath/${abbr}_tree.root $outputPath/${abbr}__*.root
+	fi
 
 	# Clear information
 	if ! qstat -u $USER -r|grep $abbr; then
+		if ls ${abbr}__*.sh &> /dev/null; then
+			tar -cfa $outputPath/logs/scripts_${abbr}.tar.bz2 ${abbr}__*.sh
+		fi
+		if ls ~/${abbr}__*.sh.o.* &> /dev/null; then
+			tar -cfa $outputPath/logs/output_${abbr}.tar.bz2 ~/${abbr}__*.sh.o*
+		fi
 		rm -f ~/${abbr}__*.sh.o*
 		rm -f ${abbr}__*.sh
-		rm -f /scratch/hh/dust/naf/cms/user/kiesel/${abbr}__*.root
+		rm -f $outputPath/kiesel/${abbr}__*.root
 	fi
 done
