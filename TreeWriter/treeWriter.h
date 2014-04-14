@@ -59,7 +59,6 @@ class TreeWriter {
 
 		float getPileUpWeight();
 		void getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton, bool isPhotonJet, bool isPhotonElectron );
-		void getPtFromMatchedJet1( tree::Photon& myPhoton, bool isPhoton, bool isPhotonJet, bool isPhotonElectron );
 		float getHt() const;
 		float getMht() const;
 		void fillJets();

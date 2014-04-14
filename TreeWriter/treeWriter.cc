@@ -558,65 +558,6 @@ void TreeWriter::getQcdWeights( float pt, float ht_, float & qcdWeight, float & 
 	qcdWeightError = qcdWeightHisto.GetBinError(bin);
 }
 
-
-void TreeWriter::getPtFromMatchedJet1( tree::Photon& myPhoton, bool isPhoton=false, bool isPhotonJet=false, bool isPhotonElectron=false ) {
-	/**
-	 * \brief Takes jet p_T as photon p_T
-	 *
-	 * At first all jets with DeltaR < 0.3 (isolation cone) are searched.
-	 * If several jets are found, take the one with the minimal pt difference
-	 * compared to the photon. If no such jets are found, keep the photon_pt
-
-	 * change _ptJet and matchedJetIndex
-	 */
-
-	/* Try out something new **************************************/
-	float drMin = 20;
-	float drMinPt = -10;
-	for(std::vector<tree::Jet>::iterator jet = jets.begin();
-			jet != jets.end(); ++jet) {
-
-		float deltaR_ = myPhoton.DeltaR( *jet );
-		if( deltaR_ < drMin ) {
-			drMin = deltaR_;
-			drMinPt = jet->pt;
-		}
-	}
-	if( isPhoton )
-		hist1D["matchMinDr"].Fill( drMin );
-	if( isPhotonJet )
-		hist1D["matchMinDrJet"].Fill( drMin );
-	if( isPhotonElectron )
-		hist1D["matchMinDrE"].Fill( drMin );
-
-	if( isPhoton )
-		hist2D["matchPhotonToJet"].Fill( drMin, drMinPt/myPhoton.pt, weight );
-	if( isPhotonJet )
-		hist2D["matchPhotonJetToJet"].Fill( drMin, drMinPt/myPhoton.pt, weight );
-	if( isPhotonElectron )
-		hist2D["matchPhotonElectronToJet"].Fill( drMin, drMinPt/myPhoton.pt, weight );
-
-
-	if ( drMin < 0.1 ) {
-		if( isPhoton )
-			hist1D["matchMinPtDiff"].Fill( drMinPt - myPhoton.pt );
-		if( isPhotonJet )
-			hist1D["matchMinPtDiffJet"].Fill( drMinPt - myPhoton.pt );
-		if( isPhotonElectron )
-			hist1D["matchMinPtDiffE"].Fill( drMinPt - myPhoton.pt );
-		if( isPhoton )
-			hist1D["matchMinPtRatio"].Fill( drMinPt/myPhoton.pt );
-		if( isPhotonJet )
-			hist1D["matchMinPtRatioJet"].Fill( drMinPt/myPhoton.pt );
-		if( isPhotonElectron )
-			hist1D["matchMinPtRatioE"].Fill( drMinPt/myPhoton.pt );
-
-		myPhoton._ptJet = drMinPt;
-
-	}
-}
-
-
 void TreeWriter::getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton=false, bool isPhotonJet=false, bool isPhotonElectron=false ) {
 	/**
 	 * \brief Takes jet p_T as photon p_T
@@ -634,6 +575,8 @@ void TreeWriter::getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton=fals
 
 	for(std::vector<tree::Jet>::iterator jet = jets.begin();
 			jet != jets.end(); ++jet) {
+		if( !jet->isMatch( tree::kJetId ) )
+			continue;
 
 		float deltaR_ = myPhoton.DeltaR( *jet );
 		float eRel = jet->pt / myPhoton.pt;
