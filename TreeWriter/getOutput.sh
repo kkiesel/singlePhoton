@@ -39,10 +39,10 @@ for dataset in "${datasets[@]}"; do
 	# Clear information
 	if ! qstat -u $USER -r|grep $abbr; then
 		if ls ${abbr}__*.sh &> /dev/null; then
-			tar cfa $outputPath/logs/scripts_${abbr}.tar.bz2 ${abbr}__*.sh
+			tar -zcvf $outputPath/logs/scripts_${abbr}.tar.gz ${abbr}__*.sh
 		fi
 		if ls ~/${abbr}__*.sh.o.* &> /dev/null; then
-			tar cfa $outputPath/logs/output_${abbr}.tar.bz2 ~/${abbr}__*.sh.o*
+			tar -zcvf $outputPath/logs/output_${abbr}.tar.gz ~/${abbr}__*.sh.o*
 		fi
 		rm -f ~/${abbr}__*.sh.o*
 		rm -f ${abbr}__*.sh
