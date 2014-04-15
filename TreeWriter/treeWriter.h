@@ -112,6 +112,8 @@ class TreeWriter {
 		float met;
 		float metSig;
 		float metPhi;
+		float metShiftxy;
+		float metShiftxyPhi;
 		float ht;
 		float weight;
 		unsigned int nGoodJets;

@@ -575,8 +575,6 @@ void TreeWriter::getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton=fals
 
 	for(std::vector<tree::Jet>::iterator jet = jets.begin();
 			jet != jets.end(); ++jet) {
-		if( !jet->isMatch( tree::kJetId ) )
-			continue;
 
 		float deltaR_ = myPhoton.DeltaR( *jet );
 		float eRel = jet->pt / myPhoton.pt;
@@ -816,6 +814,8 @@ void TreeWriter::SetBranches( TTree& tree ) {
 	tree.Branch("met", &met, "met/F");
 	tree.Branch("metSig", &metSig, "metSig/F");
 	tree.Branch("metPhi", &metPhi, "metPhi/F");
+	tree.Branch("metShiftxy", &metShiftxy, "metShiftxy/F");
+	tree.Branch("metShiftxyPhi", &metShiftxyPhi, "metShiftxyPhi/F");
 	tree.Branch("ht", &ht, "ht/F");
 	tree.Branch("weight", &weight, "weight/F");
 	tree.Branch("nVertex", &nVertex, "nVertex/I");
@@ -941,6 +941,10 @@ void TreeWriter::Loop() {
 		metPhi = pfMet.mEt.Phi();
 		if( loggingVerbosity > 2 )
 			std::cout << " met = " << met << std::endl;
+
+		susy::MET pfMetxy = event.metMap["pfSysShiftCorrectedMet"];
+		metShiftxy = pfMetxy.met();
+		metShiftxyPhi = pfMetxy.mEt.Phi();
 
 
 		// photons
