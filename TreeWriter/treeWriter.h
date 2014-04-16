@@ -109,11 +109,26 @@ class TreeWriter {
 		std::vector<tree::Particle> genElectrons;
 		std::vector<tree::Particle> genPhotons;
 
-		float met;
 		float metSig;
+
+		float met;
 		float metPhi;
+
 		float metShiftxy;
 		float metShiftxyPhi;
+
+		float genMet;
+		float genMetPhi;
+
+		float met01corr;
+		float met01corrPhi;
+
+		float mvaMet;
+		float mvaMetPhi;
+
+		float noPuMet;
+		float noPuMetPhi;
+
 		float ht;
 		float weight;
 		unsigned int nGoodJets;
