@@ -36,3 +36,13 @@ float tree::Particle::DeltaR( const TLorentzVector &vec2 ) const {
 	vec1.SetPtEtaPhi( 1, eta, phi );
 	return vec1.DeltaR( vec2.Vect() );
 }
+
+float tree::Particle::DeltaPhi( float phi2 ) const {
+	float const  kPI        = TMath::Pi();
+	float const  kTWOPI     = 2.*kPI;
+
+	float x = phi - phi2;
+	while (x >= kPI) x -= kTWOPI;
+	while (x < -kPI) x += kTWOPI;
+	return x;
+}

@@ -25,6 +25,7 @@ class Particle {
 	public:
 		float DeltaR( const Particle &p2 ) const;
 		float DeltaR( const TLorentzVector &vec2 ) const;
+		float DeltaPhi( float phi2 ) const;
 		float pt, eta, phi;
 };
 
