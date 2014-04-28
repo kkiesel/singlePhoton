@@ -687,7 +687,26 @@ void TreeWriter::fillJets() {
 	std::sort( jets.begin(), jets.end(), tree::EtGreater);
 }
 
-float TreeWriter::getMht() const {
+TVector3 TreeWriter::getRecoilVector() const {
+	TVector3 sum,adding;
+
+	for(std::vector<tree::Jet>::const_iterator jet = jets.begin();
+			jet != jets.end(); ++jet ) {
+
+		if( jet->pt < 30 || std::abs(jet->eta) > 2.5 ) continue;
+		if( !jet->isMatch( tree::kJetId ) ) continue;
+		if( isAdjacentToParticles<tree::Photon>( *jet, photons, 0.4 ) ) continue;
+		if( isAdjacentToParticles<tree::Photon>( *jet, photonJetss, 0.4 ) ) continue;
+		if( isAdjacentToParticles<tree::Photon>( *jet, photonElectrons, 0.4 ) ) continue;
+
+		adding.SetPtEtaPhi( jet->pt, jet->eta, jet->phi );
+		sum += adding;
+	}
+
+	return sum;
+}
+
+TVector3 TreeWriter::getMhtVector() const {
 	TVector3 sum,adding;
 
 	for(std::vector<tree::Jet>::const_iterator jet = jets.begin();
@@ -719,7 +738,7 @@ float TreeWriter::getMht() const {
 			sum += adding;
 		}
 	}
-	return sum.Pt();
+	return sum;
 }
 
 float TreeWriter::getHt() const {
@@ -810,10 +829,10 @@ void TreeWriter::SetBranches( TTree& tree ) {
 	tree.Branch("genMetPhi", &genMetPhi, "genMetPhi/F");
 	tree.Branch("met01corr", &met01corr, "met01corr/F");
 	tree.Branch("met01corrPhi", &met01corrPhi, "met01corrPhi/F");
-	tree.Branch("mvaMet", &mvaMet, "mvaMet/F");
-	tree.Branch("mvaMetPhi", &mvaMetPhi, "mvaMetPhi/F");
-	tree.Branch("noPuMet", &noPuMet, "noPuMet/F");
-	tree.Branch("noPuMetPhi", &noPuMetPhi, "noPuMetPhi/F");
+	tree.Branch("recoil", &recoil, "recoil/F");
+	tree.Branch("recoilPhi", &recoilPhi, "recoilPhi/F");
+	tree.Branch("mht", &mht, "mht/F");
+	tree.Branch("mhtPhi", &mhtPhi, "mhtPhi/F");
 	tree.Branch("ht", &ht, "ht/F");
 	tree.Branch("weight", &weight, "weight/F");
 	tree.Branch("nVertex", &nVertex, "nVertex/I");
@@ -948,10 +967,14 @@ void TreeWriter::Loop() {
 		genMetPhi = event.metMap["genMetTrue"].mEt.Phi();
 		met01corr = event.metMap["pfType01CorrectedMet"].met();
 		met01corrPhi = event.metMap["pfType01CorrectedMet"].mEt.Phi();
-		mvaMet = event.metMap["pfMVAMet"].met();
-		mvaMetPhi = event.metMap["pfMVAMet"].mEt.Phi();
-		noPuMet = event.metMap["pfNoPileUpMet"].met();
-		noPuMetPhi = event.metMap["pfNoPileUpMet"].mEt.Phi();
+
+		TVector3 mhtVector = getMhtVector();
+		mht = mhtVector.Pt();
+		mhtPhi = mhtVector.Phi();
+
+		TVector3 recoilVector = getRecoilVector();
+		recoil = recoilVector.Pt();
+		recoilPhi = recoilVector.Phi();
 
 		// photons
 		std::vector<susy::Photon> photonVector = event.photons["photons"];

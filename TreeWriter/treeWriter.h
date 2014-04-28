@@ -60,7 +60,8 @@ class TreeWriter {
 		float getPileUpWeight();
 		void getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton, bool isPhotonJet, bool isPhotonElectron );
 		float getHt() const;
-		float getMht() const;
+		TVector3 getMhtVector() const;
+		TVector3 getRecoilVector() const;
 		void fillJets();
 		unsigned int countGoodJets( bool clean );
 		void getQcdWeights( float pt, float ht, float & qcdWeight, float & qcdWeightError );
@@ -110,6 +111,7 @@ class TreeWriter {
 		std::vector<tree::Particle> genPhotons;
 
 		float metSig;
+		float sumEt;
 
 		float met;
 		float metPhi;
@@ -123,11 +125,11 @@ class TreeWriter {
 		float met01corr;
 		float met01corrPhi;
 
-		float mvaMet;
-		float mvaMetPhi;
+		float mht;
+		float mhtPhi;
 
-		float noPuMet;
-		float noPuMetPhi;
+		float recoil;
+		float recoilPhi;
 
 		float ht;
 		float weight;
