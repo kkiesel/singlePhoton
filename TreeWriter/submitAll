@@ -1,87 +1,86 @@
 #!/bin/bash
-# This script submitts all jobs to naf, which are defined in dataset
+# This script submits all jobs to naf, which are defined in dataset
 
 version="12"
 datasets=(
 
 ## QCD
- srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/GJets_200_400_V03/
- srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/GJets_400_inf_V03/
- srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/QCD_250-500_V03/
- srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/QCD_500-1000_V03/
- srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/QCD_1000-inf_V03/
+ /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/GJets_200_400_V03/
+ /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/GJets_400_inf_V03/
+ /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/QCD_250-500_V03/
+ /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/QCD_500-1000_V03/
+ /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/QCD_1000-inf_V03/
 
 ## EWK
- srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/TTJets_V03/
- srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WJets_250_300_V03/
- srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WJets_300_400_V03/
- srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WJets_400_inf_V03/
+ /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/TTJets_V03/
+ /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WJets_250_300_V03/
+ /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WJets_300_400_V03/
+ /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WJets_400_inf_V03/
 
 ## ISR
- srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/TTGamma_V03/
- srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WGamma_50_130_V03/
- srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WGamma_130_inf_V03/
- srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/ZGammaNuNu_V03/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/ZGammaNuNu1_200_400_V03/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/ZGammaNuNu1_400_inf_V03/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/ZGammaNuNu2_200_400_V03/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/ZGammaNuNu2_400_inf_V03/
+ /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/TTGamma_V03/
+ /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WGamma_50_130_V03/
+ /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WGamma_130_inf_V03/
+ /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/ZGammaNuNu_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/ZGammaNuNu1_200_400_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/ZGammaNuNu1_400_inf_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/ZGammaNuNu2_200_400_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/ZGammaNuNu2_400_inf_V03/
 
 ## Data
- srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/PhotonHadA_V03/
- srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/PhotonHadB_V03/
- srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/PhotonHadC_V03/
- srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/PhotonHadD_V03/
-
+ /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/PhotonHadA_V03/
+ /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/PhotonHadB_V03/
+ /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/PhotonHadC_V03/
+ /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/PhotonHadD_V03/
 
 
 ## QCD
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/GJets_200_400_V02/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/GJets_400_inf_V02/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/QCD_250-500_V02/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/QCD_500-1000_V02/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/QCD_1000-inf_V02/
+# /pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/GJets_200_400_V02/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/GJets_400_inf_V02/
+# /pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/QCD_250-500_V02/
+# /pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/QCD_500-1000_V02/
+# /pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/QCD_1000-inf_V02/
 
 ## EWK
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/TTJets_V02/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WJets_250_300_V02/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WJets_300_400_V02/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WJets_400_inf_V02/
+# /pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/TTJets_V02/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WJets_250_300_V02/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WJets_300_400_V02/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WJets_400_inf_V02/
 
 ## ISR
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/TTGamma_V02/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WGamma_50_130_V02/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WGamma_130_inf_V02/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/ZGamma_V02/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/TTGamma_V02/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WGamma_50_130_V02/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WGamma_130_inf_V02/
+# /pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/ZGamma_V02/
 
 ## Data
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/PhotonHadA_V02/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/PhotonHadB_V02/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/PhotonHadC_V02/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/PhotonHadD_V02/
+# /pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/PhotonHadA_V02/
+# /pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/PhotonHadB_V02/
+# /pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/PhotonHadC_V02/
+# /pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/PhotonHadD_V02/
 
 ## Dated
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/GJets_100_200_V02/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/WGamma_V02/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/WJets_V02/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/GVJets_V02/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/TTSemi_V02/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/TTFull_V02/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/ZGammaNuNu_V02/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/ZGammaLL_V02/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/TTHadronic_V02/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/GJets_100_200_V02/
+# /pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/WGamma_V02/
+# /pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/WJets_V02/
+# /pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/GVJets_V02/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/TTSemi_V02/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/TTFull_V02/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/ZGammaNuNu_V02/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/ZGammaLL_V02/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/TTHadronic_V02/
 
 ## Obsolete: V01 with CMSSW_532
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/QCD_250-500_V01/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/QCD_500-1000_V01/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/QCD_1000-inf_V01/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/GJets_V01/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/WJets_V01/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/TTJets_V01/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/DY_to_ee/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/GVJets_V01/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/WGamma_V01/
-# srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/ZGamma_V01/
+# /pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/QCD_250-500_V01/
+# /pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/QCD_500-1000_V01/
+# /pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/QCD_1000-inf_V01/
+# /pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/GJets_V01/
+# /pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/WJets_V01/
+# /pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/TTJets_V01/
+# /pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/DY_to_ee/
+# /pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/GVJets_V01/
+# /pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/WGamma_V01/
+# /pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/ZGamma_V01/
 )
 
 # settings
@@ -95,9 +94,7 @@ for dataset in "${datasets[@]}"; do
     # Since root can't handle -, it will be substituted to _
     job_name=$(echo $job_name|sed 's/-/_/g')
 
-    files=( $(srmls -offset 0 -count 999 $dataset|grep root|awk '{print $2 }') )
-    # Ugly hack to get more than 1000 files (up to 2000).
-    files+=( $(srmls -offset 1000 -count 1999 $dataset|grep root|awk '{print $2 }') )
+    files=( $(dcls $dataset|grep root) )
 
     # Rounding up
     number_of_jobs=$(expr \( ${#files[@]} + $files_per_job \) / $files_per_job )
@@ -108,9 +105,10 @@ for dataset in "${datasets[@]}"; do
         jobPrefix=${job_name}.${version}__${job}
 
         files_to_submit=""
-        for (( i=$(expr $job \* $files_per_job - $files_per_job  ); i<$(expr $job \* $files_per_job ); i++ )); do
+        for (( i=$(expr $job \* $files_per_job - $files_per_job ); i<$(expr $job \* $files_per_job ); i++ )); do
             if [[ "${files[$i]}" != "" ]]; then
-                files_to_submit=$files_to_submit"dcap://dcache-cms-dcap.desy.de"${files[$i]}" "
+                files_to_submit=$files_to_submit"dcap://dcache-cms-dcap.desy.de"${dataset}${files[$i]}"
+"
             fi
         done # files for one job
         outputFileName=$outputFolder/${jobPrefix}_tree.root
@@ -128,7 +126,7 @@ for dataset in "${datasets[@]}"; do
 
         echo ./executable $outputFileName $files_to_submit >> $script
         chmod +x $script
-        qsub -b y -j y -l os=sld5 -l h_vmem=1000M -l h_rt=7:00:00 -l site=hh `pwd`/$jobPrefix.sh
+        echo qsub -b y -j y -l os=sld5 -l h_vmem=1000M -l h_rt=7:00:00 -l site=hh `pwd`/$jobPrefix.sh
         # b: execute a binary or script that will not be transferred to the batch node thus the batch node needs to have access to the given path
         # j: merge stdout and stderr
         # o: log file
