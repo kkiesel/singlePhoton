@@ -696,7 +696,7 @@ TVector3 TreeWriter::getRecoilVector() const {
 		if( jet->pt < 30 || std::abs(jet->eta) > 2.5 ) continue;
 		if( !jet->isMatch( tree::kJetId ) ) continue;
 		if( isAdjacentToParticles<tree::Photon>( *jet, photons, 0.4 ) ) continue;
-		if( isAdjacentToParticles<tree::Photon>( *jet, photonJetss, 0.4 ) ) continue;
+		if( isAdjacentToParticles<tree::Photon>( *jet, photonJets, 0.4 ) ) continue;
 		if( isAdjacentToParticles<tree::Photon>( *jet, photonElectrons, 0.4 ) ) continue;
 
 		adding.SetPtEtaPhi( jet->pt, jet->eta, jet->phi );
