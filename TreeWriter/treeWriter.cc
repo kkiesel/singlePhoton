@@ -968,14 +968,6 @@ void TreeWriter::Loop() {
 		met01corr = event.metMap["pfType01CorrectedMet"].met();
 		met01corrPhi = event.metMap["pfType01CorrectedMet"].mEt.Phi();
 
-		TVector3 mhtVector = getMhtVector();
-		mht = mhtVector.Pt();
-		mhtPhi = mhtVector.Phi();
-
-		TVector3 recoilVector = getRecoilVector();
-		recoil = recoilVector.Pt();
-		recoilPhi = recoilVector.Phi();
-
 		// photons
 		std::vector<susy::Photon> photonVector = event.photons["photons"];
 		for(std::vector<susy::Photon>::iterator it = photonVector.begin();
@@ -1113,6 +1105,14 @@ void TreeWriter::Loop() {
 
 
 		if( splitting && hadronicSelection && ( nGoodJets < 2 || ht < 500 ) ) continue;
+		TVector3 mhtVector = getMhtVector();
+		mht = mhtVector.Pt();
+		mhtPhi = mhtVector.Phi();
+
+		TVector3 recoilVector = getRecoilVector();
+		recoil = recoilVector.Pt();
+		recoilPhi = recoilVector.Phi();
+
 
 		fillMetFilterBitHistogram( hist1D.at("metFilters"), event.metFilterBit );
 		if( !event.passMetFilters() || !event.passMetFilter( susy::kEcalLaserCorr) ) continue;
