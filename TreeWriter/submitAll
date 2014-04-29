@@ -1,7 +1,7 @@
 #!/bin/bash
 # This script submits all jobs to naf, which are defined in dataset
 
-version="12"
+version="13"
 datasets=(
 
 ## QCD
@@ -12,10 +12,10 @@ datasets=(
  /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/QCD_1000-inf_V03/
 
 ## EWK
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/TTJets_V03/
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WJets_250_300_V03/
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WJets_300_400_V03/
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WJets_400_inf_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/TTJets_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WJets_250_300_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WJets_300_400_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WJets_400_inf_V03/
 
 ## ISR
  /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/TTGamma_V03/
@@ -107,8 +107,7 @@ for dataset in "${datasets[@]}"; do
         files_to_submit=""
         for (( i=$(expr $job \* $files_per_job - $files_per_job ); i<$(expr $job \* $files_per_job ); i++ )); do
             if [[ "${files[$i]}" != "" ]]; then
-                files_to_submit=$files_to_submit"dcap://dcache-cms-dcap.desy.de"${dataset}${files[$i]}"
-"
+                files_to_submit=$files_to_submit"dcap://dcache-cms-dcap.desy.de"${dataset}${files[$i]}" "
             fi
         done # files for one job
         outputFileName=$outputFolder/${jobPrefix}_tree.root
@@ -126,7 +125,7 @@ for dataset in "${datasets[@]}"; do
 
         echo ./executable $outputFileName $files_to_submit >> $script
         chmod +x $script
-        echo qsub -b y -j y -l os=sld5 -l h_vmem=1000M -l h_rt=7:00:00 -l site=hh `pwd`/$jobPrefix.sh
+        qsub -b y -j y -l os=sld5 -l h_vmem=1000M -l h_rt=7:00:00 -l site=hh `pwd`/$jobPrefix.sh
         # b: execute a binary or script that will not be transferred to the batch node thus the batch node needs to have access to the given path
         # j: merge stdout and stderr
         # o: log file
