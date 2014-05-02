@@ -3,11 +3,14 @@
 
 from treeFunctions import *
 st = Styles.tdrStyle2D()
+st.SetNumberContours( 999 )
 st.SetOptLogz(0)
 paperWidth = 14.65 #cm
 paperWidth2 = 5.7
 st.SetPaperSize(paperWidth2,50.)
 
+bHistoLimit = readHisto("xsecBinoLimit.root", "histo__8")
+wHistoLimit = readHisto("xsecBinoLimit.root", "histo__20")
 
 class SignalPlane:
 	def __init__( self, fileName ):
@@ -31,7 +34,7 @@ class SignalPlane:
 			for y in self.yList:
 				xsec, acc = pdf[(x,y)]
 				self.histo.SetBinContent( self.histo.FindBin(x,y), sqrt(xsec**2+acc**2) )
-		self.histo.GetZaxis().SetTitle( "pdf uncert." )
+		self.histo.GetZaxis().SetTitle( "pdf uncert. [%]" )
 		self.draw( "pdfUncertainty" )
 
 	def xsectionUncertainty( self, file_ ):
@@ -44,6 +47,16 @@ class SignalPlane:
 				self.histo.SetBinContent( self.histo.FindBin(x,y), (uncertUp+uncertDown)/2/xSec*100 )
 		self.histo.GetZaxis().SetTitle( "#text{rel. }#sigma#text{ uncert.}#text{ [%]}" )
 		self.draw( "xsectionSignalUncertaintyRel" )
+
+	def xsecLimit( self, abbr ):
+		histo = wHistoLimit if abbr == "W" else bHistoLimit
+		for x in self.xList:
+			for y in self.yList:
+				bin = histo.FindBin(x,y)
+				self.histo.SetBinContent( self.histo.FindBin(x,y), histo.GetBinContent(bin) )
+		self.histo.GetZaxis().SetTitle( "#text{expected }#sigma#text{ limit [pb]}" )
+		self.draw( "excludedXsecLimit" )
+
 
 	def fill( self, function, zlabel, saveName ):
 		for x in self.xList:
@@ -77,10 +90,32 @@ class SignalPlane:
 		self.draw( saveName )
 
 	def draw( self, saveName ):
+
+		fillEmptyBins = True
+		if fillEmptyBins:
+			fillings = {}
+			for x in range( 1, self.histo.GetNbinsX()+1 ):
+				for y in range( 1, self.histo.GetNbinsY()+1 ):
+					if self.histo.GetBinContent(x,y) == 0:
+						values = [ self.histo.GetBinContent( x, y+1 ),
+								self.histo.GetBinContent( x, y-1 ),
+								self.histo.GetBinContent( x+1, y ),
+								self.histo.GetBinContent( x-1, y ) ]
+						values = [ v for v in values if v > 0 ]
+						if 'B' in self.fileName and x == 16 and y == 15:
+							values = [ self.histo.GetBinContent( x, y-1 ),
+								self.histo.GetBinContent( x+1, y )]
+						if len(values):
+							fillings[(x,y)] = sum(values)/len(values)
+
+			for (x,y), value in fillings.iteritems():
+				self.histo.SetBinContent( x, y, value )
+				pass
+
 		ROOT.gStyle.SetPadRightMargin(0.2)
 		can = ROOT.TCanvas()
 		can.cd()
-		if "xsectionSignal" == saveName:
+		if saveName in [ "xsectionSignal", "excludedXsecLimit" ]:
 			can.SetLogz(1)
 		else:
 			can.SetLogz(0)
@@ -98,18 +133,46 @@ class SignalPlane:
 		if palette:
 			palette.GetAxis().SetTitle( self.histo.GetZaxis().GetTitle() )
 		self.histo.GetZaxis().SetTitleOffset(1.2)
+
+		# set range
+		minimum = 1e6
+		maximum = 0
+		if saveName == "acceptance":
+			minimum = 0
+		if saveName == "signalPlaneHt":
+			minimum = 500
+			maximum = 1600*1.05
+		if saveName == "signalPlanePt":
+			minimum = 110
+			maximum = 600*1.05
+		if saveName == "signalPlaneMet":
+			minimum = 100
+			maximum = 350*1.05
+		if saveName == "signalPlaneNjets":
+			minimum = 2
+			maximum = 6*1.05
+		if saveName == "signalContaminationPlane":
+			minimum = 0
+			maximum = 3.6*1.05
+		if minimum < 1e5:
+			self.histo.SetMinimum( minimum )
+		if maximum > 0:
+			self.histo.SetMaximum( maximum )
+
 		self.histo.Draw("colz")
 
-		#"#text{CMS Private Work  -  }#SI{19.8}{fb^{-1}}#, #sqrt{s}=#SI{8}{TeV}#, #geq1#gamma,#geq2#text{jets}#,, #met<#SI{100}{GeV}" )
+		#"#text{CMS Private Work  -  }#SI{19.8}{fb^{-1}}#, #sqrt{s}=#SI{8}{TeV}#, #geq1#ggamma,#geq2#text{jets}#,, #met<#SI{100}{GeV}" )
 		text = "#text{CMS Private Work - }"
 		particleString = "Bino" if self.fileName[0] == "B" else "Wino"
 
 		text = "#text{%s-like }#tilde{#chi}^0_1"%particleString
 
 		if "xsectionSignal" in saveName:
-			text += "#, #sqrt{s}=#SI{8}{TeV}"
+			text += "#,#,#, #SI{8}{TeV}"
+		elif "excludedXsecLimit" in saveName:
+			text += "#, #SI{19.8}{fb^{-1}}#, #geq1#ggamma,#geq2#text{jets}"
 		else:
-			text += "#, #sqrt{s}=#SI{8}{TeV}#, #geq1#gamma,#geq2#text{jets}"
+			text += "#,#,#, #SI{8}{TeV}#, #geq1#ggamma,#geq2#text{jets}"
 
 		info = PlotCaption(treeName="")
 		info = ROOT.TLatex(-.12,.98, text )
@@ -133,6 +196,10 @@ def acceptance( h ):
 	minBin = h["gMet"].FindBin( 100 ) # corresponds to met cut
 	return 1.*h["gMet"].Integral(minBin, -1 )/h["nGen"]*100
 
+def acceptanceLast( h ):
+	minBin = h["gMet"].FindBin( 350 ) # corresponds to last met bin
+	return 1.*h["gMet"].Integral(minBin, -1 )/h["nGen"]*100
+
 def meanHt( h ):
 	return h["gHt"].GetMean()
 
@@ -154,13 +221,37 @@ for scanAbbr in [ "B", "W" ]:
 	sp.pdfUncertainty( pdfPath%scanAbbr )
 	sp.xsection( xSecPath%scanAbbr )
 	sp.xsectionUncertainty( xSecPath%scanAbbr )
-	sp.fill( acceptance, "Acceptance [%]", "acceptance" )
-	sp.fill( signalContamination, "Signal Contamination [%]", "signalContaminationPlane" )
-	sp.fill( meanHt, "H_{T}#text{ [GeV]}", "signalPlaneHt" )
-	sp.fill( meanPt, "p_{T^{*}}#text{ [GeV]}", "signalPlanePt" )
-	sp.fill( meanNjets, "n_{#text{jets}}", "signalPlaneNjets" )
-	sp.fill( meanMet, "#met#text{ [GeV]}", "signalPlaneMet" )
+	sp.xsecLimit( scanAbbr )
 
+for scanAbbr in [ "B", "W" ]:
+	sp = SignalPlane( filePath%scanAbbr )
+	sp.fill( acceptanceLast, "Acceptance last Bin [%]", "acceptanceLastBin" )
+
+exit
+
+for scanAbbr in [ "B", "W" ]:
+	sp = SignalPlane( filePath%scanAbbr )
+	sp.fill( acceptance, "Acceptance [%]", "acceptance" )
+
+for scanAbbr in [ "B", "W" ]:
+	sp = SignalPlane( filePath%scanAbbr )
+	sp.fill( signalContamination, "Signal Contamination [%]", "signalContaminationPlane" )
+
+for scanAbbr in [ "B", "W" ]:
+	sp = SignalPlane( filePath%scanAbbr )
+	sp.fill( meanHt, "H_{T}#text{ [GeV]}", "signalPlaneHt" )
+
+for scanAbbr in [ "B", "W" ]:
+	sp = SignalPlane( filePath%scanAbbr )
+	sp.fill( meanPt, "p_{T^{*}}#text{ [GeV]}", "signalPlanePt" )
+
+for scanAbbr in [ "B", "W" ]:
+	sp = SignalPlane( filePath%scanAbbr )
+	sp.fill( meanNjets, "n_{#text{jets}}", "signalPlaneNjets" )
+
+for scanAbbr in [ "B", "W" ]:
+	sp = SignalPlane( filePath%scanAbbr )
+	sp.fill( meanMet, "#met#text{ [GeV]}", "signalPlaneMet" )
 
 	#sp.fill( signalContaminationError, "#sigma_{signal contermination}", "signalConmatinationError" )
 	#sp.fill( signalContaminationErrorRel, "#sigma_{signal cont.} / signal cont.", "signalConmatinationErrorRel" )

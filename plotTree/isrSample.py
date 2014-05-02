@@ -33,7 +33,7 @@ colors = {
 		}
 
 info = PlotCaption()
-info = ROOT.TLatex(0,.97, "#text{CMS Private Work }#hspace{5cm}#SI{19.8}{fb^{-1}}#, #sqrt{s}=#SI{8}{TeV}#, #geq1#gamma,#geq2#text{jets}" )
+info = ROOT.TLatex(0,.97, "#text{CMS Private Work - Simulation}#hspace{2.5cm}#SI{19.8}{fb^{-1}}#, #sqrt{s}=#SI{8}{TeV}#, #geq1#ggamma,#geq2#text{jets}" )
 info.SetNDC()
 info.SetTextSize(1)
 
@@ -135,6 +135,12 @@ def inclusiveAndIsrSamples( fList1, fList2, saveAffix="" ):
 	abbr2 = shortName( fList2 )
 
 	mh = Multihisto()
+
+	if "ZGamma" in fList1[0]:
+		mh.setMaximum( 10 )
+		mh.setMinimum( 2e-4 )
+		mh.leg.SetFillStyle(0)
+
 	mh.leg.SetX1(0.6)
 	mh.leg.SetY1(0.6)
 	mh.addHisto( h1, datasetToLatex( abbr1 ) )
@@ -145,8 +151,16 @@ def inclusiveAndIsrSamples( fList1, fList2, saveAffix="" ):
 	mh.Draw()
 	info.SetTextSize(1./31.5562/0.502113)
 	info.Draw()
-	SavePad( "inclusiveAndIsrSample_%s"%abbr1 )
 
+	if "pt130" in saveAffix:
+		cutInfo = ROOT.TLatex(.2,.8, "p_{T,#gamma}#geq#SI{130}{GeV}" )
+		cutInfo.SetNDC()
+		info.SetTextSize(1./31.5562/0.502113)
+		cutInfo.Draw()
+
+
+
+	SavePad( "inclusiveAndIsrSample_%s%s"%(abbr1,saveAffix) )
 	ROOT.gPad.SaveAs("/home/knut/master/documents/thesis/plots/inclusiveAndIsrSample_%s%s.tex"%(abbr1,saveAffix) )
 	correctTiksPlot( "/home/knut/master/documents/thesis/plots/inclusiveAndIsrSample_%s%s.tex"%(abbr1,saveAffix) )
 
@@ -154,6 +168,7 @@ def inclusiveAndIsrSamples( fList1, fList2, saveAffix="" ):
 
 if __name__ == "__main__":
 
+	'''
 	compareBinnedSamples(
 		["slimWJets_V02.43_tree.root"],
 		[ "slimWJets_250_300_V02.43_tree.root", "slimWJets_300_400_V02.43_tree.root", "slimWJets_400_inf_V02.43_tree.root" ]
@@ -186,6 +201,7 @@ if __name__ == "__main__":
 		[ "slimZGammaNuNu3_400_inf_V03.00_tree.root" ],
 		[ "slimZGamma_V02.43_tree.root" ],
 		)
+	'''
 
 	inclusiveAndIsrSamples(
 		[ "slimZGammaNuNu3_400_inf_V03.00_tree.root" ],

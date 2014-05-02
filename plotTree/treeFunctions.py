@@ -209,10 +209,15 @@ def getHisto( tree, plot, cut="1", overflow=0, weight="weight", color=1, nBins=N
 			lastBin += .5
 			nBins = int(lastBin-firstBin)
 
+	addCut = ""
+	if "booleanTree"+tree.GetName() in tree.GetFile().GetListOfKeys():
+		tree.AddFriend( "booleanTree"+tree.GetName(), tree.GetFile().GetName() )
+		addCut = "&&x"
+
 	if binning:
-		histo = createHistoFromTree( tree, plot, "%s*(%s)"%(weight, cut), nBins=binning)
+		histo = createHistoFromTree( tree, plot, "%s*(%s)"%(weight, cut+addCut), nBins=binning)
 	else:
-		histo = createHistoFromTree( tree, plot, "%s*(%s)"%(weight, cut), nBins=nBins, firstBin=firstBin, lastBin=lastBin )
+		histo = createHistoFromTree( tree, plot, "%s*(%s)"%(weight, cut+addCut), nBins=nBins, firstBin=firstBin, lastBin=lastBin )
 	if overflow > 0:
 		histo = appendOverflowBin(histo, overflow)
 
@@ -225,7 +230,8 @@ def getHisto( tree, plot, cut="1", overflow=0, weight="weight", color=1, nBins=N
 
 		for bin in range(1, histo.GetNbinsX()+2):
 			# if the bin left or right is not empty but the bin itself, set the error
-			if not histo.GetBinContent( bin ) and ( histo.GetBinContent( bin-1 ) or histo.GetBinContent( bin+1 ) ) and histo.GetBinWidth(bin):
+			#if not histo.GetBinContent( bin ) and ( histo.GetBinContent( bin-1 ) or histo.GetBinContent( bin+1 ) ) and histo.GetBinWidth(bin):
+			if not histo.GetBinContent( bin ):
 				histo.SetBinError( bin, poissonZeroError*weight / histo.GetBinWidth(bin) )
 
 	if appendOverflowBin:
@@ -293,7 +299,7 @@ def getAxisTitle( plot ):
 		obj, nObj, var = re.match( "Length\$\(%s\)"%objVarExpr, plot ).groups()
 		obj = reduce(lambda x, y: x.replace(y, objectReplacement[y]), objectReplacement, obj )
 		label = "N_{%s}"%obj
-	elif "." in plot:
+	elif "." in plot and re.match( objVarExpr, plot ):
 		obj, nObj, var = re.match( objVarExpr, plot ).groups()
 		var = reduce(lambda x, y: x.replace(y, variableReplacement[y]), variableReplacement, var )
 		obj = reduce(lambda x, y: x.replace(y, objectReplacement[y]), objectReplacement, obj )

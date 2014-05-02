@@ -26,6 +26,7 @@ def sumUpPlots( filenames, norm ):
 	datasetAffix = getSaveNameFromDatasets( filenames )
 
 	Styles.tdrStyle2D()
+	ROOT.gStyle.SetNumberContours( 999 )
 
 	st = ROOT.gROOT.GetStyle("tdrStyle")
 	paperWidth = 14.65 #cm
@@ -67,8 +68,14 @@ def sumUpPlots( filenames, norm ):
 				line.SetLineColor(2)
 				line.Draw()
 
+		if "matchGenPhoton" in name:
+			histo.GetXaxis().SetTitle("#Delta{R}")
+			histo.GetYaxis().SetTitle("(p_{T, #text{gen}}-p_T) / p_{T,#text{gen}}")
+
+
 		pc1 = ROOT.TLatex(0,.96, "CMS Private Work")
-		pc2 = ROOT.TLatex( .51,.96, "\SI{19.8}{fb^{-1}} #sqrt{s}=\SI{8}{TeV}")
+		pc2 = ROOT.TLatex( .47,.96, "\SI{19.8}{fb^{-1}} #sqrt{s}=\SI{8}{TeV}")
+		#for pc in [pc1, pc2]:
 		for pc in [pc1, pc2]:
 			pc.SetNDC()
 			pc.SetTextSize(0.07930341347505648)
@@ -76,8 +83,10 @@ def sumUpPlots( filenames, norm ):
 
 
 		SaveAs( ROOT.gPad, "%s_%s"%(name, datasetAffix) )
-		if name in ["matchPhotonToJet","matchPhotonJetToJet"]:
-			ROOT.gPad.SaveAs("~/master/documents/thesis/plots/%s_%s.tex"%(manipulateSaveName(name),shortName( filenames )) )
+		if name in ["matchPhotonToJet","matchPhotonJetToJet", "matchGenPhoton" ]:
+			saveName = "/home/knut/master/documents/thesis/plots/%s_%s.tex"%(manipulateSaveName(name),shortName( filenames ))
+			ROOT.gPad.SaveAs( saveName )
+			correctTiksPlot( saveName )
 
 
 if __name__ == "__main__":

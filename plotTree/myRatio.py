@@ -25,6 +25,7 @@ class Ratio:
 					self.ratioSys.SetBinError( bin, self.denominator.GetBinError(bin) / self.denominator.GetBinContent(bin) )
 			elif self.numerator.GetBinContent(bin):
 				self.ratio.SetBinError( bin, 1.*self.numerator.GetBinError(bin)/self.numerator.GetBinContent(bin) )
+				self.ratio.SetBinContent(bin,0)
 
 	def draw( self, yMin=None, yMax=None ):
 		self.calculateRatio()
@@ -33,10 +34,18 @@ class Ratio:
 		# and a maximum from 1.5 to 50
 		if yMin == None:
 			#yMin = min( max(0, self.ratio.GetBinContent(self.ratio.GetMinimumBin())), .5 )
+			# minimum, which is larger than 0
 			yMin = 0
+			minimum = self.ratio.GetBinContent(self.ratio.GetMaximumBin())
+			for bin in range( self.ratio.GetNbinsX()+2 ):
+				minInBin = self.ratio.GetBinContent(bin)
+				if minInBin < minimum and minInBin > 0:
+					minimum = minInBin
+			yMin = minimum*.95
 		if yMax == None:
 			from math import ceil
 			yMax = min( max(1.5, ceil(self.ratio.GetBinContent(self.ratio.GetMaximumBin()))), 50 )
+			yMax = self.ratio.GetBinContent(self.ratio.GetMaximumBin())*1.05
 
 		# Set ratio properties
 		for hist in [ self.ratio, self.ratioSys ]:
@@ -49,9 +58,6 @@ class Ratio:
 		self.ratioSys.SetFillStyle(3554)
 		self.ratioSys.SetMarkerSize(0)
 		self.ratioSys.SetFillColor(self.ratioSys.GetLineColor())
-
-		oneLine = ROOT.TLine()
-		oneLine.SetLineStyle(2)
 
 		# Delete label and title of all histograms in the current pad
 		for ding in ROOT.gPad.GetListOfPrimitives():
@@ -75,7 +81,10 @@ class Ratio:
 		rPad.SetLogy(0)
 
 		self.ratioSys.Draw("e2")
-		self.ratio.Draw("e same")
-		oneLine.DrawLine( self.ratio.GetBinLowEdge(1), 1.0, self.ratio.GetBinLowEdge(self.ratio.GetNbinsX()+1), 1.0 )
+		self.ratio.Draw("e0 same")
+		if yMin < 1 and yMax > 1:
+			oneLine = ROOT.TLine()
+			oneLine.SetLineStyle(2)
+			oneLine.DrawLine( self.ratio.GetBinLowEdge(1), 1.0, self.ratio.GetBinLowEdge(self.ratio.GetNbinsX()+1), 1.0 )
 
 

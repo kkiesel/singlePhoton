@@ -5,7 +5,7 @@ from multiplot import Multihisto
 from treeFunctions import *
 
 info = PlotCaption()
-info = ROOT.TLatex(0,.97, "#text{CMS Private Work }#hspace{7cm}}#, #sqrt{s}=#SI{8}{TeV}#, #geq1#gamma,#geq2#text{jets}" )
+info = ROOT.TLatex(0,.97, "#text{CMS Private Work - Wino-like }#tilde{#chi}^{0}_{1}#hspace{3cm}#, #sqrt{s}=#SI{8}{TeV}#, #geq1#ggamma,#geq2#text{jets}" )
 info.SetNDC()
 info.SetTextSize(1./15.8447)
 
@@ -19,6 +19,7 @@ ROOT.gStyle.SetPadBottomMargin(0.13)
 ROOT.gStyle.SetPadLeftMargin(0.10)
 ROOT.gStyle.SetPadRightMargin(0.02)
 
+ROOT.gStyle.SetErrorX(0)
 
 def drawSignalContamination( filename, xy, split ):
 	import array
@@ -43,7 +44,7 @@ def drawSignalContamination( filename, xy, split ):
 	for h in [totalContamination, fContamination, eContamination]:
 		h.Scale(100.) # in %
 		h.GetYaxis().SetTitleOffset( 0.9 )
-		h.SetTitle(";%s [%s];Signal Contamination [%s]"%("#met",unit, "%"))
+		h.SetTitle(";%s [#text{%s}];Signal Contamination [%s]"%("#met",unit, "%"))
 		h.SetLineWidth(2)
 		h.SetMarkerSize(0)
 		h.SetLabelSize(1./15.8447, "xy")
@@ -52,9 +53,9 @@ def drawSignalContamination( filename, xy, split ):
 	mh = Multihisto()
 	mh.setMinimum(0)
 	if split:
-		mh.addHisto( totalContamination, "Total", draw="e0" )
-		mh.addHisto( eContamination, "e#rightarrow#gamma", draw="hist" )
-		mh.addHisto( fContamination, "#text{QCD}", draw="hist" )
+		mh.addHisto( totalContamination, "Total", draw="pe" )
+		mh.addHisto( fContamination, "b_{#text{signal}}^{#text{QCD}}/s", draw="hist" )
+		mh.addHisto( eContamination, "b_{#text{signal}}^{e#rightarrow#gamma}/s", draw="hist" )
 	else:
 		mh.addHisto( totalContamination, "", draw="e0" )
 
