@@ -46,6 +46,11 @@ class H1F( ROOT.TH1F ):
 	def GetContent(self):
 		return self.GetBinContent(self.currentBin)
 
+	#todo: systematic uncertainty
+
+class Tree( ROOT.TChain ):
+	# addfriend
+
 
 if __name__ == "__main__":
 	h = H1F("nide", "dinel", 10, 0, 1)
