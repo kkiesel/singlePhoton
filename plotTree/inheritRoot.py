@@ -1,5 +1,6 @@
 import ROOT
 import math
+from treeFunctions import *
 
 class Legend( ROOT.TLegend ):
 
@@ -21,14 +22,23 @@ class Bin:
 		self.error = histogram.GetBinError(bin)
 
 class H1F( ROOT.TH1F ):
-	#TODO: test all functions
-	def MergeOverflow():
+
+	def addRelUncert( self, relUncert ):
+		try:
+			oldUncert = self.uncert
+		except:
+			oldUncert = 0
+		self.uncert = oldUncert |qPlus| relUncert
+
+	def MergeOverflow(self):
 		nBins = self.GetNbinsX()
 		self.SetBinContent( nBins, self.GetBinContent(nBins)+self.GetBinContent(nBins+1) )
-		self.fSumw2.fArray[nBins] += self.fSumw2.fArray[nBins+1]
-		# TODO: set bin content 0
+		self.SetBinError( nBins, self.GetBinError(nBins) |qPlus| self.GetBinError(nBins+1) )
+		self.SetBinContent( nBins+1, 0 )
+		self.SetBinError( nBins+1, 0 )
 
 
+	#TODO: test all functions
 	def __iter__(self):
 		self.currentBin = 0
 		#TODO: define bin, and all functions like getBinContent
@@ -49,16 +59,28 @@ class H1F( ROOT.TH1F ):
 	#todo: systematic uncertainty
 
 class Tree( ROOT.TChain ):
+	pass
 	# addfriend
 
 
 if __name__ == "__main__":
+
+	orig = ROOT.TLegend()
+	new = orig.__class__ = Legend
+	print orig
+	print new
+
 	h = H1F("nide", "dinel", 10, 0, 1)
+	h.Sumw2()
 	h.FillRandom("gaus", 100)
+	h.SetBinContent(h.GetNbinsX()+1, 100)
+	h.SetBinError(h.GetNbinsX()+1, 10)
+
 
 	for bin in h:
 		print bin.content
 	print
 
+	h.MergeOverflow()
 	for bin in range( h.GetNbinsX()+2):
-		print h.GetBinContent(bin),
+		print h.GetBinContent(bin), h.GetBinError(bin)

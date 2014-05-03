@@ -6,7 +6,6 @@ import Styles
 import argparse
 from sys import stdout
 from prettifyFunctions import *
-import ratios
 
 # To use user defined help message, sys.arv has to be sent to python and not
 # to TApplication.
@@ -246,6 +245,20 @@ def getHisto( tree, plot, cut="1", overflow=0, weight="weight", color=1, nBins=N
 
 	histo.SetTitle( getHistoTitle( histo, plot, label, unit, binning ) )
 	return histo
+
+def getHists( filenames, plot="met", cut="1", treeName="photonTree" ):
+	endHist = None
+	for filename in filenames:
+		tree = readTree( filename, treeName )
+		hist = getHisto( tree, plot, color=1, fillEmptyBins=not ("PhotonHad" in filename), cut=cut )
+
+		if endHist:
+			endHist.Add( hist )
+		else:
+			endHist = hist
+
+	return endHist
+
 
 def getQCDErrorHisto( tree, plot, cut="1", overflow=0, nBins=20, firstBin=None, lastBin=None ):
 	"""Applies w_qcd +- w_qcd_error for qcd error propagation.

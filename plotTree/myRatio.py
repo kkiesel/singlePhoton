@@ -10,19 +10,23 @@ class Ratio:
 		self.sysHisto = sysHisto
 		self.ratio = numerator.Clone( randomName() )
 		self.ratioSys = denominator.Clone( randomName() )
+		self.totalUncert = denominator.Clone( randomName() )
 
 	def calculateRatio( self ):
 		for bin in range(self.numerator.GetNbinsX()+2):
 			if self.denominator.GetBinContent(bin):
 				self.ratio.SetBinContent( bin, self.numerator.GetBinContent(bin) / self.denominator.GetBinContent(bin) )
-				self.ratio.SetBinError( bin, self.numerator.GetBinError(bin) / self.denominator.GetBinContent(bin) )
+				self.ratio.SetBinError(   bin, self.numerator.GetBinError(bin)   / self.denominator.GetBinContent(bin) )
 				if self.sysHisto:
 					self.ratioSys.SetBinContent( bin, self.sysHisto.GetBinContent(bin) / self.denominator.GetBinContent(bin) )
+					self.ratioSys.SetBinError(   bin, self.sysHisto.GetBinError(bin)   / self.denominator.GetBinContent(bin) )
 					combinedError = sqrt( self.sysHisto.GetBinError(bin)**2 + self.denominator.GetBinError(bin)**2 )
-					self.ratioSys.SetBinError( bin, combinedError / self.denominator.GetBinContent(bin) )
 				else:
 					self.ratioSys.SetBinContent( bin, 1 )
 					self.ratioSys.SetBinError( bin, self.denominator.GetBinError(bin) / self.denominator.GetBinContent(bin) )
+					combinedError = self.denominator.GetBinError(bin)**2
+				self.totalUncert.SetBinError( bin, combinedError/self.denominator.GetBinContent(bin) )
+				self.totalUncert.SetBinContent( bin, 1 )
 			elif self.numerator.GetBinContent(bin):
 				self.ratio.SetBinError( bin, 1.*self.numerator.GetBinError(bin)/self.numerator.GetBinContent(bin) )
 				self.ratio.SetBinContent(bin,0)
@@ -48,16 +52,26 @@ class Ratio:
 			yMax = self.ratio.GetBinContent(self.ratio.GetMaximumBin())*1.05
 
 		# Set ratio properties
-		for hist in [ self.ratio, self.ratioSys ]:
+		for hist in [ self.ratio, self.ratioSys, self.totalUncert ]:
 			hist.GetYaxis().SetNdivisions(2, 0, 2)
 			hist.SetTitleOffset(.9, "Y")
 			hist.SetYTitle( self.title )
 			hist.SetMinimum( yMin )
 			hist.SetMaximum( yMax )
 
-		self.ratioSys.SetFillStyle(3554)
-		self.ratioSys.SetMarkerSize(0)
-		self.ratioSys.SetFillColor(self.ratioSys.GetLineColor())
+		if self.sysHisto:
+			self.ratioSys.SetFillStyle( self.sysHisto.GetFillStyle() )
+			self.ratioSys.SetMarkerSize( self.sysHisto.GetMarkerSize() )
+			self.ratioSys.SetFillColor( self.sysHisto.GetFillColor() )
+		else:
+			self.ratioSys.SetFillStyle(3554)
+			self.ratioSys.SetMarkerSize(0)
+			self.ratioSys.SetFillColor(self.ratioSys.GetLineColor())
+
+		self.totalUncert.SetFillStyle(3002)
+		self.totalUncert.SetMarkerSize(0)
+		self.totalUncert.SetFillColor(1)
+
 
 		# Delete label and title of all histograms in the current pad
 		for ding in ROOT.gPad.GetListOfPrimitives():
@@ -80,7 +94,8 @@ class Ratio:
 		rPad.cd()
 		rPad.SetLogy(0)
 
-		self.ratioSys.Draw("e2")
+		self.totalUncert.Draw("e2")
+		self.ratioSys.Draw("e2 same")
 		self.ratio.Draw("e0 same")
 		if yMin < 1 and yMax > 1:
 			oneLine = ROOT.TLine()

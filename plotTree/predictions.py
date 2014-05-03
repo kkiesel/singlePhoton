@@ -73,7 +73,6 @@ def getMixedWeigthHisto( filenames, predFilenames, commonCut, control=True ):
 					weight2D.SetBinContent( i, j, 1 )
 					weight2D.SetBinError( i, j, 0 )
 
-	#drawWeightHisto( weight2D, numerator, denominator, control, shortName( filenames ) )
 	return weight2D
 
 
@@ -115,7 +114,7 @@ def attachWeightsToFiles( filenames, weight2D, weightTreeName ):
 
 		f = ROOT.TFile( fileName, "update" )
 		f.cd()
-		treeFriend.Write()
+		treeFriend.Write( "", ROOT.TObject.kSingleKey )
 		f.Close()
 
 
@@ -152,6 +151,7 @@ def predictionHistos( filenames, plot, cut, modifyEmptyBins ):
 			fHist = hist
 			sysHist = sHist
 
+	fHist.SetMarkerSize(0)
 	sysHist.SetFillColor( sysHist.GetLineColor() )
 	sysHist.SetLineColor( sysHist.GetLineColor() )
 	sysHist.SetFillStyle(3254)
