@@ -12,20 +12,16 @@ datasets=(
  /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/QCD_1000-inf_V03/
 
 ## EWK
-# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/TTJets_V03/
-# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WJets_250_300_V03/
-# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WJets_300_400_V03/
-# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WJets_400_inf_V03/
+ /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/TTJets_V03/
+ /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WJets_250_300_V03/
+ /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WJets_300_400_V03/
+ /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WJets_400_inf_V03/
 
 ## ISR
  /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/TTGamma_V03/
  /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WGamma_50_130_V03/
  /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WGamma_130_inf_V03/
  /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/ZGammaNuNu_V03/
-# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/ZGammaNuNu1_200_400_V03/
-# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/ZGammaNuNu1_400_inf_V03/
-# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/ZGammaNuNu2_200_400_V03/
-# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/ZGammaNuNu2_400_inf_V03/
 
 ## Data
  /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/PhotonHadA_V03/
@@ -69,6 +65,10 @@ datasets=(
 # /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/ZGammaNuNu_V02/
 # /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/ZGammaLL_V02/
 # /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/TTHadronic_V02/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/ZGammaNuNu1_200_400_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/ZGammaNuNu1_400_inf_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/ZGammaNuNu2_200_400_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/ZGammaNuNu2_400_inf_V03/
 
 ## Obsolete: V01 with CMSSW_532
 # /pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/QCD_250-500_V01/
