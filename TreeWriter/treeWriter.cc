@@ -989,12 +989,13 @@ void TreeWriter::Loop() {
 			photonToTree.conversionSafeVeto = it->passelectronveto;
 			photonToTree.genInformation = 0;
 
+			getPtFromMatchedJet( photonToTree, false, false, false );
 			//photon definition barrel
 			bool isPhotonOrElectron = photonToTree.hadTowOverEm < 0.05
 				&& photonToTree.sigmaIetaIeta < 0.012
 				&& photonToTree.chargedIso < 2.6
-				&& photonToTree.neutralIso < 3.5+0.04*photonToTree.pt
-				&& photonToTree.photonIso < 1.3+0.005*photonToTree.pt;
+				&& photonToTree.neutralIso < 3.5+0.04*photonToTree.ptJet()
+				&& photonToTree.photonIso < 1.3+0.005*photonToTree.ptJet();
 
 			bool isPhoton = isPhotonOrElectron && !photonToTree.pixelseed;
 			bool isPhotonElectron = isPhotonOrElectron && photonToTree.pixelseed;
@@ -1004,9 +1005,13 @@ void TreeWriter::Loop() {
 				&& !photonToTree.pixelseed
 				&& photonToTree.hadTowOverEm < 0.05
 				&& photonToTree.sigmaIetaIeta < 0.012
-				&& photonToTree.chargedIso < 26 && photonToTree.chargedIso > 0.26
-				&& photonToTree.neutralIso < 35+0.4*photonToTree.pt && photonToTree.neutralIso > 0.35+0.004*photonToTree.pt
-				&& photonToTree.photonIso < 13+0.05*photonToTree.pt && photonToTree.photonIso > 0.13+0.0005*photonToTree.pt;
+				&&	  (photonToTree.chargedIso < 5.2 || (photonToTree.neutralIso < 3.5 + 0.04*photonToTree.ptJet() && photonToTree.photonIso < 1.3 + 0.005*photonToTree.ptJet())) &&
+					  	  (photonToTree.neutralIso < 7 + 0.06*photonToTree.ptJet() || (photonToTree.chargedIso < 2.6 && photonToTree.photonIso < 1.3 + 0.005*photonToTree.ptJet())) &&
+						  	  (photonToTree.photonIso < 2.6 + 0.0075*photonToTree.ptJet() || (photonToTree.chargedIso < 2.6 &&	photonToTree.neutralIso < 3.5 + 0.04*photonToTree.ptJet()));
+
+				//&& photonToTree.chargedIso < 26 && photonToTree.chargedIso > 0.26
+				//&& photonToTree.neutralIso < 35+0.4*photonToTree.pt && photonToTree.neutralIso > 0.35+0.004*photonToTree.pt
+				//&& photonToTree.photonIso < 13+0.05*photonToTree.pt && photonToTree.photonIso > 0.13+0.0005*photonToTree.pt;
 
 			// print photon information
 			if( loggingVerbosity > 2 ) {
@@ -1034,7 +1039,6 @@ void TreeWriter::Loop() {
 			if( matchLorentzToGenVector( it->momentum, genQuarkLike, NULL, .3 ) )
 				photonToTree.setGen( tree::kGenJet );
 
-			getPtFromMatchedJet( photonToTree, isPhoton, isPhotonJet, isPhotonElectron );
 			if( loggingVerbosity > 2 )
 				std::cout << "  ->jet pT = " << photonToTree._ptJet << std::endl;
 
