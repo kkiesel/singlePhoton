@@ -333,7 +333,7 @@ from math import sqrt
 qPlus = Infix( lambda x,y: sqrt(x**2+y**2) )
 qMinus = Infix( lambda x,y: sqrt(x**2-y**2) )
 
-def integralAndError( h, binx1, binx2, option="" ):
+def integralAndError( h, binx1=0, binx2=-1, option="" ):
 	import ROOT
 	err = ROOT.Double(0)
 	integral = h.IntegralAndError( binx1, binx2, err, option )
