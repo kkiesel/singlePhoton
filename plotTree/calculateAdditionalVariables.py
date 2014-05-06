@@ -102,5 +102,5 @@ if __name__ == "__main__":
 
 		for treename in [ "photonTree", "photonJetTree", "photonElectronTree" ]:
 			treeFriend = createNewVariableTree( filename, treename )
-			treeFriend.Write(ROOT.TObject.kSingleKey)
+			treeFriend.Write(ROOT.TObject.kOverwrite)
 		f.Close()
