@@ -62,7 +62,7 @@ def drawPileUpHistos( saveTex=False ):
 
 	for h in [mc, data ]:
 		h.Scale( 1./h.Integral() )
-		h.SetTitle( ";Number of Vertices;Normalized Entries" )
+		h.SetTitle( ";Number of Pile-up Events;Normalized Entries" )
 		if saveTex:
 			h.SetLineWidth(2)
 			h.SetTitleSize( 0.06311227345609463, "yx" )
@@ -70,7 +70,7 @@ def drawPileUpHistos( saveTex=False ):
 
 	muhist = Multihisto()
 	muhist.addHisto( data, "Data", draw="ep" )
-	muhist.addHisto( mc, "Simulation" )
+	muhist.addHisto( mc, "Simulation", draw="hist" )
 	muhist.setMinimum(0)
 
 	if saveTex:

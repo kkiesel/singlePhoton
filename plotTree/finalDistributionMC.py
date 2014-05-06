@@ -4,13 +4,31 @@
 from multiplot import Multihisto
 from treeFunctions import *
 
-yVar = "recoil"
+# definition of an Infix operator class
+# this recipe also works in jython
+# calling sequence for the infix is either:
+#  x |op| y
+# or:
+# x <<op>> y
 
-foCut = " && (Max$(photons[0].chargedIso) < 5.2 || (Max$(photons[0].neutralIso-0.04*photons[0].pt) < 3.5 && Max$(photons[0].photonIso-0.005*photons[0].pt) < 1.3)) && (Max$(photons[0].neutralIso-0.06*photons[0].pt) < 7 || (Max$(photons[0].chargedIso) < 2.6 && Max$(photons[0].photonIso-0.005*photons[0].pt) < 1.3 )) && (Max$(photons[0].photonIso-0.0075*photons[0].pt) < 2.6 || (Max$(photons[0].chargedIso) < 2.6 && Max$(photons[0].neutralIso-0.04*photons[0].pt) < 3.5))"
+class Infix:
+    def __init__(self, function):
+        self.function = function
+    def __ror__(self, other):
+        return Infix(lambda x, self=self, other=other: self.function(other, x))
+    def __or__(self, other):
+        return self.function(other)
+    def __rlshift__(self, other):
+        return Infix(lambda x, self=self, other=other: self.function(other, x))
+    def __rshift__(self, other):
+        return self.function(other)
+    def __call__(self, value1, value2):
+        return self.function(value1, value2)
 
+# quadratic addition, usage: 3 |qPlus| 4
+qPlus = Infix( lambda x,y: sqrt(x**2+y**2) )
+qMinus = Infix( lambda x,y: sqrt(x**2-y**2) )
 
-gCut = " && photons.neutralIso-0.04*photons.pt< 3.5 && photons.photonIso-0.005*photons.pt < 1.3"
-#gCut = " &&1"
 
 def getMetHisto( scan="W", mg=1200, ms=1220 ):
 	if scan not in ["W", "B"]:
@@ -19,8 +37,7 @@ def getMetHisto( scan="W", mg=1200, ms=1220 ):
 	if mg<0 or ms<0:
 		print "Please insert sensible masses"
 
-	signalVersion="V03.00"
-	h = readHisto( scan+"_gsq_%s.root"%signalVersion, "gMet%s_%s"%(mg,ms) )
+	h = readHisto( scan+"_gsq_V03.45.root", "gMet%s_%s"%(mg,ms) )
 
 	# scale histo
 	nGen = 60000 if scan == "W" else 10000
@@ -43,6 +60,7 @@ def getMetHisto( scan="W", mg=1200, ms=1220 ):
 	return newh
 
 
+
 def subtractHistQuadratic( h1, h2 ):
 	out = h2.Clone( randomName() )
 	for bin in range( out.GetNbinsX()+2 ):
@@ -50,6 +68,7 @@ def subtractHistQuadratic( h1, h2 ):
 		v2 = h2.GetBinError(bin)
 		out.SetBinError( bin, v1 |qMinus| v2 )
 	return out
+
 
 
 def printDeviations( h1, h2 ):
@@ -72,6 +91,7 @@ def getMixedWeigthHisto( filenames, predFilenames, commonCut, control=True, fill
 	regionCut = "met<100" if control else "met>=100"
 
 	xVar = "photons[0].ptJet()"
+	yVar = "ht"
 	xlabel, xunit, xbinning = readAxisConf( xVar )
 	ylabel, yunit, ybinning = readAxisConf( yVar )
 
@@ -87,8 +107,7 @@ def getMixedWeigthHisto( filenames, predFilenames, commonCut, control=True, fill
 	denominator = None
 	for fileName in predFilenames:
 		foTree = readTree( fileName, "photonJetTree" )
-		foCut = " && (Max$(photons[0].chargedIso) < 5.2 || (Max$(photons[0].neutralIso-0.04*photons[0].pt) < 3.5 && Max$(photons[0].photonIso-0.005*photons[0].pt) < 1.3)) && (Max$(photons[0].neutralIso-0.06*photons[0].pt) < 7 || (Max$(photons[0].chargedIso) < 2.6 && Max$(photons[0].photonIso-0.005*photons[0].pt) < 1.3 )) && (Max$(photons[0].photonIso-0.0075*photons[0].pt) < 2.6 || (Max$(photons[0].chargedIso) < 2.6 && Max$(photons[0].neutralIso-0.04*photons[0].pt) < 3.5))"
-		den = createHistoFromTree2D( foTree, yVar+":"+xVar, "weight*( %s && %s %s)"%(regionCut, commonCut, foCut), xbinning, ybinning )
+		den = createHistoFromTree2D( foTree, yVar+":"+xVar, "weight*( %s && %s)"%(regionCut, commonCut), xbinning, ybinning )
 		if denominator:
 			denominator.Add( den )
 		else:
@@ -97,19 +116,11 @@ def getMixedWeigthHisto( filenames, predFilenames, commonCut, control=True, fill
 	weight2D = divideHistos( numerator, denominator )
 
 	# Set the weight and error for empty bins to one.
-	#for i in range( weight2D.GetXaxis().GetNbins()+1 ):
-	#	for j in range( weight2D.GetYaxis().GetNbins()+1 ):
-	#		if fillEmptyBins and not weight2D.GetBinContent( i, j ):
-	#			weight2D.SetBinContent( i, j, 1 )
-	#			weight2D.SetBinError( i, j, 1 )
-
-	print "write qcdweight file"
-	weightFile = ROOT.TFile( "qcdWeight.root", "recreate" )
-	weightFile.cd()
-	weight2D.SetName("qcdWeight")
-	weight2D.Write()
-	weightFile.Close()
-
+	for i in range( weight2D.GetXaxis().GetNbins()+1 ):
+		for j in range( weight2D.GetYaxis().GetNbins()+1 ):
+			if fillEmptyBins and not weight2D.GetBinContent( i, j ):
+				weight2D.SetBinContent( i, j, 1 )
+				weight2D.SetBinError( i, j, 1 )
 
 	return weight2D
 
@@ -135,7 +146,7 @@ def writeWeight2DToFile( fileName, tree, h_weight, weightTreeName ):
 			stdout.write( "\r%s / %s"%(event.GetReadEntry(), event.GetEntries() ) )
 			stdout.flush()
 
-		b = h_weight.FindBin( event.photons.at(0).ptJet(), eval("event.%s"%yVar) )
+		b = h_weight.FindBin( event.photons.at(0).ptJet(), event.ht )
 		weight[0] = h_weight.GetBinContent( b )
 		weight_error[0] = h_weight.GetBinError( b )
 		weightTree.Fill()
@@ -150,8 +161,9 @@ def drawWeightHisto( weight, control=True ):
 	regionString = "control" if control else "signal"
 	# Draw the histograms
 	info = PlotCaption(control=control, signal=not control,treeName="")
-	info = ROOT.TLatex(0,.96, "#text{CMS Private Work }#SI{19.8}{fb^{-1}}#, #sqrt{s}=#SI{8}{TeV}#, #geq1#ggamma(#geq1#fgamma),#geq2#text{jets}#,, #met<#SI{100}{GeV}" )
+	info = ROOT.TLatex(0,.96, "#text{CMS Private Work  #hspace{2cm}  }#SI{19.8}{fb^{-1}}#, #sqrt{s}=#SI{8}{TeV}#, #geq1#gamma,#geq2#text{jets}#,, #met<#SI{100}{GeV}" )
 	info.SetNDC()
+	info.SetTextSize(0.07930341347505648/1.63823/1.16666)
 
 
 	weight.SetTitle(";#pt#text{ [GeV]};H_{T}#text{ [GeV]}")
@@ -214,6 +226,7 @@ def getHists( filenames, cut="1", plot="met", treeName="photonTree" ):
 		else:
 			endHist = hist
 
+	endHist.Scale(3932./19789.301) # to scale for 4/fb
 	return endHist
 
 def applyAddUncertainty( hist, uncert ):
@@ -227,14 +240,11 @@ def qcdPredictionHistos( filenames, plot, cut, modifyEmptyBins ):
 	for filename in filenames:
 		fTree = readTree( filename, "photonJetTree" )
 		fTree.AddFriend( "foWeights", filename )
-		foCut = " && (Max$(photons[0].chargedIso) < 5.2 || (Max$(photons[0].neutralIso-0.04*photons[0].pt) < 3.5 && Max$(photons[0].photonIso-0.005*photons[0].pt) < 1.3)) && (Max$(photons[0].neutralIso-0.06*photons[0].pt) < 7 || (Max$(photons[0].chargedIso) < 2.6 && Max$(photons[0].photonIso-0.005*photons[0].pt) < 1.3 )) && (Max$(photons[0].photonIso-0.0075*photons[0].pt) < 2.6 || (Max$(photons[0].chargedIso) < 2.6 && Max$(photons[0].neutralIso-0.04*photons[0].pt) < 3.5))"
 
-		hist = getHisto( fTree, plot, weight="weight*w_qcd", cut=cut+foCut, color=46, firstBin=1, lastBin=1, fillEmptyBins=modifyEmptyBins )
-		sHist = getHisto( fTree, plot, weight="weight*w_qcd_error", cut=cut+foCut, color=46, firstBin=1, lastBin=1, fillEmptyBins=modifyEmptyBins )
+		hist = getHisto( fTree, plot, weight="weight*w_qcd", cut=cut, color=46, firstBin=1, lastBin=1, fillEmptyBins=modifyEmptyBins )
+		sHist = getHisto( fTree, plot, weight="weight*w_qcd_error", cut=cut, color=46, firstBin=1, lastBin=1, fillEmptyBins=modifyEmptyBins )
 		sHistEmptyBin = getHisto( fTree, plot, weight="weight", cut="w_qcd*(%s)+(w_qcd<0.0001)*(%s)"%(cut,cut), color=46, firstBin=1, lastBin=1, fillEmptyBins=modifyEmptyBins )
 		sHistEmptyBin.Add( hist, -1. ) # get difference to normal prediction
-		for bin in range(sHistEmptyBin.GetNbinsX()+2):
-			sHistEmptyBin.SetBinContent(bin, 0)
 
 		if fHist:
 			fHist.Add( hist )
@@ -251,6 +261,10 @@ def qcdPredictionHistos( filenames, plot, cut, modifyEmptyBins ):
 	sysHist.SetMarkerSize(0)
 
 	fHist.SetLineColor(7)
+
+	for h in fHist, sysHist, sysEmptyBin:
+		h.Scale(3932./19789.301) # to scale for 4/fb
+
 
 	return fHist, sysHist, sysEmptyBin
 
@@ -361,7 +375,7 @@ nMetBins = %s
 	dataCardString += commonInformation
 	dataCardString += "\n##################################\n"
 
-	data = getArrayOfBins( dataHist, roundInt=True )
+	data = getArrayOfBins( dataHist, roundInt=False )
 	qcd = getArrayOfBins( fgammaHist )
 	qcd_stat = getArrayOfBins( fgammaHist, True )
 	qcd_weight = getArrayOfBins( fgammaWeightError )
@@ -393,10 +407,13 @@ nMetBins = %s
 	isrT_syst = getArrayOfBins( fsrT, scale=isrUncertaintyT )
 
 	totalUncert = addBinQuadratic( addBinQuadratic( addBinQuadratic( addBinQuadratic( addBinQuadratic( qcd_stat , qcd_syst ), ewk_stat ), ewk_syst ), isr_stat ), isr_syst )
-	if data == [0]*len(data):
-		for i in range(len(data)):
-			data[i] = int( qcd[i] + ewk[i] + isr[i] )
-			totalUncert[i] = totalUncert[i]/data[i] if data[i] else 0
+
+	totalBkg = [0]*len(data)
+	for i in range(len(data)):
+		totalBkg[i] = qcd[i] + ewk[i] + isr[i]
+
+	if data == [0]*len(data): # if blind analysis, set data yields to total bkg estimation for limit calculation
+		data = [ int(x) for x in totalBkg ]
 
 
 	for name, array in [
@@ -409,20 +426,20 @@ nMetBins = %s
 		( "EWK syst uncert = %s", ewk_syst ),
 		( "ISR background  = %s", isr ),
 		( "ISR stat uncert = %s", isr_stat ),
-		( "ISR syst uncert = %s", isr_syst ) ]:
+		( "ISR syst uncert = %s", isr_syst ),
+		( "Total Backgr.   = %s", totalBkg ) ]:
 		dataCardString += name%( ' '.join(map(str, array ) ) ) + "\n"
 
-	#print dataCardString
+	print dataCardString
 
 	additionalInfo = "" if len(binList) == 6 else "_%smetBins"%len(binList)
 
-	dataCardFileName = "eventYieldData%s-%s.txt"%(additionalInfo, time.strftime("%Y-%m-%d"))
-	dataCardFile = open( dataCardFileName, "w")
-	dataCardFile.write( dataCardString )
-	dataCardFile.close()
-	print "Write event yields to %s"%dataCardFileName
+	#dataCardFileName = "eventYieldMC%s-%s.txt"%(additionalInfo, time.strftime("%Y-%m-%d"))
+	#dataCardFile = open( dataCardFileName, "w")
+	#dataCardFile.write( dataCardString )
+	#dataCardFile.close()
+	#print "Write event yields to %s"%dataCardFileName
 
-	return
 
 	rawTable = []
 	rawTable.append([])
@@ -432,7 +449,7 @@ nMetBins = %s
 	rawTable[-1].append( "$t\\bar{t}$" )
 	rawTable[-1].append( "$\gamma$Z" )
 	rawTable[-1].append( "\\hline\nSum" )
-	rawTable[-1].append( "Data" )
+	rawTable[-1].append( "Simulation" )
 
 	binsToPrint = range(len(qcd) )
 	binsToPrint = [0,5]
@@ -464,33 +481,43 @@ nMetBins = %s
 
 
 
-def finalDistributionData( plot ):
+def finalDistributionMC( plot ):
 
 	# Some definitions:
+
+	# Electroweak fake-rate
+	fakeRate            = 1.48/100
+	fakeRateStatError   = 0.05/100
+	fakeRateSysError    = 0.08/100
+	fakeRateSysErrorOwn = fakeRate * .5
 
 	# additional ISR uncertainty
 	isrUncertaintyZ = 0.7
 	isrUncertaintyW = 0.5
 	isrUncertaintyT = 0.5
 
+	version = 12
+	g1 = "slimGJets_200_400_V03.%s_tree.root"%version
+	g2 = "slimGJets_400_inf_V03.%s_tree.root"%version
+	q1 = "slimQCD_250_500_V03.%s_tree.root"%version
+	q2 = "slimQCD_500_1000_V03.%s_tree.root"%version
+	q3 = "slimQCD_1000_inf_V03.%s_tree.root"%version
+
+	tt = "slimTTJets_V03.%s_tree.root"%version
+	w1 = "slimWJets_250_300_V03.%s_tree.root"%version
+	w2 = "slimWJets_300_400_V03.%s_tree.root"%version
+	w3 = "slimWJets_400_inf_V03.%s_tree.root"%version
+
 	# Sample names
-	mcVersion = "13"
-	wg1 = "slimWGamma_50_130_V03.%s_tree.root"%mcVersion
-	wg2 = "slimWGamma_130_inf_V03.%s_tree.root"%mcVersion
-	tg = "slimTTGamma_V03.%s_tree.root"%mcVersion
-	zgn = "slimZGammaNuNu_V03.%s_tree.root"%mcVersion
+	wg1 = "slimWGamma_50_130_V03.%s_tree.root"%12
+	wg2 = "slimWGamma_130_inf_V03.%s_tree.root"%12
+	tg = "slimTTGamma_V03.%s_tree.root"%12
+	zgn = "slimZGammaNuNu_V03.%s_tree.root"%12
 
-	published = False
-	setRange = [ "A", "B" ] if published else [ "A", "B", "C", "D" ]
-	additionalCut = "&& runNumber < 195948" if published else ""
+	versionData = 12
+	data = [ g1, g2, q1, q2, q3, tt, w1, w2, w3, zgn, wg1,wg2,tg ]
 
-	versionData = 13
-	data = [ "PhotonHad%s_V03.%s_tree.root"%(x,versionData) for x in setRange ]
-
-	commonCut = "!@electrons.size() || Max$(electrons.pt)<20 && !@muons.size() || Max$(muons.pt)<20"+additionalCut
-	commonCut = "!@electrons.size() || Min$(electrons.pt)<15 && !@muons.size() || Min$(muons.pt)<15"+additionalCut
-	commonCut = "!@electrons.size() && !@muons.size()"+additionalCut
-	#commonCut = "1"
+	commonCut = "!@electrons.size() && !@muons.size()"
 
 	# Compute the weights:
 	#weight2D = getMixedWeigthHisto( data, data, commonCut, control=True, fillEmptyBins=False )
@@ -500,17 +527,16 @@ def finalDistributionData( plot ):
 	#	writeWeight2DToFile( filename, fTree, weight2D, "foWeights" )
 
 	# Get Histograms
-	dataHist = getHists( data, commonCut+gCut, plot )
-	fgammaHist, fgammaWeightError, fgammaEmptyBinError = qcdPredictionHistos( data, plot, commonCut, True, plot=plot )
+	dataHist = getHists( data, commonCut )
 
-	#egammaHist = getHists( data, commonCut, treeName="photonElectronTree" )
-	#egammaHist.Scale( fakeRate )
-	from predictions import multiDimFakeRate
-	egammaHist = multiDimFakeRate( data, cut=commonCut+gCut, plot=plot )
+	fgammaHist, fgammaWeightError, fgammaEmptyBinError = qcdPredictionHistos( data, plot, commonCut, True )
 
-	fsrZ = getHists( [zgn], cut=commonCut+gCut, plot )
-	fsrW = getHists( [wg1,wg2], cut=commonCut+gCut, plot )
-	fsrTT = getHists( [tg], cut=commonCut+gCut, plot )
+	egammaHist = getHists( data, commonCut, treeName="photonElectronTree" )
+	egammaHist.Scale( fakeRate )
+
+	fsrZ = getHists( [zgn], cut=commonCut )
+	fsrW = getHists( [wg1,wg2], cut=commonCut )
+	fsrTT = getHists( [tg], cut=commonCut )
 
 	writeFinalTableLong( versionData, fakeRate, fakeRateStatError, fakeRateSysError, fakeRateSysErrorOwn,
 		isrUncertaintyZ, isrUncertaintyW, isrUncertaintyT,
@@ -560,34 +586,24 @@ def finalDistributionData( plot ):
 
 
 	# Extract the signal and prettify the plots
-	#signal1 = getHists( ["slimW_1200_1120_375_V02.44_tree.root"], cut=commonCut )
-	signal1 = getMetHisto( "W", 900, 1720 )
-	signal2 = getMetHisto( "B", 1700, 1120 )
-
-	
+	#signal1 = getHists( ["slimW_1200_1120_375_V03.44_tree.root"], cut=commonCut )
+	"""signal1 = getMetHisto( "W", 1300, 1320 )
+	signal2 = getMetHisto( "B", 1300, 1320 )
 	signal1.SetLineStyle(5)
 	signal2.SetLineStyle(9)
 	signal2.SetLineColor( ROOT.kGreen +4 )
-	if plot != "met":
-		print do something
 	signal1.SetLineColor( ROOT.kGreen +4 )
-	signal1 = getHists( ["slimW_1700_720_375_V03.06_tree.root"], plot=plot, cut=commonCut )
-	signal2 = getHists( ["slimW_900_1720_375_V03.06_tree.root"], plot=plot, cut=commonCut )
-	signal3 = getHists( ["slimB_1300_1720_375_V03.06_tree.root"], plot=plot, cut=commonCut )
-	signal4 = getHists( ["slimB_1700_1120_375_V03.06_tree.root"], plot=plot, cut=commonCut )
-	for i, signal in enumerate([signal1, signal2, signal3, signal4]):
-		signal.SetLineColor( ROOT.kGreen +4 )
-		signal.SetLineStyle(5+i)
+	"""
 
 	fsrZ.SetLineColor( ROOT.kRed-7 )
 	fsrW.SetLineColor( ROOT.kRed-9 )
 	fsrTT.SetLineColor( ROOT.kRed )
 	egammaHist.SetLineColor( 3 )
 
-	#for h in [fsrTT, signal1, fgammaHist, dataHist]:
-		#h.GetXaxis().SetTitle("#met [GeV]")
-		#h.SetTitleSize(1./31.4485, "xy")
-		#h.SetLabelSize(1./31.4485, "xy")
+	for h in [fsrTT, fgammaHist, dataHist]:
+		h.GetXaxis().SetTitle("#met#text{ [GeV]}")
+		h.SetTitleSize(1./31.4485, "xy")
+		h.SetLabelSize(1./31.4485, "xy")
 
 	mh = Multihisto()
 	mh.orderByIntegral = False
@@ -601,22 +617,22 @@ def finalDistributionData( plot ):
 	mh.addHisto( egammaHist, "e#rightarrow#gamma", True )
 	mh.addHisto( fgammaHist, "Multijet", True )
 
-	#dataLegName = "#text{Data (for }#met<#SI{100}{GeV})" if blind else "Data"
-	dataLegName = "Data"
-	mh.addHisto( dataHist, dataLegName, draw="pe" )
-	mh.addHisto( signal2, "Bino-like #chi_{1}^{0}", draw="hist" )
-	mh.addHisto( signal1, "Wino-like #chi_{1}^{0}", draw="hist" )
+	mh.addHisto( dataHist, "Simulation", draw="pe" )
+	#mh.addHisto( signal2, "#text{Bino-like }#chi_{1}^{0}", draw="hist" )
+	#mh.addHisto( signal1, "#text{Wino-like }#chi_{1}^{0}", draw="hist" )
 
-	data = 0
-	for bin in range(dataHist.GetNbinsX()+2):
-		data += dataHist.GetBinContent(bin)*dataHist.GetBinWidth(bin)
-	print "dataInt = ", data
 
 	# draw stuff
 	luminosity = 19.8
-	infoText = ROOT.TLatex(0,.96, "CMS Private Work - %sfb^{-1} #sqrt{s}=8TeV #geq1#gamma_{tight},#geq2jets"%luminosity )
+	infoText = ROOT.TLatex(0,.96, "#text{CMS Private Work#hspace{4.5cm}   }#SI{%s}{fb^{-1}}#, #sqrt{s}=#SI{8}{TeV}#, #geq1#ggamma,#geq2#text{jets}"%luminosity )
 	infoText.SetNDC()
-	infoText.SetTextSize(.04)
+	infoText.SetTextSize(1./31.4485)
+
+	ROOT.gStyle.SetPaperSize(14.6,50.)
+	ROOT.gStyle.SetPadTopMargin(0.05)
+	ROOT.gStyle.SetPadRightMargin(0.02)
+	ROOT.gStyle.SetPadLeftMargin(0.09)
+
 
 
 	can = ROOT.TCanvas()
@@ -627,40 +643,17 @@ def finalDistributionData( plot ):
 	errorBand.SetMarkerSize(0)
 	errorBand.Draw("e2 same")
 
-	from testPoissonError import significanceAsimov
-	from testPoissonError import significanceBkg
-
-	for sh in [ signal1 ]:
-		scomb = 0.
-		nSign = 0.
-		for bin in range( errorBand.FindBin(101), errorBand.GetNbinsX()+2):
-			s = sh.GetBinContent(bin)
-			b = errorBand.GetBinContent(bin)
-			b_uncert = errorBand.GetBinError(bin)
-			#print s, b, b_uncert
-			if s and b and b_uncert:
-				if not fgammaHist.GetBinContent(bin):
-					b_uncert *=100
-				#print bin, significanceBkg( s, b, b_uncert )
-				scomb += significanceBkg( s, b, b_uncert )
-				nSign += 1
-		#print "combined:", scomb / sqrt(nSign)
-
-
-
-
 	for ding in can.GetListOfPrimitives():
 		if isinstance( ding, ROOT.TH1 ) or isinstance( ding, ROOT.THStack):
 			ax = ding.GetYaxis()
-			#ax.SetTitleSize(1./31.4485)
-			#ax.SetLabelSize(1./31.4485)
+			ax.SetTitleSize(1./31.4485)
+			ax.SetLabelSize(1./31.4485)
 			ax.SetTitleOffset(1.3)
 			ax.SetLabelOffset(0)
 
 	from myRatio import Ratio
-	r = Ratio( "Data / Bkg", dataHist, mh.stack.GetStack().Last() )
-	#r.draw(0.5,1.5)
-	r.draw(0,2.8)
+	r = Ratio( "Simulation / Bkg", dataHist, mh.stack.GetStack().Last() )
+	r.draw(0,2)
 
 	if True:
 		x = subtractHistQuadratic( r.ratioSys, statUncertHist)
@@ -668,8 +661,9 @@ def finalDistributionData( plot ):
 	r.ratio.Draw("same e")
 	infoText.Draw()
 
-	SaveAs( can, "finalDistributionData_%s"%yVar )
-	#savePath = "/home/knut/master/documents/thesis/plots/finalDistributionData.tex"
+	printDeviations( mh.stack.GetStack().Last(), dataHist )
+	SaveAs( can, "finalDistributionMC" )
+	#savePath = "/home/knut/master/documents/thesis/plots/finalDistributionMC.tex" 
 	#can.SaveAs( savePath )
 	#correctTiksPlot( savePath )
 
@@ -683,5 +677,5 @@ if __name__ == "__main__":
 		opts.plot = [ "met", "ht", "photons[0].ptJet()","Length$(jets.pt)", "Length$(photons.pt)"]
 
 	for plot in opts.plot:
-		finalDistributionData( plot )
+		finalDistributionMC( plot )
 

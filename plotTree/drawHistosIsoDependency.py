@@ -13,6 +13,7 @@ def split2Din1DMultihist( h2D, useYaxis, uFlow, oFlow ):
 	oFlow: Take the overFlow into account (bool).
 	"""
 	mh = Multihisto()
+	mh.setMinimum(1e-8)
 	style = ROOT.gROOT.GetStyle("tdrStyle") # for nice color gradient
 
 	if useYaxis:
@@ -54,7 +55,10 @@ def split2Din1DMultihist( h2D, useYaxis, uFlow, oFlow ):
 	return mh
 
 def drawDependency( inName, histName, rebinX, rebinY, axis="y", uFlow=True, oFlow=True ):
-	hist2D = readHisto( inName, histName )
+
+	hist2D = readHisto( inName[0], histName )
+	for fname in inName[1:]:
+		hist2D.Add( readHisto( fname, histName ) )
 	hist2D = rebin2D( hist2D, rebinX, rebinY )
 
 	mh = split2Din1DMultihist( hist2D, axis, uFlow, oFlow )
@@ -63,14 +67,14 @@ def drawDependency( inName, histName, rebinX, rebinY, axis="y", uFlow=True, oFlo
 			h[0].Scale(1./h[0].Integral(),"width")
 		h[0].GetYaxis().SetTitle("Normed Entries, divided by bin width")
 
-	mh.leg.SetX1(.5)
+	#mh.leg.SetX1(.5)
 	if axis == "x" and "sigma" in hist2D.GetYaxis().GetTitle():
 		mh.leg.SetY1(0.2)
 		mh.leg.SetY2(0.6)
 
 	can = ROOT.TCanvas()
 	mh.Draw()
-	datasetAbbr = getDatasetAbbr( inName )
+	datasetAbbr = getSaveNameFromDatasets( inName )
 	label = createDatasetLabel( datasetAbbr )
 	label.Draw()
 	SaveAs( can, "2Dto1D_%s_%s_%s_%s%s"%(histName,datasetAbbr,axis,len(rebinX),len(rebinY)) )
@@ -78,13 +82,18 @@ def drawDependency( inName, histName, rebinX, rebinY, axis="y", uFlow=True, oFlo
 if __name__ == "__main__":
 	arguments = argparse.ArgumentParser()
 	arguments.add_argument("filenames", nargs="+",type=isValidFile )
+	arguments.add_argument("--sum", action="store_true" )
 	opts = arguments.parse_args()
 
 	metBinning = readAxisConf( "met" )[2]
 	metBinningCompact = [x for x in metBinning if x>=100 and x<500]
 	photonBinning = [80, 100, 120, 140, 160, 180, 200, 250, 300, 400, 600, 650,  700 ]
 
-	for inName in opts.filenames:
+	differentFiles = [ opts.filenames ] if opts.sum else opts.filenames
+
+	for inName in differentFiles:
+		if not isinstance( inName, list):
+			inName = [ inName ]
 		drawDependency( inName, "metSigma", metBinning, [0.0, 0.012, 0.014 ], True, False, False )
 		drawDependency( inName, "metSigma", metBinning, [0.001*x for x in range(0,15,2) ], True, False )
 

@@ -5,6 +5,12 @@ from multiplot import Multihisto
 from treeFunctions import *
 from myRatio import Ratio
 
+def addRelativeUncertainty( hist, uncert ):
+	for bin in range( hist.GetNbinsX()+1 ):
+		hist.SetBinError( bin, hist.GetBinError(bin) |qPlus| (uncert * hist.GetBinContent(bin)) )
+	return hist
+
+
 def closure( filenames, predNames, errorZeroBins, opts ):
 	commonCut = "!@muons.size() && !@electrons.size() && %s"%opts.cut
 	for f in filenames:
@@ -33,7 +39,7 @@ def closure( filenames, predNames, errorZeroBins, opts ):
 
 		recE = getHisto( eTree, opts.plot, color=2, fillEmptyBins=True, cut=commonCut )
 		recE.SetFillColor( recE.GetLineColor() )
-		recE.SetFillStyle(3554)
+		recE.SetFillStyle(3354)
 		recE.SetMarkerSize(0)
 		recEStat = recE.Clone(randomName())
 		recEStat = applyFakeRateEWK( recEStat, 0.0084, 0.000000001 )
@@ -47,19 +53,14 @@ def closure( filenames, predNames, errorZeroBins, opts ):
 			eHist = recE
 			eHistStat = recEStat
 
+	eHist = multiDimFakeRate( predNames )
 	# needed if "setErrorInEmptyBins" enabled
 	for h in [eHist, gHist, eHistStat]:
 		bin = h.FindBin(99) # met bin before 100
 		if not h.GetBinContent(bin):
 			h.SetBinError( bin, 0 )
 
-		h.GetXaxis().SetTitle("#met#text{ [GeV]}")
 		h.GetXaxis().SetNdivisions(5,5,0, False)
-		for a in h.GetXaxis(), h.GetYaxis():
-			a.SetLabelSize(1./31.4485/0.425531)
-			a.SetTitleSize(1./31.4485/0.425531)
-		h.GetXaxis().SetTitleOffset(1.0)
-		h.GetYaxis().SetTitleOffset(1.6)
 
 
 	gDatasetAbbrs = mergeDatasetAbbr( gDatasetAbbrs )
@@ -81,15 +82,8 @@ def closure( filenames, predNames, errorZeroBins, opts ):
 
 
 
-	ROOT.gStyle.SetPaperSize(14.6/2.35,50.)
-	ROOT.gStyle.SetPadTopMargin(0.05)
-	ROOT.gStyle.SetPadRightMargin(0.02)
-	ROOT.gStyle.SetPadLeftMargin(0.17)
-
-	infoText = ROOT.TLatex(0,.96, "#text{CMS Private Work }#SI{8}{TeV}#, #geq1#gamma,#geq2#text{jets}" )
+	infoText = ROOT.TLatex(0.03,.96, "CMS Private Work - 8TeV #geq1#gamma,#geq2jets" )
 	infoText.SetNDC()
-	infoText.SetTextSize(1./14.3823)
-	multihisto.leg.SetX1(.50)
 
 	can = ROOT.TCanvas()
 	can.cd()
@@ -99,9 +93,7 @@ def closure( filenames, predNames, errorZeroBins, opts ):
 	infoText.Draw()
 	r = Ratio( "Sim./Pred.", gHist, eHist )
 	r.draw(0,2)
-	SaveAs( can, "ewkClosure_%s_%s_%s"%("".join(eDatasetAbbrs),opts.plot.replace(".",""),opts.save))
-	can.SaveAs("~/master/documents/thesis/plots/ewkClosure_%s_%s.tex"%(''.join(eDatasetAbbrs), opts.plot) )
-	correctTiksPlot("/home/knut/master/documents/thesis/plots/ewkClosure_%s_%s.tex"%(''.join(eDatasetAbbrs), opts.plot) )
+	SaveAs( can, "ewkClosure_%s_%s_%s"%(getSaveNameFromDatasets(eDatasetAbbrs),opts.plot.replace(".",""),opts.save))
 
 
 

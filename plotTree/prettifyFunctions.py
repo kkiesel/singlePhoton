@@ -289,14 +289,56 @@ def correctTiksPlot( filename, scale1=True ):
 
 		# each object with scale=0 is deleted
 		line = re.sub( ".*scale=0[^\.].*", "", line )
+
 		# expressions with 10^x will be in math mode now
 		line = re.sub( "[^\$](10\^\{-?[0-9]+\})[^\$]", "{$\\1$}", line )
+
 		# '%' without a leading \ will be replaced by \%
 		line = re.sub( "(.*[^\\\\])%(.*)", "\\1\%\\2", line )
+
+		# remove double '$$'
+		line = line.replace( '$$', '$' )
+
 		if scale1:
 			# scale all objects to 1
 			line = re.sub( "(.*scale=)(\d*\.\d*)([, ]+.*)", "\\1 1 \\3", line )
 
 		# sys.stdout is redirected to the file
 		sys.stdout.write(line)
+
+
+class Infix:
+	# definition of an Infix operator class
+	# this recipe also works in jython
+	# calling sequence for the infix is either:
+	#  x |op| y
+	# or:
+	# x <<op>> y
+	def __init__(self, function):
+		self.function = function
+	def __ror__(self, other):
+		return Infix(lambda x, self=self, other=other: self.function(other, x))
+	def __or__(self, other):
+		return self.function(other)
+	def __rlshift__(self, other):
+		return Infix(lambda x, self=self, other=other: self.function(other, x))
+	def __rshift__(self, other):
+		return self.function(other)
+	def __call__(self, value1, value2):
+		return self.function(value1, value2)
+
+
+# quadratic addition, usage: 3 |qPlus| 4
+from math import sqrt
+qPlus = Infix( lambda x,y: sqrt(x**2+y**2) )
+qMinus = Infix( lambda x,y: sqrt(x**2-y**2) )
+
+def integralAndError( h, binx1, binx2, option="" ):
+	import ROOT
+	err = ROOT.Double(0)
+	integral = h.IntegralAndError( binx1, binx2, err, option )
+	return integral, err
+
+
+
 

@@ -2,11 +2,12 @@
 # -*- coding: utf-8 -*-
 from treeFunctions import *
 Styles.tdrStyle2D()
+Styles.setPalette("red")
 
 ROOT.gStyle.SetPaintTextFormat("4.f")
 
 def changeAxisTitle( h ):
-	replacements = { "#gamma": "#ggamma", "#gamma_{jet}": "#fgamma", "#gamma_{e}": "#egamma" }
+	replacements = { "#gamma": "#text{Number of }#ggamma", "#gamma_{jet}": "#text{Number of }#fgamma", "#gamma_{e}": "#text{Number of }#egamma" }
 
 	for ax in h.GetYaxis(),h.GetXaxis(),h.GetZaxis():
 		for old, new in replacements.iteritems():

@@ -19,6 +19,7 @@ def modify( inputFileName, printOnly ):
 	eventHisto = readHisto( inputFileName )
 	processNEvents = eventHisto.GetBinContent(1)
 	lumiWeight = getLumiWeight( datasetAbbr, processNEvents )
+	print lumiWeight, inputFileName
 	if printOnly:
 		return datasetAbbr, processNEvents, lumiWeight
 
@@ -40,6 +41,7 @@ def modify( inputFileName, printOnly ):
 	import os
 	outputFileName = "slim"+os.path.basename( inputFileName )
 	fout = ROOT.TFile( outputFileName, "recreate" )
+
 
 	for treeName in treeNames:
 		inTree = readTree( inputFileName, treeName )
@@ -78,12 +80,12 @@ if __name__ == "__main__":
 		out = modify( inName, opts.printOnly )
 		if out:
 			abbr, nGen, w = out
-			s = w*nGen/19800
+			s = w*nGen/19712
 			rawTable.append( (abbr, s, nGen ) )
 
 	print
 	print "Sample name  &  $\sigma$ [pb]  &  nGen [1e6]"
 	for abbr, s, nGen in rawTable:
 		niceAbbr = abbr.replace("GJets","#gammaJets").replace("TTJets","t#bar{t}").replace("ZGamma", "#gammaZ")
-		print "\\verb|%s|  &  %.1f  &  %i \\\\"%(abbr, s, round(nGen/1e6) )
+		print "\\verb|%s|  &  %.3f  &  %s \\\\"%(abbr, s, nGen/1e6 )
 
