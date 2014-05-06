@@ -5,8 +5,6 @@ from multiplot import Multihisto
 from treeFunctions import *
 from predictions import *
 
-foCut = " && (photons[0].chargedIso < 5.2 || (photons[0].neutralIso < 3.5 + 0.04*photons[0].pt && photons[0].photonIso < 1.3 + 0.005*photons[0].pt)) && (photons[0].neutralIso < 7 + 0.06*photons[0].pt || (photons[0].chargedIso < 2.6 && photons[0].photonIso < 1.3 + 0.005*photons[0].pt)) && (photons[0].photonIso < 2.6 + 0.0075*photons[0].pt || (photons[0].chargedIso < 2.6 &&photons[0].neutralIso < 3.5 + 0.04*photons[0].pt))"
-
 def drawWeightHisto( weight2D, saveName, writeWeightFile=False, control=True ):
 	regionString = "control" if control else "signal"
 	# Draw the histograms
@@ -31,16 +29,16 @@ def drawWeightHisto( weight2D, saveName, writeWeightFile=False, control=True ):
 
 	can2D = ROOT.TCanvas()
 	can2D.cd()
-	can2D.SetLogz(0)
+	can2D.SetLogz(1)
 
 	for hist in weight2D, weightErrors, weightRelErrors:
 
 		name = hist.GetName()
 		if name == "weight2D":
-			#hist1.GetZaxis().SetRangeUser(0,2)
+			hist.GetZaxis().SetRangeUser(0.02,20)
 			hist.GetZaxis().SetTitle("\qcdRatio")
 		if name == "weightRelError":
-			#hist1.GetZaxis().SetRangeUser(0,1.2)
+			#hist.GetZaxis().SetRangeUser(0,1.2)
 			hist.GetZaxis().SetTitle("\qcdRatioError")
 
 		hist.Draw("colz")
@@ -53,7 +51,7 @@ def drawWeightHisto( weight2D, saveName, writeWeightFile=False, control=True ):
 		weightFile = ROOT.TFile( "qcdWeight.root", "recreate" )
 		weightFile.cd()
 		weight2D.SetName("qcdWeight")
-		weight2D.Write(ROOT.TObject.kSingleKey)
+		weight2D.Write(ROOT.TObject.kOverwrite)
 		weightFile.Close()
 
 
@@ -146,10 +144,6 @@ def drawClosure( filenames, predFilenames, plot, commonCut, infoText, additional
 
 	gHist = getHists( filenames, plot, commonCut )
 	fHist, sysHist = predictionHistos( predFilenames, plot, commonCut, modifyEmptyBins )
-
-	for bin in range( sysHist.GetNbinsX()+2 ):
-		sysHist.SetBinError( bin, sysHist.GetBinContent(bin) )
-		sysHist.SetBinContent( bin, fHist.GetBinContent(bin) )
 
 	signalAbbrs = mergeDatasetAbbr( [ getDatasetAbbr(x) for x in filenames ] )
 
