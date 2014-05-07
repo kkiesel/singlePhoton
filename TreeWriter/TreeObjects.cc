@@ -31,6 +31,13 @@ float tree::Particle::DeltaR( const Particle &p2 ) const {
 	return sqrt( dphi*dphi + deta*deta );
 }
 
+float tree::Jet::DeltaR( const tree::Photon &p2 ) const {
+	TVector2 tempVect;
+	float dphi = tempVect.Phi_mpi_pi( phi -p2._phiJet );
+	float deta = eta - p2._etaJet;
+	return sqrt( dphi*dphi + deta*deta );
+}
+
 float tree::Particle::DeltaR( const TLorentzVector &vec2 ) const {
 	TVector3 vec1;
 	vec1.SetPtEtaPhi( 1, eta, phi );

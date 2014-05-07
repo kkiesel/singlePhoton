@@ -61,7 +61,7 @@ class TreeWriter {
 		void getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton, bool isPhotonJet, bool isPhotonElectron );
 		float getHt() const;
 		TVector3 getMhtVector() const;
-		TVector3 getRecoilVector() const;
+		TVector3 getRecoilVector( eventType eType ) const;
 		void fillJets();
 		unsigned int countGoodJets( bool clean );
 		void getQcdWeights( float pt, float ht, float & qcdWeight, float & qcdWeightError );

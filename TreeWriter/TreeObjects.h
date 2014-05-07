@@ -35,6 +35,8 @@ class Photon : public Particle {
 		void setGen( genParticles id );
 		float ptJet() const;
 		float _ptJet;
+		float _etaJet;
+		float _phiJet;
 		float sigmaIphiIphi;
 		float r9, sigmaIetaIeta, hadTowOverEm;
 		float chargedIso, neutralIso, photonIso;
@@ -46,6 +48,7 @@ class Photon : public Particle {
 
 class Jet : public Particle{
 	public:
+		float DeltaR( const Photon &p2 ) const;
 		bool isMatch( jetMatches id ) const;
 		void setMatch( jetMatches id );
 		short matchInformation;

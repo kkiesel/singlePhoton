@@ -560,6 +560,8 @@ void TreeWriter::getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton=fals
 	 */
 
 	myPhoton._ptJet = 0;
+	myPhoton._etaJet = -10;
+	myPhoton._phiJet = -10;
 	myPhoton.matchedJetIndex = -1;
 	std::vector<short> indices;
 
@@ -593,6 +595,8 @@ void TreeWriter::getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton=fals
 		// If only one jet is found, we would be done here
 		myPhoton.matchedJetIndex = std::distance( jets.begin(), jet );
 		myPhoton._ptJet = jet->pt;
+		myPhoton._etaJet = jet->eta;
+		myPhoton._phiJet = jet->phi;
 
 		// If more than one jet is found, we have to decide which jet to choose
 		indices.push_back( myPhoton.matchedJetIndex );
@@ -608,6 +612,8 @@ void TreeWriter::getPtFromMatchedJet( tree::Photon& myPhoton, bool isPhoton=fals
 			if ( ptDiff < minPtDifferenz ) {
 				minPtDifferenz = ptDiff;
 				myPhoton._ptJet = jets.at(*index).pt;
+				myPhoton._etaJet = jets.at(*index).eta;
+				myPhoton._phiJet = jets.at(*index).phi;
 				myPhoton.matchedJetIndex = *index;
 			}
 		}
@@ -687,17 +693,16 @@ void TreeWriter::fillJets() {
 	std::sort( jets.begin(), jets.end(), tree::EtGreater);
 }
 
-TVector3 TreeWriter::getRecoilVector() const {
+TVector3 TreeWriter::getRecoilVector( eventType eType ) const {
 	TVector3 sum,adding;
 
 	for(std::vector<tree::Jet>::const_iterator jet = jets.begin();
 			jet != jets.end(); ++jet ) {
 
-		if( jet->pt < 30 || std::abs(jet->eta) > 2.5 ) continue;
-		if( !jet->isMatch( tree::kJetId ) ) continue;
-		if( isAdjacentToParticles<tree::Photon>( *jet, photons, 0.4 ) ) continue;
-		if( isAdjacentToParticles<tree::Photon>( *jet, photonJets, 0.4 ) ) continue;
-		if( isAdjacentToParticles<tree::Photon>( *jet, photonElectrons, 0.4 ) ) continue;
+		if( jet->pt < 30 || std::abs(jet->eta) > 3 ) continue;
+		if( eType == kPhotonEvent && jet->DeltaR( photons[0])<0.5 ) continue;
+		if( eType == kJetEvent && jet->DeltaR( photonJets[0])<0.5 ) continue;
+		if( eType == kElectronEvent && jet->DeltaR( photonElectrons[0])<0.5 ) continue;
 
 		adding.SetPtEtaPhi( jet->pt, jet->eta, jet->phi );
 		sum += adding;
@@ -989,12 +994,15 @@ void TreeWriter::Loop() {
 			photonToTree.conversionSafeVeto = it->passelectronveto;
 			photonToTree.genInformation = 0;
 
+			getPtFromMatchedJet( photonToTree, false,false,false );
 			//photon definition barrel
 			bool isPhotonOrElectron = photonToTree.hadTowOverEm < 0.05
 				&& photonToTree.sigmaIetaIeta < 0.012
 				&& photonToTree.chargedIso < 2.6
 				&& photonToTree.neutralIso < 3.5+0.04*photonToTree.pt
-				&& photonToTree.photonIso < 1.3+0.005*photonToTree.pt;
+				&& photonToTree.photonIso < 1.3+0.005*photonToTree.pt
+				&& photonToTree.neutralIso < 3.5+0.04*photonToTree.ptJet()
+				&& photonToTree.photonIso < 1.3+0.005*photonToTree.ptJet();
 
 			bool isPhoton = isPhotonOrElectron && !photonToTree.pixelseed;
 			bool isPhotonElectron = isPhotonOrElectron && photonToTree.pixelseed;
@@ -1004,12 +1012,12 @@ void TreeWriter::Loop() {
 				&& !photonToTree.pixelseed
 				&& photonToTree.hadTowOverEm < 0.05
 				&& photonToTree.sigmaIetaIeta < 0.012
-				&& (photonToTree.chargedIso < 5.2 || (photonToTree.neutralIso < 3.5 + 0.04*photonToTree.pt && photonToTree.photonIso < 1.3 + 0.005*photonToTree.pt))
-				&& (photonToTree.neutralIso < 7 + 0.06*photonToTree.pt || (photonToTree.chargedIso < 2.6 && photonToTree.photonIso < 1.3 + 0.005*photonToTree.pt))
-				&& (photonToTree.photonIso < 2.6 + 0.0075*photonToTree.pt || (photonToTree.chargedIso < 2.6 &&	photonToTree.neutralIso < 3.5 + 0.04*photonToTree.pt))
 				&& photonToTree.chargedIso < 26 && photonToTree.chargedIso > 0.26
 				&& photonToTree.neutralIso < 35+0.4*photonToTree.pt && photonToTree.neutralIso > 0.35+0.004*photonToTree.pt
-				&& photonToTree.photonIso < 13+0.05*photonToTree.pt && photonToTree.photonIso > 0.13+0.0005*photonToTree.pt;
+				&& photonToTree.photonIso < 13+0.05*photonToTree.pt && photonToTree.photonIso > 0.13+0.0005*photonToTree.pt
+				&& (photonToTree.chargedIso < 5.2 || (photonToTree.neutralIso < 3.5 + 0.04*photonToTree.ptJet() && photonToTree.photonIso < 1.3 + 0.005*photonToTree.ptJet()))
+				&& (photonToTree.neutralIso < 7 + 0.06*photonToTree.ptJet() || (photonToTree.chargedIso < 2.6 && photonToTree.photonIso < 1.3 + 0.005*photonToTree.ptJet()))
+				&& (photonToTree.photonIso < 2.6 + 0.0075*photonToTree.ptJet() || (photonToTree.chargedIso < 2.6 &&	photonToTree.neutralIso < 3.5 + 0.04*photonToTree.ptJet()));
 
 			// print photon information
 			if( loggingVerbosity > 2 ) {
@@ -1112,10 +1120,6 @@ void TreeWriter::Loop() {
 		mht = mhtVector.Pt();
 		mhtPhi = mhtVector.Phi();
 
-		TVector3 recoilVector = getRecoilVector();
-		recoil = recoilVector.Pt();
-		recoilPhi = recoilVector.Phi();
-
 
 		fillMetFilterBitHistogram( hist1D.at("metFilters"), event.metFilterBit );
 		if( !event.passMetFilters() || !event.passMetFilter( susy::kEcalLaserCorr) ) continue;
@@ -1134,6 +1138,10 @@ void TreeWriter::Loop() {
 		if( splitting ) {
 
 			eventType eType = TreeWriter::whichEventType( photons, photonElectrons, photonJets );
+			TVector3 recoilVector = getRecoilVector( eType );
+			recoil = recoilVector.Pt();
+			recoilPhi = recoilVector.Phi();
+
 
 			if( eType == kPhotonEvent ) {
 				photonTree.Fill();
