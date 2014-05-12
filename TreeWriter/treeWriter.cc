@@ -213,21 +213,14 @@ bool matchLorentzToGenVector( TLorentzVector& lvec, std::vector<tree::Particle>&
 	 * hist: fill the histogram with dR and relPt
 	 */
 	bool match = false;
-	float dR, dPt, xSigma, resolution, eGen;
-	float eRec = lvec.E();
+	float dR, dPt;
 	TLorentzVector a;
 	for( std::vector<tree::Particle>::const_iterator it = genParticles.begin();
 			it != genParticles.end(); ++it ) {
 
 		a.SetPtEtaPhiE( it->pt, it->eta, it->phi, 1 );
 		dR = lvec.DeltaR( a );
-
-		eGen = it->pt / sin(2*atan(exp(-it->eta)));
-		// see http://iopscience.iop.org/1748-0221/2/04/P04004/ for the resolution
-		resolution = eGen * sqrt( 7.84e-4/eGen + 0.0144/eGen/eGen + 9e-6 );
-		xSigma = (eRec - eGen) / resolution;
-		dPt = xSigma;
-		//dPt = (it->pt-lvec.Pt()) / it->pt;
+		dPt = (it->pt-lvec.Pt()) / it->pt;
 
 		if( hist ) hist->Fill( dR, dPt );
 
@@ -243,7 +236,56 @@ void printChildren( int index, const susy::ParticleCollection&  particles, int l
 	 */
 	for (int i = 0; i< level; ++i )
 		std::cout <<"\t";
-	std::cout << particles[index].pdgId << " (" << (int)particles[index].status << ") " << particles[index].momentum.Pt() << std::endl;
+
+	std::map<int,std::string> pdgIdToString;
+	std::map<int,std::string> pdgIdToStringTmp;
+	pdgIdToString[1] = "d";
+	pdgIdToString[2] = "u";
+	pdgIdToString[3] = "s";
+	pdgIdToString[4] = "c";
+	pdgIdToString[5] = "b";
+	pdgIdToString[6] = "t";
+	pdgIdToString[11] = "e-";
+	pdgIdToString[12] = "ν_-";
+	pdgIdToString[13] = "μ-";
+	pdgIdToString[14] = "ν�";
+	pdgIdToString[15] = "tau-";
+	pdgIdToString[16] = "ν_ta";
+	pdgIdToString[21] = "g";
+	pdgIdToString[22] = "γ";
+	pdgIdToString[23] = "Z";
+	pdgIdToString[24] = "W";
+	pdgIdToString[221] = "η";
+	pdgIdToString[111] = "pi0";
+	pdgIdToString[211] = "pi+";
+	pdgIdToString[2212] = "p";
+
+	for( std::map<int,std::string>::iterator it = pdgIdToString.begin(); it != pdgIdToString.end(); ++it ) {
+		pdgIdToStringTmp[it->first] = it->second;
+		pdgIdToStringTmp[1000000+it->first] = std::string("~")+it->second;
+	}
+	pdgIdToStringTmp[1000022] = "~chi01";
+	pdgIdToStringTmp[1000023] = "~chi02";
+	pdgIdToStringTmp[1000025] = "~chi03";
+	pdgIdToStringTmp[1000035] = "~chi04";
+	pdgIdToStringTmp[1000039] = "~G";
+	pdgIdToString = pdgIdToStringTmp;
+	for( std::map<int,std::string>::iterator it = pdgIdToString.begin(); it != pdgIdToString.end(); ++it ) {
+		pdgIdToStringTmp[it->first] = it->second;
+		pdgIdToStringTmp[-it->first] = it->second + std::string("-");
+	}
+	pdgIdToStringTmp[1000024] = "~chi+1";
+	pdgIdToStringTmp[-1000024] = "~chi-1";
+	pdgIdToStringTmp[1000037] = "~chi+2";
+	pdgIdToStringTmp[-1000037] = "~chi-2";
+	pdgIdToString = pdgIdToStringTmp;
+
+	if( pdgIdToString.find( particles[index].pdgId) != pdgIdToString.end() )
+		std::cout << pdgIdToString.find( particles[index].pdgId)->second;
+	else
+		std::cout << particles[index].pdgId;
+
+	std::cout << " (" << (int)particles[index].status << ") " << particles[index].momentum.Pt() << std::endl;
 
 	//susy::ParticleCollection children;
 	for( susy::ParticleCollection::const_iterator it = particles.begin(); it != particles.end(); ++it ) {
@@ -945,6 +987,7 @@ void TreeWriter::Loop() {
 				genQuarkLike.push_back( thisGenParticle );
 			}
 		}
+
 		if( loggingVerbosity > 1 )
 			std::cout << "Found " << genPhotons.size() << " generated photons and "
 			<< genElectrons.size() << " generated electrons" << std::endl;
@@ -1038,9 +1081,9 @@ void TreeWriter::Loop() {
 			// Fill matching histograms only for photon-like objects
 			if( splitting && !isPhotonOrElectron && !isPhotonJet ) continue;
 
-			if( matchLorentzToGenVector( it->momentum, genPhotons, &hist2D["matchGenPhoton"], .01, 5 ) )
+			if( matchLorentzToGenVector( it->momentum, genPhotons, &hist2D["matchGenPhoton"], .1, .1 ) )
 				photonToTree.setGen( tree::kGenPhoton );
-			if( matchLorentzToGenVector( it->momentum, genElectrons, &hist2D["matchGenElectron"], .01, 5 ) )
+			if( matchLorentzToGenVector( it->momentum, genElectrons, &hist2D["matchGenElectron"], .1, .1 ) )
 				photonToTree.setGen( tree::kGenElectron );
 			if( matchLorentzToGenVector( it->momentum, genQuarkLike, NULL, .3 ) )
 				photonToTree.setGen( tree::kGenJet );
