@@ -374,8 +374,8 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 	hist2D["matchPhotonJetToJetPt"]      = TH2F("", "photon-jet matching;p_{T,#gamma};p_{T, jet}", 100, 0, 1000, 100, 0, 1000 );
 	hist2D["matchPhotonElectronToJetPt"] = TH2F("", "photon-jet matching;p_{T,#gamma};p_{T, jet}", 100, 0, 1000, 100, 0, 1000 );
 
-	hist2D["matchGenPhoton"]   = TH2F("", ";#DeltaR;#Delta E / #sigma_{E}", 1000, 0, .5, 200, -20, 20 );
-	hist2D["matchGenElectron"] = TH2F("", ";#DeltaR;#Delta E / #sigma_{E}", 1000, 0, .5, 200, -20, 20 );
+	hist2D["matchGenPhoton"]   = TH2F("", ";#DeltaR;#Delta p_{T} / p_{T}", 1000, 0, .5, 200, -5, 5 );
+	hist2D["matchGenElectron"] = TH2F("", ";#DeltaR;#Delta p_{T} / p_{T}", 1000, 0, .5, 200, -5, 5 );
 
 	hist2D["metSigma"] = TH2F("", ";#slash{E}_{T};#sigma_{i#etai#eta}", 50, 0, 500, 440, 0, 0.022 );
 	hist2D["metChIso"] = TH2F("", ";#slash{E}_{T};Iso^{#pm}",           50, 0, 500, 300, 0, 30 );
@@ -1081,9 +1081,9 @@ void TreeWriter::Loop() {
 			// Fill matching histograms only for photon-like objects
 			if( splitting && !isPhotonOrElectron && !isPhotonJet ) continue;
 
-			if( matchLorentzToGenVector( it->momentum, genPhotons, &hist2D["matchGenPhoton"], .1, .1 ) )
+			if( matchLorentzToGenVector( it->momentum, genPhotons, &hist2D["matchGenPhoton"], .1, 1e6 ) )
 				photonToTree.setGen( tree::kGenPhoton );
-			if( matchLorentzToGenVector( it->momentum, genElectrons, &hist2D["matchGenElectron"], .1, .1 ) )
+			if( matchLorentzToGenVector( it->momentum, genElectrons, &hist2D["matchGenElectron"], .1, 1e6 ) )
 				photonToTree.setGen( tree::kGenElectron );
 			if( matchLorentzToGenVector( it->momentum, genQuarkLike, NULL, .3 ) )
 				photonToTree.setGen( tree::kGenJet );
