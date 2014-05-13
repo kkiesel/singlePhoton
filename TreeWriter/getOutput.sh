@@ -24,7 +24,10 @@ ZGammaNuNu1_400_inf_V03
 ZGammaNuNu2_200_400_V03
 ZGammaNuNu2_400_inf_V03
 ZGammaNuNu_V03
+ZGamma_V02
+ZGammaLL_V02
 )
+
 outputPath=/nfs/dust/cms/user/kiesel
 version=$1
 for dataset in "${datasets[@]}"; do
@@ -41,7 +44,7 @@ for dataset in "${datasets[@]}"; do
 		if ls ${abbr}__*.sh &> /dev/null; then
 			tar -zcvf $outputPath/logs/scripts_${abbr}.tar.gz ${abbr}__*.sh
 		fi
-		if ls ~/${abbr}__*.sh.o.* &> /dev/null; then
+		if ls ~/${abbr}__*.sh.o* &> /dev/null; then
 			tar -zcvf $outputPath/logs/output_${abbr}.tar.gz ~/${abbr}__*.sh.o*
 		fi
 		rm -f ~/${abbr}__*.sh.o*
