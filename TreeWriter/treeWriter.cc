@@ -1158,7 +1158,8 @@ void TreeWriter::Loop() {
 		}
 
 
-		if( splitting && hadronicSelection && ( nGoodJets < 2 || ht < 500 ) ) continue;
+		if( splitting && hadronicSelection && ( ht < 500 ) ) continue;
+		//if( splitting && hadronicSelection && ( nGoodJets < 2 || ht < 500 ) ) continue;
 		TVector3 mhtVector = getMhtVector();
 		mht = mhtVector.Pt();
 		mhtPhi = mhtVector.Phi();
