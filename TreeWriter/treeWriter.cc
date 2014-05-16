@@ -963,7 +963,16 @@ void TreeWriter::Loop() {
 
 		// genParticles
 		tree::Particle thisGenParticle;
+		bool sortOutZTauTau = true;
+		bool foundZTau = false;
 		for( susy::ParticleCollection::const_iterator it = event.genParticles.begin(); it != event.genParticles.end(); ++it ) {
+			if( sortOutZTauTau ){
+				if( std::abs(it->pdgId) == 15 && event.genParticles.at(it->motherIndex).pdgId == 23 ){
+					std::cout << "found z->tautau" << std::endl;
+					foundZTau = true;
+				}
+			}
+
 
 			// status 3: particles in matrix element
 			// status 2: intermediate particles
@@ -987,6 +996,10 @@ void TreeWriter::Loop() {
 				genQuarkLike.push_back( thisGenParticle );
 			}
 		}
+		if( foundZTau )
+			std::cout << "tau event" << std::endl;
+		else
+			std::cout << "no tau event" << std::endl;
 
 		if( loggingVerbosity > 1 )
 			std::cout << "Found " << genPhotons.size() << " generated photons and "
