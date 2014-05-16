@@ -1020,7 +1020,14 @@ void TreeWriter::Loop() {
 		if( loggingVerbosity > 2 )
 			std::cout << " met = " << met << std::endl;
 
-		susy::MET pfMetxy = event.metMap["pfSysShiftCorrectedMet"];
+
+		susy::MET pfMetxy = event.metMap["pfMet"];
+		for( susy::ParticleCollection::const_iterator it = event.genParticles.begin(); it != event.genParticles.end(); ++it ) {
+			if( it->status != 3 || it->pdgId != 23) continue;
+			TVector2 zBoson;
+			zBoson.SetMagPhi( it->momentum.Pt(), it->momentum.Phi() );
+			pfMetxy.mEt += zBoson;
+		}
 		metShiftxy = pfMetxy.met();
 		metShiftxyPhi = pfMetxy.mEt.Phi();
 
