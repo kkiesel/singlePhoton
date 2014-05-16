@@ -963,7 +963,11 @@ void TreeWriter::Loop() {
 
 		// genParticles
 		tree::Particle thisGenParticle;
+		bool sortOutZTauTau = true;
+		bool foundZTau = false;
 		for( susy::ParticleCollection::const_iterator it = event.genParticles.begin(); it != event.genParticles.end(); ++it ) {
+			if( sortOutZTauTau && std::abs(it->pdgId) == 15 && event.genParticles.at(it->motherIndex).pdgId == 23 )
+					foundZTau = true;
 
 			// status 3: particles in matrix element
 			// status 2: intermediate particles
@@ -987,6 +991,8 @@ void TreeWriter::Loop() {
 				genQuarkLike.push_back( thisGenParticle );
 			}
 		}
+		if( foundZTau )
+			continue;
 
 		if( loggingVerbosity > 1 )
 			std::cout << "Found " << genPhotons.size() << " generated photons and "
@@ -1123,6 +1129,16 @@ void TreeWriter::Loop() {
 
 		// filter out events with no photons
 		if( !photons.size() && !photonJets.size() && !photonElectrons.size() ) continue;
+		//if( photons.size() )
+		//std::cout << photons.size() << photonJets.size() << photonElectrons.size() << std::endl;
+		std::vector<tree::Photon> lookAt = photonElectrons;
+		if( lookAt.size() ) {
+			printCascade( event.genParticles );
+			std::cout << "pt gamma = " << lookAt.at(0).pt << std::endl;
+			if( genElectrons.size() ) std::cout << "deltaR to leading e = " << lookAt.at(0).DeltaR( genElectrons.at(0)) << " with ptDiff = " << fabs(genElectrons.at(0).pt-lookAt.at(0).pt) <<  std::endl;
+			if( genPhotons.size() ) std::cout << "deltaR to leading gamma = " << lookAt.at(0).DeltaR( genPhotons.at(0)) <<  " with pt = " << genPhotons.at(0).pt << std::endl;
+			continue;
+		}
 
 		// electrons
 		std::vector<susy::Electron> eVector = event.electrons["gsfElectrons"];
