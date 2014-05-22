@@ -19,7 +19,6 @@ def modify( inputFileName, printOnly ):
 	eventHisto = readHisto( inputFileName )
 	processNEvents = eventHisto.GetBinContent(1)
 	lumiWeight = getLumiWeight( datasetAbbr, processNEvents )
-	print lumiWeight, inputFileName
 	if printOnly:
 		return datasetAbbr, processNEvents, lumiWeight
 
