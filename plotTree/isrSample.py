@@ -165,8 +165,91 @@ def inclusiveAndIsrSamples( fList1, fList2, saveAffix="" ):
 	correctTiksPlot( "/home/knut/master/documents/thesis/plots/inclusiveAndIsrSample_%s%s.tex"%(abbr1,saveAffix) )
 
 
+def zGammaCut(plot="photons[0].pt", merge=False ):
+	cut = "!@electrons.size() && !@muons.size()"
+
+	nunuTree = readTree( "slimZGammaNuNu_V03.19b_tree.root", "photonTree" )
+	llTree = readTree( "slimZGammaLL_V02.19b_tree.root", "photonTree" )
+	zIncTree = readTree( "slimZGamma_V03.18_tree.root", "photonTree" )
+
+	nBins = range(60, 500, 10) if plot == "photons[0].pt" or plot=="genPhotons[0].pt" else readAxisConf(plot)[2]
+
+	h_nunu = getHisto( nunuTree, plot, cut+"&&genPhotons[0].pt>130", nBins=nBins,color=2 )
+	h_ll = getHisto( llTree, plot, cut, nBins=nBins,color=5 )
+	h_zInc = getHisto( zIncTree, plot, cut, nBins=nBins)
+
+	llTree.AddFriend( "photonTreeAddVariables", llTree.GetFile().GetName() )
+
+	llPlot = "metLL" if plot=="met" else plot
+
+	zMod = getHisto( llTree, llPlot, "genPhotons[0].pt<130", nBins=nBins, color=4 )
+	zMod.Scale( 20./(2.*3.363) )
+
+	mh = Multihisto()
+	mh.orderByIntegral = False
+	mh.setMinimum(0.01)
+
+	mh.addHisto( h_nunu, "#gammaZ#rightarrow#gamma#nu#nu(p_{T#gamma}^{gen}#geq130GeV)", draw="e", toStack=True )
+	mh.addHisto( zMod, "ll to #slash{E}_{T}", toStack=True )
+	mh.addHisto( h_ll, "#gammaZ#rightarrow#gammall", draw="e", toStack=True )
+	mh.addHisto( h_zInc, "#gammaZ", draw="e" )
+
+	if merge:
+		h_nunuPart = getHisto( nunuTree, plot, cut+"&&genPhotons[0].pt>=130", nBins=nBins,color=6 )
+		h_zIncPart = getHisto( zIncTree, plot, cut+"&&genPhotons[0].pt<130", nBins=nBins, color=6)
+		merged = addHistos( [h_nunuPart,h_zIncPart] )
+		mh.addHisto( merged, "merged", draw="e" )
+
+
+	mh.Draw()
+	total = mh.stack.GetStack().Last().Clone(randomName() )
+	total.SetFillStyle(3002)
+	total.SetFillColor(1)
+	total.Draw("same e2")
+
+	if plot == "photons[0].pt":
+		l = ROOT.TLine( 130, 0, 130, 1 )
+		l.Draw()
+
+	if merge:
+		plot+="_merged"
+	SavePad( "zGammaCut_%s"%plot )
+
+
+def zGammaMixture(plot="met"):
+	cut = "1"
+
+	nunuTree = readTree( "slimZGammaNuNu_V03.18_tree.root", "photonTree" )
+	zIncTree = readTree( "slimZGamma_V03.18_tree.root", "photonTree" )
+
+	nBins = range(80, 500, 10) if plot == "photons[0].pt" else readAxisConf(plot)[2]
+
+	h_nunu = getHisto( nunuTree, plot, cut+"&&photons[0].pt>=130", nBins=nBins,color=2 )
+	h_zInc = getHisto( zIncTree, plot, cut+"&&photons[0].pt<130", nBins=nBins, color=4)
+
+	mh = Multihisto()
+
+	mh.addHisto( h_nunu, "#gammaZ#rightarrow#gamma#nu#nu(p_{T}#geq130GeV)", draw="e", toStack=True )
+	mh.addHisto( h_zInc, "#gammaZ(p_{T}<130GeV)", draw="e", toStack=True )
+	mh.Draw()
+
+	if plot == "photons[0].pt":
+		l = ROOT.TLine( 130, 0, 130, 1 )
+		l.Draw()
+
+	SavePad( "inclusiveAndIsrSample_%s"%plot )
+
+
 
 if __name__ == "__main__":
+	zGammaCut("met")
+	zGammaCut("photons[0].pt")
+	zGammaCut("genPhotons[0].pt")
+	#compareBinnedSamples(
+	#	[ "slimWGamma_130_inf_V03.18_tree.root" ],
+	#	[ "slimWGamma_50_130_V03.18_tree.root", "slimWGamma_130_inf_V03.18_tree.root" ],
+	#	"genPhotons[0].pt"
+	#	)
 
 	'''
 	compareBinnedSamples(
@@ -201,7 +284,6 @@ if __name__ == "__main__":
 		[ "slimZGammaNuNu3_400_inf_V03.00_tree.root" ],
 		[ "slimZGamma_V02.43_tree.root" ],
 		)
-	'''
 
 	inclusiveAndIsrSamples(
 		[ "slimZGammaNuNu3_400_inf_V03.00_tree.root" ],
@@ -224,3 +306,5 @@ if __name__ == "__main__":
 		["slimWGamma_50_130_V02.43_tree.root", "slimWGamma_130_inf_V02.43_tree.root" ]
 		)
 
+
+	'''

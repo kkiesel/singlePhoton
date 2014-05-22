@@ -23,8 +23,8 @@ class Ratio:
 					combinedError = sqrt( self.sysHisto.GetBinError(bin)**2 + self.denominator.GetBinError(bin)**2 )
 				else:
 					self.ratioSys.SetBinContent( bin, 1 )
-					self.ratioSys.SetBinError( bin, self.denominator.GetBinError(bin) / self.denominator.GetBinContent(bin) )
-					combinedError = self.denominator.GetBinError(bin)**2
+					self.ratioSys.SetBinError( bin, 0 )
+					combinedError = self.denominator.GetBinError(bin)
 				self.totalUncert.SetBinError( bin, combinedError/self.denominator.GetBinContent(bin) )
 				self.totalUncert.SetBinContent( bin, 1 )
 			elif self.numerator.GetBinContent(bin):
@@ -59,14 +59,9 @@ class Ratio:
 			hist.SetMinimum( yMin )
 			hist.SetMaximum( yMax )
 
-		if self.sysHisto:
-			self.ratioSys.SetFillStyle( self.sysHisto.GetFillStyle() )
-			self.ratioSys.SetMarkerSize( self.sysHisto.GetMarkerSize() )
-			self.ratioSys.SetFillColor( self.sysHisto.GetFillColor() )
-		else:
-			self.ratioSys.SetFillStyle(3554)
-			self.ratioSys.SetMarkerSize(0)
-			self.ratioSys.SetFillColor(self.ratioSys.GetLineColor())
+		self.ratioSys.SetFillStyle(3254)
+		self.ratioSys.SetMarkerSize(0)
+		self.ratioSys.SetFillColor(2)
 
 		self.totalUncert.SetFillStyle(3002)
 		self.totalUncert.SetMarkerSize(0)
@@ -95,7 +90,8 @@ class Ratio:
 		rPad.SetLogy(0)
 
 		self.totalUncert.Draw("e2")
-		self.ratioSys.Draw("e2 same")
+		if self.sysHisto:
+			self.ratioSys.Draw("e2 same")
 		self.ratio.Draw("e0 same")
 		if yMin < 1 and yMax > 1:
 			oneLine = ROOT.TLine()

@@ -4,6 +4,7 @@
 from multiplot import Multihisto
 from treeFunctions import *
 from predictions import *
+from qcdClosure import drawWeightHisto
 
 def getSignalHisto( scan="W", mg=1200, ms=1220, plot="met" ):
 	if scan not in ["W", "B"]:
@@ -63,10 +64,7 @@ def histogramToList( histo, error=False, minimalVal=100, roundInt=False ):
 
 def writeDataCard( versionData, dataHist, fgammaHist, fgammaWeightError,
 		egammaHist, egammaHistsys,
-		fsrZ, fsrZsys, fsrW, fsrWsys, fsrT, fsrTsys ):
-
-	totalISR = addHistos( [fsrZ, fsrW, fsrT] )
-	totalISRsys = addHistos( [fsrZsys, fsrWsys, fsrTsys] )
+		fsr, fsrsys ):
 
 	# Print out events bin by bin
 	binList = [100.0,]
@@ -105,6 +103,7 @@ nMetBins = %s
 	dataCardString += "\n##################################\n"
 
 	data = histogramToList( dataHist, roundInt=True )
+
 	qcd = histogramToList( fgammaHist )
 	qcd_stat = histogramToList( fgammaHist, True )
 	qcd_syst = histogramToList( fgammaWeightError, True )
@@ -113,9 +112,9 @@ nMetBins = %s
 	ewk_stat = histogramToList( egammaHist, True )
 	ewk_syst = histogramToList( egammaHistsys, True )
 
-	isr = histogramToList( totalISR )
-	isr_stat = histogramToList( totalISR, True )
-	isr_syst = histogramToList( totalISRsys, True )
+	isr = histogramToList( fsr )
+	isr_stat = histogramToList( fsr, True )
+	isr_syst = histogramToList( fsrsys, True )
 
 	for name, array in [
 		( "selected        = %s", data ),
@@ -141,43 +140,59 @@ nMetBins = %s
 
 	return
 
+
 def finalDistributionData( plot ):
 
 	# Sample names
-	mcVersion = "13"
-	wg1 = "slimWGamma_50_130_V03.%s_tree.root"%mcVersion
-	wg2 = "slimWGamma_130_inf_V03.%s_tree.root"%mcVersion
-	tg = "slimTTGamma_V03.%s_tree.root"%mcVersion
-	zgn = "slimZGammaNuNu_V03.%s_tree.root"%mcVersion
+	treeVersion = "13"
+	wg1 = "slimWGamma_50_130_V03.%s_tree.root"%treeVersion
+	wg2 = "slimWGamma_130_inf_V03.%s_tree.root"%treeVersion
+	tg = "slimTTGamma_V03.%s_tree.root"%treeVersion
+	zgn = "slimZGammaNuNu_V03.%s_tree.root"%treeVersion
+	zgn1 = "slimZGammaLL_V02.19b_tree.root"
+	zgll = "slimZGammaLL_V02.19b_tree.root"
+	data = [ "PhotonHad%s_V03.%s_tree.root"%(x,treeVersion) for x in ["A","B","C","D" ] ]
 
-	published = False
-	setRange = [ "A", "B" ] if published else [ "A", "B", "C", "D" ]
-	additionalCut = "&& runNumber < 195948" if published else ""
+	# additional ISR uncertainty
+	ewkUncertainty = 0.11
+	isrUncertaintyZ = 0.5
+	isrUncertaintyW = 0.5
+	isrUncertaintyT = 0.5
+	isrUncertainty = 0.5
 
-	versionData = 13
-	data = [ "PhotonHad%s_V03.%s_tree.root"%(x,versionData) for x in setRange ]
 
-	leptonPtCut = 15 # only larger than 15 make sense here, since this is the reprocessing cut
+	leptonPtCut = 25 # only larger than 15 make sense here, since this is the reprocessing cut
 	#commonCut = "(!@electrons.size() || Max$(electrons.pt)<{0}) && (!@muons.size() || Max$(muons.pt)<{0})".format(leptonPtCut)
 	commonCut = "!@electrons.size() && !@muons.size()"
-	#commonCut = "1"
-	commonCut += additionalCut
+
+	#commonCut += " && nGoodJets>1"
 
 	# Compute the weights:
 	weight2D = getMixedWeigthHisto( data, data, commonCut )
 	attachWeightsToFiles( data, weight2D, "foWeights" )
-	from qcdClosure import drawWeightHisto
 	drawWeightHisto( weight2D, "Data" )
 
 	# Get Histograms
-	dataHist = getHists( data, plot, commonCut+gCut )
+	dataHist = getHists( data, plot, commonCut )
 	fgammaHist, fgammaWeightError = predictionHistos( data, plot, commonCut, modifyEmptyBins=False )
 
-	egammaHist = multiDimFakeRate( data, plot, commonCut+gCut )
+	egammaHist = multiDimFakeRate( data, plot, commonCut )
+	egammaHistsys = setRelativeUncertainty( egammaHist.Clone(randomName()), ewkUncertainty )
 
-	fsrZ = getHists( [zgn], plot, commonCut+gCut )
-	fsrW = getHists( [wg1,wg2], plot, commonCut+gCut )
-	fsrT = getHists( [tg], plot, commonCut+gCut )
+	fsrZ = getHists( [zgn], plot, commonCut+"&&photons[0].pt>130" )
+	fsrZll = getHists( [zgll], plot, commonCut )
+	fsrZ2 = getHists( [zgn1], plot+"LL", commonCut+"&&photons[0].pt<130" )
+	fsrZ2.Scale( 20./(2.*3.363) )
+	fsrW = getHists( [wg1,wg2], plot, commonCut )
+	fsrT = getHists( [tg], plot, commonCut )
+
+	# apply common scale factor
+	for h in fsrW, fsrT, fsrZ, fsrZ2, fsrZll:
+		h.Scale(1.5)
+
+	fsr = addHistos( [fsrT, fsrW, fsrZ, fsrZ2,fsrZll ] )
+	fsr.SetLineColor(ROOT.kRed)
+	fsrSys = setRelativeUncertainty( fsr, isrUncertainty )
 
 	#signal1 = getMetHisto( "W", 900, 1720 )
 	#signal2 = getMetHisto( "B", 1700, 1120 )
@@ -186,9 +201,11 @@ def finalDistributionData( plot ):
 	signal3 = getHists( ["slimB_1300_1720_375_V03.06_tree.root"], plot, commonCut )
 	signal4 = getHists( ["slimB_1700_1120_375_V03.06_tree.root"], plot, commonCut )
 	for i, signal in enumerate([signal1, signal2, signal3, signal4]):
-		signal.SetLineColor( ROOT.kGreen +4 )
-		signal.SetLineStyle(5+i)
+		signal.SetLineColor( ROOT.kGreen + i )
+		signal.SetLineColor( ROOT.kBlue + i )
+		#signal.SetLineStyle(5+i)
 
+	# prettify histograms
 	fgammaHist.SetLineColor(7)
 	egammaHist.SetLineColor( 3 )
 	fsrZ.SetLineColor( ROOT.kRed-7 )
@@ -196,40 +213,30 @@ def finalDistributionData( plot ):
 	fsrT.SetLineColor( ROOT.kRed )
 
 	mh = Multihisto()
+	mh.setMinimum(0.2)
 	mh.orderByIntegral = False
-	mh.addHisto( fsrT, "#gamma t#bar{t}", True )
-	mh.addHisto( fsrW, "#gamma W", True )
-	mh.addHisto( fsrZ, "#gamma Z", True )
+	mh.addHisto( fsr, "ISR", True )
+	#mh.addHisto( fsrW, "#gamma W", True )
+	#mh.addHisto( fsrZ, "#gamma Z", True )
 	mh.addHisto( egammaHist, "e#rightarrow#gamma", True )
 	mh.addHisto( fgammaHist, "Multijet", True )
 	dataLegName = "Data"
-	mh.addHisto( dataHist, dataLegName, draw="pe" )
-	mh.addHisto( signal2, "Bino-like #chi_{1}^{0}", draw="hist" )
-	mh.addHisto( signal1, "Wino-like #chi_{1}^{0}", draw="hist" )
+	mh.addHisto( dataHist, dataLegName, draw="pe x0" )
+	#mh.addHisto( signal2, "Bino-like #chi_{1}^{0}", draw="hist" )
+	#mh.addHisto( signal1, "Wino-like #chi_{1}^{0}", draw="hist" )
 
-
-	# additional ISR uncertainty
-	ewkUncertainty = 0.11
-	isrUncertaintyZ = 0.5
-	isrUncertaintyW = 0.5
-	isrUncertaintyT = 0.5
 
 	# get all SYSTEMATICAL uncertainties:
-	egammaHistsys = setRelativeUncertainty( egammaHist.Clone(randomName()), ewkUncertainty )
-	fsrTsys = setRelativeUncertainty( fsrT.Clone(randomName()), isrUncertaintyT  )
-	fsrWsys = setRelativeUncertainty( fsrW.Clone(randomName()), isrUncertaintyW  )
-	fsrZsys = setRelativeUncertainty( fsrZ.Clone(randomName()), isrUncertaintyZ  )
 	systematicUncertHistStack = ROOT.THStack()
 	systematicUncertHistStack.Add( fgammaWeightError )
 	systematicUncertHistStack.Add( egammaHistsys )
-	systematicUncertHistStack.Add( fsrTsys )
-	systematicUncertHistStack.Add( fsrWsys )
-	systematicUncertHistStack.Add( fsrZsys )
+	systematicUncertHistStack.Add( fsrSys )
+
 
 	if plot == "met":
-		writeDataCard( versionData, dataHist, fgammaHist, fgammaWeightError,
+		writeDataCard( treeVersion, dataHist, fgammaHist, fgammaWeightError,
 			egammaHist, egammaHistsys,
-			fsrZ, fsrZsys, fsrW, fsrWsys, fsrT, fsrTsys )
+			fsr, fsrSys )
 
 	# draw stuff
 	luminosity = 19.7
@@ -239,18 +246,28 @@ def finalDistributionData( plot ):
 
 	can = ROOT.TCanvas()
 	mh.Draw()
-	errorBand = mh.stack.GetStack().Last().Clone( randomName() )
-	sysUncert = systematicUncertHistStack.GetStack().Last()
-	for bin in range(errorBand.GetNbinsX()+2):
-		errorBand.SetBinError( bin, errorBand.GetBinError(bin) |qPlus| sysUncert.GetBinError(bin) )
-	errorBand.SetFillStyle(3002)
-	errorBand.SetMarkerSize(0)
-	errorBand.SetFillColor(1)
-	errorBand.Draw("e2 same")
+	statUncert = mh.stack.GetStack().Last().Clone( randomName() )
+	systUncert = systematicUncertHistStack.GetStack().Last().Clone( randomName() )
+	totalUncert = statUncert.Clone( randomName() )
+	for bin in range( totalUncert.GetNbinsX()+2 ):
+		totalUncert.SetBinError( bin, statUncert.GetBinError(bin) |qPlus| systUncert.GetBinError(bin) )
+	for h in statUncert, systUncert, totalUncert:
+		h.SetMarkerSize(0)
+
+	totalUncert.SetFillStyle(3002)
+	totalUncert.SetFillColor(1)
+	totalUncert.Draw("same e2")
+	systUncert.SetFillStyle(3254)
+	systUncert.SetFillColor(2)
+	systUncert.Draw("same e2")
+	statUncert.SetLineWidth(3)
+	statUncert.SetLineColor(2)
+	statUncert.Draw("same e x0")
+	dataHist.Draw("same pe x0")
 
 	from myRatio import Ratio
 	r = Ratio( "Data / Bkg", dataHist, mh.stack.GetStack().Last(), systematicUncertHistStack.GetStack().Last() )
-	r.draw(0.5,1.5)
+	r.draw(0.,2.5)
 
 	infoText.Draw()
 
@@ -263,7 +280,7 @@ if __name__ == "__main__":
 	opts = arguments.parse_args()
 
 	if opts.plot == ["all"]:
-		opts.plot = [ "met", "ht", "photons[0].ptJet()","Length$(jets.pt)", "Length$(photons.pt)"]
+		opts.plot = [ "met", "ht", "photons[0].ptJet()","nGoodJets", "@photons.size()"]
 
 	for plot in opts.plot:
 		finalDistributionData( plot )

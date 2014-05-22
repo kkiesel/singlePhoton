@@ -208,15 +208,13 @@ def getHisto( tree, plot, cut="1", overflow=0, weight="weight", color=1, nBins=N
 			lastBin += .5
 			nBins = int(lastBin-firstBin)
 
-	addCut = ""
-	if "booleanTree"+tree.GetName() in tree.GetFile().GetListOfKeys():
-		tree.AddFriend( "booleanTree"+tree.GetName(), tree.GetFile().GetName() )
-		addCut = "&&x"
+	if "AddVariables"+tree.GetName() in tree.GetFile().GetListOfKeys():
+		tree.AddFriend( "AddVariables"+tree.GetName(), tree.GetFile().GetName() )
 
 	if binning:
-		histo = createHistoFromTree( tree, plot, "%s*(%s)"%(weight, cut+addCut), nBins=binning)
+		histo = createHistoFromTree( tree, plot, "%s*(%s)"%(weight, cut), nBins=binning)
 	else:
-		histo = createHistoFromTree( tree, plot, "%s*(%s)"%(weight, cut+addCut), nBins=nBins, firstBin=firstBin, lastBin=lastBin )
+		histo = createHistoFromTree( tree, plot, "%s*(%s)"%(weight, cut), nBins=nBins, firstBin=firstBin, lastBin=lastBin )
 	if overflow > 0:
 		histo = appendOverflowBin(histo, overflow)
 
@@ -230,8 +228,8 @@ def getHisto( tree, plot, cut="1", overflow=0, weight="weight", color=1, nBins=N
 		for bin in range(1, histo.GetNbinsX()+2):
 			# if the bin left or right is not empty but the bin itself, set the error
 			#if not histo.GetBinContent( bin ) and ( histo.GetBinContent( bin-1 ) or histo.GetBinContent( bin+1 ) ) and histo.GetBinWidth(bin):
-			if not histo.GetBinContent( bin ):
-				histo.SetBinError( bin, poissonZeroError*weight / histo.GetBinWidth(bin) )
+			#	histo.SetBinError( bin, poissonZeroError*weight / histo.GetBinWidth(bin) )
+			pass
 
 	if appendOverflowBin:
 		lastBin = histo.GetNbinsX()
@@ -246,18 +244,39 @@ def getHisto( tree, plot, cut="1", overflow=0, weight="weight", color=1, nBins=N
 	histo.SetTitle( getHistoTitle( histo, plot, label, unit, binning ) )
 	return histo
 
+def tryAddFriend( tree, nameAppendix="AddVariables" ):
+	newTreename = tree.GetName()+nameAppendix
+	file = tree.GetFile()
+	if newTreename in file.GetListOfKeys():
+		tree.AddFriend( newTreename, file.GetName() )
+
+	return tree
+
+
 def getHists( filenames, plot="met", cut="1", treeName="photonTree" ):
 	endHist = None
 	for filename in filenames:
 		tree = readTree( filename, treeName )
-		hist = getHisto( tree, plot, color=1, fillEmptyBins=not ("PhotonHad" in filename), cut=cut )
+		tree = tryAddFriend( tree )
+		if "PhotonHadA" in filename and treeName == "photonTree":
+			for e in tree:
+				if e.electrons.size() or e.muons.size() or True:
+					continue
+				print "evt nr:%i, rn: %i, lbnr: %i, recoilPt: %.3f, gPt: %.3f, weight: 1, we: 0"%(e.eventNumber,e.runNumber,e.luminosityBlockNumber,e.recoilChr, e.thisPt )
 
+		hist = getHisto( tree, plot, color=1, fillEmptyBins=not ("PhotonHad" in filename), cut=cut )
 		if endHist:
 			endHist.Add( hist )
 		else:
 			endHist = hist
 
 	return endHist
+
+def setRelativeUncertainty( hist, uncert ):
+	hist = hist.Clone( randomName() )
+	for bin in range( hist.GetNbinsX()+2 ):
+		hist.SetBinError( bin, uncert * hist.GetBinContent(bin) )
+	return hist
 
 
 def getQCDErrorHisto( tree, plot, cut="1", overflow=0, nBins=20, firstBin=None, lastBin=None ):
@@ -390,9 +409,9 @@ def applyFakeRateEWK( histo, fakeRate=None, fakeRateError=None ):
 		histo.SetBinError( i, sqrt( (fakeRateError*content)**2 + (fakeRate*histo.GetBinError(i))**2 ) )
 	return histo
 
-
-
-
-
+def getIntAndError( h, bin ):
+	err = ROOT.Double()
+	con = h.IntegralAndError( bin, bin, err, "width" )
+	return con, err
 
 

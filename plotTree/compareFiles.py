@@ -77,13 +77,16 @@ def compareFiles( plot, filenames, treename, diff ):
 
 	h2.SetLineColor(2)
 	mh = Multihisto()
-	mh.addHisto( h1, getVersion(filenames[0]), draw="hist e" )
-	mh.addHisto( h2, getVersion(filenames[1]), draw="hist e" )
+	name1 = getVersion(filenames[0])
+	name2 = getVersion(filenames[1])
+	mh.addHisto( h1, name1, draw="hist e" )
+	mh.addHisto( h2, name2, draw="hist e" )
 	mh.Draw()
 	from myRatio import Ratio
-	r = Ratio( "#gamma/#gamma_{jet}", h1, h2 )
+	r = Ratio( "%s/%s"%(name1,name2), h1, h2 )
 	r.draw()
 
+	plot ="test"
 	ROOT.gPad.GetCanvas().SaveAs( "compareFiles_%s.pdf"%plot )
 
 

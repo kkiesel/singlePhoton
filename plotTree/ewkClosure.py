@@ -18,14 +18,10 @@ def addRelativeUncertainty( hist, uncert ):
 
 def closure( filenames, plot ):
 	commonCut = "!@muons.size() && !@electrons.size()"
-
-	allSamples = False
-	if allSamples:
-		commonCut += " && met > 100"
+	commonCut ="1"
 
 	gHist = getHists( filenames, plot, cut="photons[0].isGen(1) && "+commonCut )
-	eHist = multiDimFakeRate( filenames, plot, commonCut, False )
-	eHist.SetLineColor(2)
+	eHist = multiDimFakeRate( filenames, plot, commonCut, isData=False )
 
 	eHistSys = eHist.Clone( randomName() )
 	eHistSys = setRelativeUncertainty( eHistSys, 0.11 )
@@ -35,8 +31,6 @@ def closure( filenames, plot ):
 
 	gDatasetAbbrs = [getDatasetAbbr(f) for f in filenames ]
 	gDatasetAbbrs = mergeDatasetAbbr( gDatasetAbbrs )
-	if allSamples:
-		gDatasetAbbrs = [ "Total Simulation" ]
 
 	multihisto = Multihisto()
 	multihisto.leg.SetHeader( "/".join([ datasetToLatex(x) for x in gDatasetAbbrs]) )
