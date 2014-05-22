@@ -3,6 +3,94 @@
 
 from sys import stdout
 from treeFunctions import *
+import numpy
+import math
+
+class variableToTree:
+	"""This class is used to attach variables to a tree. The variables will be saved
+	and the function will be evaluated each entry of the original tree."""
+	def __init__(self, tree, name, function):
+		self.name = name
+		self.function = function
+		self.x = numpy.zeros( 1, dtype=float )
+		tree.Branch( name, self.x, name+"/D" )
+
+	def calc(self, event):
+		self.x[0] = self.function( event )
+
+def metLLFunc( e ):
+	metVect = ROOT.TVector3()
+	metVect.SetPtEtaPhi( e.met, 0, e.metPhi )
+
+	for l in e.electrons:
+		lVect = ROOT.TVector3()
+		lVect.SetPtEtaPhi( l.pt, l.eta, l.phi )
+		metVect += lVect
+	for l in e.muons:
+		lVect = ROOT.TVector3()
+		lVect.SetPtEtaPhi( l.pt, l.eta, l.phi )
+		metVect += lVect
+
+	return metVect.Pt()
+
+def dPhiGammaMet( e ):
+	return e.photons[0].DeltaPhi( e.metPhi )
+
+def gammaTight( photon ):
+	return photon.ptJet() > 110 \
+		and photon.neutralIso < 3.5+0.04*photon.ptJet() \
+		and photon.photonIso < 1.3+0.005*photon.ptJet()
+
+def gammaLoose( photon ):
+	return photon.ptJet() > 110 \
+		and ( photon.chargedIso < 5.2 or (photon.neutralIso < 3.5+0.04*photon.ptJet() and photon.photonIso < 1.3+0.005*photon.ptJet()))\
+		and ( photon.neutralIso < 7+0.06*photon.ptJet() or (photon.chargedIso < 2.6 and photon.photonIso < 1.3+0.005*photon.ptJet()))\
+		and ( photon.photonIso < 2.6+0.0075*photon.ptJet() or (photon.chargedIso < 2.6 and photon.neutralIso < 3.5+0.04*photon.ptJet()))\
+		and not gammaTight( photon )
+
+def recoilChristian( e ):
+	recoil = ROOT.TVector3()
+	tmpVect = ROOT.TVector3()
+
+	thisPhoton = None
+	if e.GetName() == "photonJetTree":
+		for photon in e.photons:
+			if gammaLoose( photon ):
+				thisPhoton = photon
+				break
+	else:
+		for photon in e.photons:
+			if gammaTight( photon ):
+				thisPhoton = photon
+				break
+
+	if not thisPhoton:
+		return -10
+
+	thisJet = e.jets.at(thisPhoton.matchedJetIndex) if thisPhoton.matchedJetIndex >=0 else thisPhoton
+
+	for j in e.jets:
+		if j.pt<30. or abs(j.eta)>3.0 or j.DeltaR( thisJet) <0.5:
+			continue
+		tmpVect.SetPtEtaPhi( j.pt, j.eta, j.phi )
+		recoil += tmpVect
+	return recoil.Pt()
+
+def leadingGPt( e ):
+	pt = -10
+	if e.GetName() == "photonJetTree":
+		for photon in e.photons:
+			if gammaLoose( photon ):
+				pt = photon.ptJet()
+				break
+	else:
+		for photon in e.photons:
+			if gammaTight( photon ):
+				pt = photon.ptJet()
+				break
+	return pt
+
+
 
 def createNewVariableTree( filename, treename, treeAppendix="AddVariables" ):
 	import numpy
@@ -10,84 +98,26 @@ def createNewVariableTree( filename, treename, treeAppendix="AddVariables" ):
 	newTreeName = treename + treeAppendix
 	newTree = ROOT.TTree( newTreeName, "Tree containing additional Variables" )
 
-	dPhiGammaMet = numpy.zeros( 1, dtype=float )
-	dPhiGammaMetxy = numpy.zeros( 1, dtype=float )
-	dPhiGammaJet1 = numpy.zeros( 1, dtype=float )
-	dPhiGammaJet2 = numpy.zeros( 1, dtype=float )
-	dPhiMetJet1 = numpy.zeros( 1, dtype=float )
-	dPhiMetJet2 = numpy.zeros( 1, dtype=float )
-	dRGammaJet1 = numpy.zeros( 1, dtype=float )
-	dRGammaJet2 = numpy.zeros( 1, dtype=float )
-	mht = numpy.zeros( 1, dtype=float )
-	recoil = numpy.zeros( 1, dtype=float )
-
-	mhtVect = ROOT.TVector3()
-	recoilVect = ROOT.TVector3()
-	tmpVect = ROOT.TVector3()
-
-	# declaration of variables
-	newTree.Branch( "dPhiGammaMet", dPhiGammaMet, "dPhiGammaMet/D" )
-	newTree.Branch( "dPhiGammaMetxy", dPhiGammaMetxy, "dPhiGammaMetxy/D" )
-	newTree.Branch( "dPhiGammaJet1", dPhiGammaJet1, "dPhiGammaJet1/D" )
-	newTree.Branch( "dPhiGammaJet2", dPhiGammaJet2, "dPhiGammaJet2/D" )
-	newTree.Branch( "dPhiMetJet1", dPhiMetJet1, "dPhiMetJet1/D" )
-	newTree.Branch( "dPhiMetJet2", dPhiMetJet2, "dPhiMetJet2/D" )
-	newTree.Branch( "dRGammaJet1", dRGammaJet1, "dRGammaJet1/D" )
-	newTree.Branch( "dRGammaJet2", dRGammaJet2, "dRGammaJet2/D" )
-	newTree.Branch( "mht", mht, "mht/D" )
-	newTree.Branch( "recoil", recoil, "recoil/D" )
+	newVariables = []
+	newVariables.append( variableToTree( newTree, "metLL", metLLFunc ) )
+	newVariables.append( variableToTree( newTree, "dPhiGammaMet", dPhiGammaMet ) )
+	newVariables.append( variableToTree( newTree, "recoilChr", recoilChristian ) )
+	newVariables.append( variableToTree( newTree, "thisPt", leadingGPt ) )
 
 	origTree = readTree( filename, treename )
-
 	nEvents = origTree.GetEntries()
-	for e in origTree:
-		if not e.GetReadEntry()%10000:
-			stdout.write( "\r%s / %s"%(e.GetReadEntry(), nEvents ) )
+	for event in origTree:
+		#if event.eventNumber != 285841452 or event.runNumber != 190733 or event.luminosityBlockNumber != 267:
+		#	continue
+		if not event.GetReadEntry()%10000:
+			stdout.write( "\r%s / %s"%(event.GetReadEntry(), nEvents ) )
 			stdout.flush()
 
-		dPhiGammaMet[0] = e.photons[0].DeltaPhi( e.metPhi )
-		dPhiGammaMetxy[0] = e.photons[0].DeltaPhi( e.metShiftxyPhi )
-
-		# set default values in case not enought jets
-		dPhiGammaJet1[0] = -5
-		dPhiMetJet1[0] = -5
-		dPhiGammaJet2[0] = -5
-		dPhiMetJet2[0] = -5
-
-		foundJet1 = False
-		foundJet2 = False
-
-		mhtVect.SetXYZ(0,0,0)
-		recoilVect.SetXYZ(0,0,0)
-
-		for j in e.jets:
-			if j.isMatch( 3 ): # jet was used to cout, so good jet
-				if abs(j.eta)< 2.5 and j.DeltaR( e.photons[0] ) > 0.4:
-					tmpVect.SetPtEtaPhi( j.pt, j.eta, j.phi )
-					mhtVect += tmpVect
-					recoilVect += tmpVect
-
-				if not foundJet1:
-					dPhiGammaJet1[0] = e.photons[0].DeltaPhi( j.phi )
-					dPhiMetJet1[0] = -j.DeltaPhi( e.metPhi )
-					dRGammaJet1[0] = e.photons[0].DeltaR( j )
-					foundJet1 = True
-					continue # to look for second jet
-				if foundJet1 and not foundJet2:
-					dPhiGammaJet2[0] = e.photons[0].DeltaPhi( j.phi )
-					dPhiMetJet2[0] = -j.DeltaPhi( e.metPhi )
-					dRGammaJet2[0] = e.photons[0].DeltaR( j )
-					break #, since both jets were found
-
-		tmpVect.SetPtEtaPhi( e.photons[0].pt, e.photons[0].eta, e.photons[0].phi )
-		mhtVect += tmpVect
-
-		mht[0] = mhtVect.Pt()
-		recoil[0] = recoilVect.Pt()
+		for var in newVariables:
+			var.calc( event )
 
 		newTree.Fill()
 	print
-
 	return newTree
 
 
@@ -97,10 +127,12 @@ if __name__ == "__main__":
 	opts = arguments.parse_args()
 
 	for filename in opts.filenames:
+		print filename
 		f = ROOT.TFile( filename, "update" )
 		f.cd()
 
-		for treename in [ "photonTree", "photonJetTree", "photonElectronTree" ]:
+		#for treename in [ "photonTree", "photonJetTree", "photonElectronTree" ]:
+		for treename in [ "photonTree", "photonJetTree" ]:
 			treeFriend = createNewVariableTree( filename, treename )
-			treeFriend.Write(ROOT.TObject.kOverwrite)
+			treeFriend.Write("", ROOT.TObject.kOverwrite)
 		f.Close()
