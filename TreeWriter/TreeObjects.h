@@ -48,7 +48,8 @@ class Photon : public Particle {
 
 class Jet : public Particle{
 	public:
-		float DeltaR( const Photon &p2 ) const;
+		//float DeltaR( const Photon &p2 ) const;
+		//float DeltaR( const Jet &p2 ) const;
 		bool isMatch( jetMatches id ) const;
 		void setMatch( jetMatches id );
 		short matchInformation;
