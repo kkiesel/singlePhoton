@@ -1034,7 +1034,7 @@ void TreeWriter::Loop() {
 		for(std::vector<susy::Photon>::iterator it = photonVector.begin();
 				it != photonVector.end(); ++it ) {
 
-			if( std::abs( it->momentum.Eta() ) >= susy::etaGapBegin ) continue;
+			if( std::abs( it->momentum.Eta() ) >= 2.5 ) continue;
 
 			photonToTree.chargedIso = chargedHadronIso_corrected(*it, event.rho);
 			photonToTree.neutralIso = neutralHadronIso_corrected(*it, event.rho);
@@ -1131,6 +1131,7 @@ void TreeWriter::Loop() {
 		if( !photons.size() && !photonJets.size() && !photonElectrons.size() ) continue;
 		//if( photons.size() )
 		//std::cout << photons.size() << photonJets.size() << photonElectrons.size() << std::endl;
+		/*
 		std::vector<tree::Photon> lookAt = photonElectrons;
 		if( lookAt.size() ) {
 			printCascade( event.genParticles );
@@ -1138,7 +1139,7 @@ void TreeWriter::Loop() {
 			if( genElectrons.size() ) std::cout << "deltaR to leading e = " << lookAt.at(0).DeltaR( genElectrons.at(0)) << " with ptDiff = " << fabs(genElectrons.at(0).pt-lookAt.at(0).pt) <<  std::endl;
 			if( genPhotons.size() ) std::cout << "deltaR to leading gamma = " << lookAt.at(0).DeltaR( genPhotons.at(0)) <<  " with pt = " << genPhotons.at(0).pt << std::endl;
 			continue;
-		}
+		}*/
 
 		// electrons
 		std::vector<susy::Electron> eVector = event.electrons["gsfElectrons"];

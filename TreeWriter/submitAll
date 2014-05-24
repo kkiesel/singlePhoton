@@ -1,7 +1,7 @@
 #!/bin/bash
 # This script submits all jobs to naf, which are defined in dataset
 
-version="20"
+version="21"
 datasets=(
 
 ## QCD
