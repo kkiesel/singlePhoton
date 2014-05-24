@@ -8,7 +8,7 @@ OBJ = treeWriter.o executable.o
 EXE = executable
 
 all: $(SHARED_LIB) $(EXE)
-	@make -C pileUpReweighting --no-print-directory
+	@if [ -d /afs ]; then make -C pileUpReweighting --no-print-directory; fi
 
 %.o:%.cc
 	g++ -o $@ $+ -c -O2 $(INCS) $(WARN)
