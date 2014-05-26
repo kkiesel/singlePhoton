@@ -216,8 +216,6 @@ def finalDistributionData( plot ):
 	mh.setMinimum(0.2)
 	mh.orderByIntegral = False
 	mh.addHisto( fsr, "ISR", True )
-	#mh.addHisto( fsrW, "#gamma W", True )
-	#mh.addHisto( fsrZ, "#gamma Z", True )
 	mh.addHisto( egammaHist, "e#rightarrow#gamma", True )
 	mh.addHisto( fgammaHist, "Multijet", True )
 	dataLegName = "Data"
