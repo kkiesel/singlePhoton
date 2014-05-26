@@ -145,7 +145,7 @@ def getLumiWeight( datasetAbbr, nGenEvents, integratedLumi=19800, configName="da
 		fileNameMatch = re.match("(.)_(\d+)_(\d+)_(\d+)", datasetAbbr )
 		if fileNameMatch:
 			nlsp, mg, mq, mNlsp = fileNameMatch.groups()
-			xSectionFile = "/home/knut/master/infos/Spectra_gsq_%s_8TeV.xsec"%nlsp
+			xSectionFile = "/home/home4/institut_1b/kiesel/infos/Spectra_gsq_%s_8TeV.xsec"%nlsp
 			f = open( xSectionFile )
 			text = f.readlines()
 			f.close()

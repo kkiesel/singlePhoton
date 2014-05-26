@@ -17,11 +17,18 @@ def addRelativeUncertainty( hist, uncert ):
 	return hist
 
 def closure( filenames, plot ):
-	commonCut = "!@muons.size() && !@electrons.size()"
-	commonCut ="1"
+	leptonPtCut = 15 # only larger than 15 make sense here, since this is the reprocessing cut
+	commonCut = "(!@electrons.size() || Max$(electrons.pt)<{0}) && (!@muons.size() || Max$(muons.pt)<{0})".format(leptonPtCut)
+	#commonCut = "1"
 
-	gHist = getHists( filenames, plot, cut="photons[0].isGen(1) && "+commonCut )
-	eHist = multiDimFakeRate( filenames, plot, commonCut, isData=False )
+
+	totalHist = getHists( filenames, plot, cut=commonCut )
+	gGenHist = getHists( filenames, plot, cut="photons[0].isGen(0) && "+commonCut )
+	eHist = multiDimFakeRate( filenames, plot, commonCut, False )
+	fakeHist = predictionHistos( filenames, plot, cut=commonCut )[0]
+	fakeHist.SetLineColor(4)
+	eHist.SetLineColor(3)
+	gGenHist.SetLineColor(2)
 
 	eHistSys = eHist.Clone( randomName() )
 	eHistSys = setRelativeUncertainty( eHistSys, 0.11 )
@@ -33,10 +40,13 @@ def closure( filenames, plot ):
 	gDatasetAbbrs = mergeDatasetAbbr( gDatasetAbbrs )
 
 	multihisto = Multihisto()
+	multihisto.setMinimum(0.01)
+	multihisto.setMaximum(20)
 	multihisto.leg.SetHeader( "/".join([ datasetToLatex(x) for x in gDatasetAbbrs]) )
-	multihisto.addHisto( gHist, "Simulation", draw="e0 hist" )
-	multihisto.addHisto( eHist, "Prediction", draw="hist" )
-	multihisto.addHisto( eHistSys, "", draw="e2" )
+	multihisto.addHisto( totalHist, "Simulation", draw="e0 hist" )
+	multihisto.addHisto( fakeHist, "QCD", toStack=True, draw="hist" )
+	multihisto.addHisto( gGenHist, "gen#gamma", toStack=True, draw="e0 hist" )
+	multihisto.addHisto( eHist, "e#rightarrow#gamma", toStack=True, draw="hist" )
 
 	infoText = ROOT.TLatex(0.03,.96, "CMS Private Work - 8TeV #geq1#gamma,#geq2jets" )
 	infoText.SetNDC()
@@ -45,9 +55,9 @@ def closure( filenames, plot ):
 	can.cd()
 	multihisto.Draw()
 	infoText.Draw()
-	r = Ratio( "Sim./Pred.", gHist, eHist, eHistSys )
+	r = Ratio( "Sim./Pred.", totalHist, multihisto.stack.GetStack().Last() )
 	r.draw(0,2)
-	SaveAs( can, "ewkClosure_%s_%s"%(getSaveNameFromDatasets(filenames), plot))
+	SaveAs( can, "ewkPrediction_%s_%s"%(getSaveNameFromDatasets(filenames), plot))
 
 	ROOT.SetOwnership( can, False )
 	del can

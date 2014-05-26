@@ -3,7 +3,6 @@
 
 from multiplot import Multihisto
 from treeFunctions import *
-ROOT.gStyle.SetPadRightMargin(0.05)
 
 colors = {
 		"GJets": ROOT.kCyan-7,
@@ -44,7 +43,10 @@ combinedDatasets = {
 
 def drawStackedBackground( plot, treeName, listOfFiles, sumBinned, order=False ):
 
+	tightCut = " photons[0].sigmaIetaIeta<0.011 && photons[0].chargedIso<0.7 && photons[0].neutralIso < 0.4+0.04*photons[0].pt && photons[0].photonIso < 0.5+0.005*photons[0].pt && photons[0].r9<0.9"
 	cut = "!@electrons.size() && !@muons.size()"
+	#cut = cut +"&&" + tightCut
+	cut = "1"
 
 	# if a data histogram is present, the mc integral will scaled to data
 	mcHists = []
@@ -84,27 +86,14 @@ def drawStackedBackground( plot, treeName, listOfFiles, sumBinned, order=False )
 
 	mh = Multihisto()
 	mh.setMinimum(0.01)
-	mh.leg.SetX1(0.5)
-	mh.leg.SetX2(0.95)
-	mh.leg.SetY1(0.65)
 	mh.leg.SetFillStyle(0)
 	mh.leg.SetNColumns(2)
-	mh.leg.SetColumnSeparation(-0.50)
 	mh.orderByIntegral = order
 	if dataHist:
 		mh.addHisto( dataHist, "Data", draw="ep" )
 
 	for abbr, hist in mcHists:
 		hist.Scale( scale )
-
-		hist.GetXaxis().SetTitle("#met#text{ [GeV]}")
-		hist.GetXaxis().SetNdivisions(5,5,0, False)
-		for a in hist.GetXaxis(), hist.GetYaxis():
-			a.SetLabelSize(1./31.4485/0.425531/0.669117)
-			a.SetTitleSize(1./31.4485/0.425531/0.80294)
-			a.SetLabelOffset(1000)
-		hist.GetXaxis().SetTitleOffset(20.0)
-		hist.GetYaxis().SetTitleOffset(1.6)
 
 		mh.addHisto( hist, datasetToLatex(abbr), toStack=True, draw="hist" )
 
@@ -121,39 +110,25 @@ def drawStackedBackground( plot, treeName, listOfFiles, sumBinned, order=False )
 		#mh.addHisto( histo, datasetToLatex(getDatasetAbbr(sf)), draw="hist" )
 		#mh.addHisto( histo, "Signal", draw="hist" )
 
-
-	ROOT.gStyle.SetPaperSize(14.6/2.35,50.)
-	ROOT.gStyle.SetPadTopMargin(0.05)
-	ROOT.gStyle.SetPadRightMargin(0.02)
-	ROOT.gStyle.SetPadLeftMargin(0.17)
-
 	infoText = ROOT.TLatex(0,.97, "#text{CMS Private Work  }#geq1#gamma_{#text{pixel}},#geq2#text{jets}" )
 	infoText.SetNDC()
-	infoText.SetTextSize(1./14.3823)
+	infoText.SetTextSize(0.05)
 
 	can = ROOT.TCanvas()
 	can.cd()
 	mh.Draw()
-	xax = mh.stack.GetXaxis()
-	xax.SetNdivisions(5,5,0,False)
-	for a in xax, mh.stack.GetYaxis():
-		a.SetTitleSize(1./13.3823)
-		a.SetLabelSize(1./13.3823)
 
 	infoText.Draw()
-	if dataHist:
-		from myRatio import Ratio
-		den = totalBG
+	#if dataHist:
+	#	from myRatio import Ratio
+	#	den = totalBG
 		#den = mh.stack.GetStack().Last().Clone( randomName() )
-		den.SetLineColor(2)
-		r = Ratio( "Data/Sim.", dataHist, den )
-		r.draw(0,2)
+	#	den.SetLineColor(2)
+	#	r = Ratio( "Data/Sim.", dataHist, den )
+	#	r.draw(0,2)
 
 	allDatasetAbbr = getSaveNameFromDatasets( listOfFiles )
 	SaveAs( can, "stackedHisto_%s_%s_%s"%(treeName, plot,allDatasetAbbr) )
-	saveName = "/home/knut/master/documents/thesis/plots/stackedHistos_%s_%s_%s.tex"%(treeName,plot,allDatasetAbbr)
-	can.SaveAs( saveName )
-	correctTiksPlot( saveName )
 
 if __name__ == "__main__":
 	arguments = argparse.ArgumentParser()

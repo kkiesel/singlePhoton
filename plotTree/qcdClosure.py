@@ -35,7 +35,7 @@ def drawWeightHisto( weight2D, saveName, writeWeightFile=False, control=True ):
 
 		name = hist.GetName()
 		if name == "weight2D":
-			hist.GetZaxis().SetRangeUser(0.02,20)
+			hist.GetZaxis().SetRangeUser(0.8,20)
 			hist.GetZaxis().SetTitle("\qcdRatio")
 		if name == "weightRelError":
 			#hist.GetZaxis().SetRangeUser(0,1.2)
@@ -144,6 +144,14 @@ def drawClosure( filenames, predFilenames, plot, commonCut, infoText, additional
 
 	gHist = getHists( filenames, plot, commonCut )
 	fHist, sysHist = predictionHistos( predFilenames, plot, commonCut, modifyEmptyBins )
+	sysHist.SetFillStyle(3254)
+	sysHist.SetFillColor( sysHist.GetLineColor() )
+
+	for bin in range(gHist.FindBin(101), gHist.GetNbinsX()+1):
+		w = gHist.GetBinWidth(bin)
+		print gHist.GetBinLowEdge(bin)
+		print gHist.GetBinContent(bin)*w, "±", gHist.GetBinError(bin)*w
+		print fHist.GetBinContent(bin)*w, "±", fHist.GetBinError(bin)*w, "±", sysHist.GetBinContent(bin)*w
 
 	signalAbbrs = mergeDatasetAbbr( [ getDatasetAbbr(x) for x in filenames ] )
 
@@ -161,7 +169,7 @@ def drawClosure( filenames, predFilenames, plot, commonCut, infoText, additional
 
 	from myRatio import Ratio
 	r = Ratio( "Sim./Pred.", gHist, fHist, sysHist )
-	r.draw(0.5,1.5)
+	r.draw(0,2.4)
 	infoText.Draw()
 	SaveAs(can, "qcdClosure_%s_%s"%("".join(signalAbbrs)+additionalLabel, plot) )
 
@@ -183,7 +191,7 @@ def qcdClosure( filenames, plots ):
 
 	weights = getMixedWeigthHisto( filenames, filenames, commonCut )
 	attachWeightsToFiles( filenames, weights, "foWeights" )
-	drawWeightHisto( weights, getSaveNameFromDatasets(filenames) )
+	#drawWeightHisto( weights, getSaveNameFromDatasets(filenames) )
 
 	for plot in plots:
 		if plot != "met":
