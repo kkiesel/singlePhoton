@@ -249,7 +249,7 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 	photonElectronTree("photonElectronTree","Tree for single photon analysis"),
 	photonJetTree("photonJetTree","Tree for single photon analysis"),
 	eventNumbers("eventNumbers", "Histogram containing number of generated events", 1, 0, 1),
-	nPhotons("nPhotons", ";#gamma;#gamma_{jet};#gamma_{e}", 3, -.5, 2.5, 3, -.5, 2.5, 3, -.5, 2.5 )
+	nPhotons("nPhotons", ";#gamma_{tight};#gamma_{loose};#gamma_{pixel}", 3, -.5, 2.5, 3, -.5, 2.5, 3, -.5, 2.5 )
 {
 
 	for( int i = 0; i<nFiles; ++i )
@@ -277,8 +277,8 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 	hist2D["matchPhotonJetToJet"]      = TH2F("", "photon-jet matching;#DeltaR;p_{T}^{jet}/p_{T}^{#gamma}", 100, 0, 1, 100, 0, 4 );
 	hist2D["matchPhotonElectronToJet"] = TH2F("", "photon-jet matching;#DeltaR;p_{T}^{jet}/p_{T}^{#gamma}", 100, 0, 1, 100, 0, 4 );
 
-	hist2D["matchGenPhoton"]   = TH2F("", ";#DeltaR;p_{T}^{gen} / p_{T}", 1000, 0, .5, 200, -2, 2 );
-	hist2D["matchGenElectron"] = TH2F("", ";#DeltaR;p_{T}^{gen} / p_{T}", 1000, 0, .5, 200, -2, 2 );
+	hist2D["matchGenPhoton"]   = TH2F("", ";#DeltaR;p_{T}^{gen} / p_{T}", 1000, 0, .5, 200, 0, 2 );
+	hist2D["matchGenElectron"] = TH2F("", ";#DeltaR;p_{T}^{gen} / p_{T}", 1000, 0, .5, 200, 0, 2 );
 
 	// Set the keyName as histogram name for one and two dimensional histograms
 	for( std::map<std::string, TH1F>::iterator it = hist1D.begin();
@@ -874,8 +874,6 @@ void TreeWriter::Loop() {
 		for(std::vector<susy::Photon>::iterator it = photonVector.begin();
 				it != photonVector.end(); ++it ) {
 
-			if( std::abs( it->momentum.Eta() ) >= susy::etaGapBegin ) continue;
-
 			photonToTree.chargedIso = chargedHadronIso_corrected(*it, event.rho);
 			photonToTree.neutralIso = neutralHadronIso_corrected(*it, event.rho);
 			photonToTree.photonIso = photonIso_corrected(*it, event.rho);
@@ -935,7 +933,6 @@ void TreeWriter::Loop() {
 				photonToTree.setGen( tree::kGenPhoton );
 			if( indexOfnearestParticle<tree::Particle>( photonToTree, genElectrons, .1, -1e6, 1e6, &hist2D["matchGenPhoton"] ) > -1 )
 				photonToTree.setGen( tree::kGenElectron );
-
 
 			const char* histname = "";
 			if( isPhoton ) histname = "matchPhotonToJet";
