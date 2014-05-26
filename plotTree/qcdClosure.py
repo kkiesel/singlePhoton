@@ -189,8 +189,8 @@ def qcdClosure( filenames, plots ):
 	infoSignal = PlotCaption( signal=True )
 	info = PlotCaption()
 
-	#weights = getMixedWeigthHisto( filenames, filenames, commonCut )
-	#attachWeightsToFiles( filenames, weights, "foWeights" )
+	weights = getMixedWeigthHisto( filenames, filenames, commonCut )
+	attachWeightsToFiles( filenames, weights, "foWeights" )
 	#drawWeightHisto( weights, getSaveNameFromDatasets(filenames) )
 
 	for plot in plots:
