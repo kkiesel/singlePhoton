@@ -143,11 +143,10 @@ def attachWeightsToFiles( filenames, weight2D, weightTreeName ):
 def predictionHistos( filenames, plot, cut, modifyEmptyBins=False, modifyEmptyWeightBins=False ):
 	fHistSum, sysHistSum, sysHistEmptyBinSum = None, None, None
 
-	'''if xVar == "thisPt":
+	if xVar == "thisPt":
 		cut += "&& thisPt>0"
 	if yVar == "recoilChr":
 		cut += "&& recoilChr>0"
-	'''
 
 	for filename in filenames:
 		fTree = readTree( filename, "photonJetTree" )
