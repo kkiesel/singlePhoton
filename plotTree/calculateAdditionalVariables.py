@@ -38,6 +38,7 @@ def dPhiGammaMet( e ):
 
 def gammaTight( photon ):
 	return photon.ptJet() > 110 \
+    and photon.chargedIso < 2.6 \
 		and photon.neutralIso < 3.5+0.04*photon.ptJet() \
 		and photon.photonIso < 1.3+0.005*photon.ptJet()
 
