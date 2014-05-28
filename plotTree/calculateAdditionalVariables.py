@@ -91,6 +91,100 @@ def leadingGPt( e ):
 				break
 	return pt
 
+def M( p1, p2 ):
+	# invariant mass
+	e1 = ROOT.TLorentzVector()
+	e2 = ROOT.TLorentzVector()
+	e1.SetPtEtaPhiE( p1.pt, p1.eta, p1.phi, p1.pt/math.sin(2*math.atan(math.exp(-p1.eta))) )
+	e2.SetPtEtaPhiE( p2.pt, p2.eta, p2.phi, p2.pt/math.sin(2*math.atan(math.exp(-p2.eta))) )
+	return (e1+e2).M()
+
+def mee( e ):
+	if e.GetName() == "photonTree":
+		if e.electrons.size() >= 2:
+			return M( e.electrons.at(0), e.electrons.at(1) )
+	return -10
+
+def mmm( e ):
+	if e.GetName() == "photonTree":
+		if e.muons.size() >= 2:
+			return M( e.muons.at(0), e.muons.at(1) )
+	return -10
+
+def mll( e ):
+	if e.GetName() == "photonTree":
+		if e.muons.size() >= 2:
+			return M( e.muons.at(0), e.muons.at(1) )
+		if e.electrons.size() >= 2:
+			return M( e.electrons.at(0), e.electrons.at(1) )
+	return -10
+
+def mTMet( e, p1 ):
+	e1 = ROOT.TLorentzVector()
+	e2 = ROOT.TLorentzVector()
+	e1.SetPtEtaPhiE( p1.pt, p1.eta, p1.phi, p1.pt/math.sin(2*math.atan(math.exp(-p1.eta))) )
+	e2.SetPtEtaPhiE( e.met, 0, e.metPhi, 0 )
+	return (e1+e2).Mt()
+
+def mTe( e ):
+	if e.GetName() == "photonTree":
+		if e.electrons.size() >= 1:
+			mTMet( e, e.electrons.at(0) )
+	return -10
+
+def mTm( e ):
+	if e.GetName() == "photonTree":
+		if e.muons.size() >= 1:
+			mTMet( e, e.muons.at(0) )
+	return -10
+
+def mT( e ):
+	if e.GetName() == "photonTree":
+		if e.electrons.size() >= 1:
+			mTMet( e, e.electrons.at(0) )
+		if e.muons.size() >= 1:
+			mTMet( e, e.muons.at(0) )
+	return -10
+
+
+def metZcorr( e ):
+	thisMll = mll( e )
+	if 60 < thisMll and thisMll < 120:
+		e1 = ROOT.TLorentzVector()
+		e2 = ROOT.TLorentzVector()
+		met = ROOT.TLorentzVector()
+		p1 = None
+		p2 = None
+		if e.electrons.size() >= 2:
+			p1 = e.electrons.at(0)
+			p2 = e.electrons.at(1)
+		elif e.muons.size() >= 2:
+			p1 = e.muons.at(0)
+			p2 = e.muons.at(1)
+		else:
+			return -10
+		e1.SetPtEtaPhiE( p1.pt, p1.eta, p1.phi, p1.pt/math.sin(2*math.atan(math.exp(-p1.eta))) )
+		e2.SetPtEtaPhiE( p2.pt, p2.eta, p2.phi, p2.pt/math.sin(2*math.atan(math.exp(-p2.eta))) )
+		met.SetPtEtaPhiE( e.met, 0, e.metPhi, e.met )
+		return (met+e1+e2).Mt()
+	return -10
+
+def metWcorr( e ):
+	thisMll = mT( e )
+	if 50 < thisMll and thisMll < 100:
+		e1 = ROOT.TLorentzVector()
+		met = ROOT.TLorentzVector()
+		p1 = None
+		if e.electrons.size() >= 1:
+			p1 = e.electrons.at(0)
+		elif e.muons.size() >= 1:
+			p1 = e.muons.at(0)
+		else:
+			return -10
+		e1.SetPtEtaPhiE( p1.pt, p1.eta, p1.phi, p1.pt/math.sin(2*math.atan(math.exp(-p1.eta))) )
+		met.SetPtEtaPhiE( e.met, 0, e.metPhi, e.met )
+		return (met+e1).Mt()
+	return -10
 
 
 def createNewVariableTree( filename, treename, treeAppendix="AddVariables" ):
@@ -104,6 +198,17 @@ def createNewVariableTree( filename, treename, treeAppendix="AddVariables" ):
 	newVariables.append( variableToTree( newTree, "dPhiGammaMet", dPhiGammaMet ) )
 	newVariables.append( variableToTree( newTree, "recoilChr", recoilChristian ) )
 	newVariables.append( variableToTree( newTree, "thisPt", leadingGPt ) )
+
+	#invariant masses
+	newVariables.append( variableToTree( newTree, "mee", mee ) )
+	newVariables.append( variableToTree( newTree, "mmm", mmm ) )
+	newVariables.append( variableToTree( newTree, "mll", mll ) )
+
+	newVariables.append( variableToTree( newTree, "mT", mT ) )
+	newVariables.append( variableToTree( newTree, "mTe", mTe ) )
+	newVariables.append( variableToTree( newTree, "mTm", mTm ) )
+	#newVariables.append( variableToTree( newTree, "metZcorr", metZcorr ) )
+	#newVariables.append( variableToTree( newTree, "metWcorr", metWcorr ) )
 
 	origTree = readTree( filename, treename )
 	nEvents = origTree.GetEntries()
