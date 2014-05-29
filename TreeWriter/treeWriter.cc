@@ -77,41 +77,131 @@ float photonIso_corrected(const susy::Photon& gamma, float rho) {
 	return iso;
 }
 
-bool isVetoElectron( const susy::Electron& electron, const susy::Event& event, const int loggingVerbosity ) {
-	/** Definition of veto working point for electrons.
+tree::electronWorkingPoints getElectronWorkingPoint ( const susy::Electron& electron, const susy::Event& event ) {
+	/** Definition of all electron working points.
 	 *
 	 * See https://twiki.cern.ch/twiki/bin/viewauth/CMS/EgammaCutBasedIdentification
 	 * for more information.
 	 */
 	if( electron.momentum.Pt() > 1e6 )
-		return false; // spike rejection
+		return tree::kNoElectron; // spike rejection
+
+	// list and compute all variables
+	float fabsdEtaIn = fabs(electron.deltaEtaSuperClusterTrackAtVtx);
+	float fabsdPhiIn = fabs(electron.deltaPhiSuperClusterTrackAtVtx);
+	// electron.sigmaIetaIeta
+	// electron.hcalOverEcalBc
+	susy::Track track = event.tracks[electron.gsfTrackIndex];
+	float d0 = fabs(track.d0());
+	float dZ = fabs(track.vertex.Z());
+	float fabsInvDiff = fabs( 1./electron.ecalEnergy - 1./electron.trackMomentumAtVtx.Pt() );
 	float iso = ( electron.chargedHadronIso +
 		std::max(electron.neutralHadronIso+electron.photonIso -
 		effectiveAreaElectron(electron.momentum.Eta())*event.rho25, (float)0. ))
 		/ electron.momentum.Pt();
-	susy::Track track = event.tracks[electron.gsfTrackIndex];
-	float d0 = track.d0();
-	float dZ = track.vertex.Z();
-	bool isElectron = false;
-	float eta = std::abs(electron.momentum.Eta());
-	isElectron  = (
-		eta < susy::etaGapBegin
-			&& ( fabs(electron.deltaEtaSuperClusterTrackAtVtx) < 0.007
-				|| fabs(electron.deltaPhiSuperClusterTrackAtVtx) < 0.8
-				|| electron.sigmaIetaIeta < 0.01
-				|| electron.hcalOverEcalBc < 0.15
-				|| d0 < 0.04
-				|| dZ < 0.2
-				|| iso < 0.15 )
-		)||( ( susy::etaGapEnd < eta && eta < susy::etaMax )
-			&& ( fabs(electron.deltaEtaSuperClusterTrackAtVtx) < 0.01
-				|| fabs(electron.deltaPhiSuperClusterTrackAtVtx) < 0.7
-				|| electron.sigmaIetaIeta < 0.03
-				|| d0 < 0.04
-				|| dZ < 0.2
-				|| iso < 0.15 )
-		);
-	return isElectron;
+	// electron.passConversionVeto
+	// electron.nMissingHits
+	float eta = std::abs(electron.superCluster->position.Eta());
+	bool isBarrel = eta <= 1.479;
+	bool isEndcap = eta > 1.479 && eta < 2.5;
+
+	if( ( isBarrel
+			&& fabsdEtaIn < 0.004
+			&& fabsdPhiIn < 0.03
+			&& electron.sigmaIetaIeta < 0.01
+			&& electron.hcalOverEcalBc < 0.12
+			&& d0 < 0.02
+			&& dZ < 0.1
+			&& fabsInvDiff < 0.05
+			&& iso < 0.1
+			&& electron.passConversionVeto
+			&& electron.nMissingHits == 0
+		) || ( isEndcap
+			&& fabsdEtaIn < 0.005
+			&& fabsdPhiIn < 0.02
+			&& electron.sigmaIetaIeta < 0.03
+			&& electron.hcalOverEcalBc < 0.1
+			&& d0 < 0.02
+			&& dZ < 0.1
+			&& fabsInvDiff < 0.05
+			&& iso < 0.1
+			&& ( iso < 0.07 || electron.momentum.Pt() > 20 )
+			&& electron.passConversionVeto
+			&& electron.nMissingHits == 0
+		) )
+		return tree::kTightElectron;
+
+	if( ( isBarrel
+			&& fabsdEtaIn < 0.004
+			&& fabsdPhiIn < 0.06
+			&& electron.sigmaIetaIeta < 0.01
+			&& electron.hcalOverEcalBc < 0.12
+			&& d0 < 0.02
+			&& dZ < 0.1
+			&& fabsInvDiff < 0.05
+			&& iso < 0.15
+			&& electron.passConversionVeto
+			&& electron.nMissingHits <= 1
+		) || ( isEndcap
+			&& fabsdEtaIn < 0.007
+			&& fabsdPhiIn < 0.03
+			&& electron.sigmaIetaIeta < 0.03
+			&& electron.hcalOverEcalBc < 0.1
+			&& d0 < 0.02
+			&& dZ < 0.1
+			&& fabsInvDiff < 0.05
+			&& iso < 0.15
+			&& ( iso < 0.10 || electron.momentum.Pt() > 20 )
+			&& electron.passConversionVeto
+			&& electron.nMissingHits <= 1
+		) )
+		return tree::kMediumElectron;
+
+	if( ( isBarrel
+			&& fabsdEtaIn < 0.007
+			&& fabsdPhiIn < 0.15
+			&& electron.sigmaIetaIeta < 0.01
+			&& electron.hcalOverEcalBc < 0.12
+			&& d0 < 0.02
+			&& dZ < 0.2
+			&& fabsInvDiff < 0.05
+			&& iso < 0.15
+			&& electron.passConversionVeto
+			&& electron.nMissingHits <= 1
+		) || ( isEndcap
+			&& fabsdEtaIn < 0.009
+			&& fabsdPhiIn < 0.1
+			&& electron.sigmaIetaIeta < 0.03
+			&& electron.hcalOverEcalBc < 0.1
+			&& d0 < 0.02
+			&& dZ < 0.2
+			&& fabsInvDiff < 0.05
+			&& iso < 0.15
+			&& ( iso < 0.10 || electron.momentum.Pt() > 20 )
+			&& electron.passConversionVeto
+			&& electron.nMissingHits <= 1
+		) )
+		return tree::kLooseElectron;
+
+	if( ( isBarrel
+			&& fabsdEtaIn < 0.007
+			&& fabsdPhiIn < 0.8
+			&& electron.sigmaIetaIeta < 0.01
+			&& electron.hcalOverEcalBc < 0.15
+			&& d0 < 0.04
+			&& dZ < 0.2
+			&& iso < 0.15
+		) || ( isEndcap
+			&& fabsdEtaIn < 0.01
+			&& fabsdPhiIn < 0.7
+			&& electron.sigmaIetaIeta < 0.03
+			&& d0 < 0.04
+			&& dZ < 0.2
+			&& iso < 0.15
+		) )
+		return tree::kVetoElectron;
+
+	return tree::kNoElectron;
 }
 
 bool isLooseJet( const susy::PFJet& jet ) {
@@ -502,6 +592,7 @@ void TreeWriter::fillGenParticles() {
 		thisGenParticle.pt = it->momentum.Pt();
 		thisGenParticle.eta = it->momentum.Eta();
 		thisGenParticle.phi = it->momentum.Phi();
+		thisGenParticle.bitFlag = 0;
 		int pdgId = std::abs(it->pdgId);
 		switch( pdgId ) {
 			case 22: // photon
@@ -526,11 +617,16 @@ void TreeWriter::fillLeptons() {
 	// electrons
 	std::vector<susy::Electron> eVector = event.electrons["gsfElectrons"];
 	for(std::vector<susy::Electron>::const_iterator it = eVector.begin(); it < eVector.end(); ++it) {
-		if( it->momentum.Pt() < 15 || std::abs(it->momentum.Eta()) > 2.6 || !isVetoElectron( *it, event, loggingVerbosity ) )
+		if( it->momentum.Pt() < 15 || std::abs(it->momentum.Eta()) > 2.6 )
+			continue;
+		tree::electronWorkingPoints wp = getElectronWorkingPoint( *it, event );
+		if( wp == tree::kNoElectron )
 			continue;
 		leptonToTree.pt = it->momentum.Pt();
 		leptonToTree.eta = it->momentum.Eta();
 		leptonToTree.phi = it->momentum.Phi();
+		leptonToTree.bitFlag = 0;
+		leptonToTree.setStatus( wp );
 		if( indexOfnearestParticle<tree::Photon>( leptonToTree, photons, .3 ) > -1 ) continue;
 		if( indexOfnearestParticle<tree::Photon>( leptonToTree, photonElectrons, .3 ) > -1 ) continue;
 		if( indexOfnearestParticle<tree::Photon>( leptonToTree, photonJets, .3 ) > -1 ) continue;
@@ -548,6 +644,7 @@ void TreeWriter::fillLeptons() {
 		leptonToTree.pt = it->momentum.Et();
 		leptonToTree.eta = it->momentum.Eta();
 		leptonToTree.phi = it->momentum.Phi();
+		leptonToTree.bitFlag = 0;
 		if( indexOfnearestParticle<tree::Photon>( leptonToTree, photons, .3 ) > -1 ) continue;
 		if( indexOfnearestParticle<tree::Photon>( leptonToTree, photonElectrons, .3 ) > -1 ) continue;
 		if( indexOfnearestParticle<tree::Photon>( leptonToTree, photonJets, .3 ) > -1 ) continue;
@@ -598,9 +695,9 @@ void TreeWriter::fillJets() {
 		std::cout << "LRcorrected pt = " << it->momentum.Pt()*subcorr.at(3) << "   " << subcorr.at(3) <<  std::endl;
 		*/
 
-		jetToTree.matchInformation = 0;
+		jetToTree.bitFlag = 0;
 		if( isLooseJet( *it ) )
-			jetToTree.setMatch( tree::kJetId );
+			jetToTree.setStatus( tree::kJetId );
 
 
 		jetToTree.pt = corrP4.Pt();
@@ -697,7 +794,7 @@ float TreeWriter::getHt() const {
 			jet != jets.end(); ++jet ) {
 
 		if( jet->pt < 40 || std::abs(jet->eta) > 3. ) continue;
-		if( !jet->isMatch( tree::kJetId ) ) continue;
+		if( !jet->isStatus( tree::kJetId ) ) continue;
 		//std::cout << " add jet to HT " << jet->pt << std::endl;
 
 		returnedHt += jet->pt;
@@ -737,7 +834,7 @@ unsigned int TreeWriter::countGoodJets( bool clean ) {
 	unsigned int number = 0;
 	for(std::vector<tree::Jet>::iterator jet = jets.begin();
 			jet != jets.end(); ++jet ) {
-		if( !jet->isMatch( tree::kJetId )) continue;
+		if( !jet->isStatus( tree::kJetId )) continue;
 		if( jet->pt < 30 || std::abs(jet->eta) > 2.5 ) continue;
 
 		if( indexOfnearestParticle<tree::Particle>( *jet, electrons, .3 ) > -1 ) continue;
@@ -747,7 +844,7 @@ unsigned int TreeWriter::countGoodJets( bool clean ) {
 			if( indexOfnearestParticle<tree::Photon>( *jet, photonElectrons, .3 ) > -1 ) continue;
 			if( indexOfnearestParticle<tree::Photon>( *jet, photonJets, .3 ) > -1 ) continue;
 		}
-		jet->setMatch( tree::kJetCount );
+		jet->setStatus( tree::kJetCount );
 		++number;
 	}
 	return number;
@@ -886,7 +983,7 @@ void TreeWriter::Loop() {
 			photonToTree.hadTowOverEm = it->hadTowOverEm;
 			photonToTree.pixelseed = it->nPixelSeeds;
 			photonToTree.conversionSafeVeto = it->passelectronveto;
-			photonToTree.genInformation = 0;
+			photonToTree.bitFlag = 0;
 
 			//photon definition barrel
 			bool isPhotonOrElectron =
@@ -930,9 +1027,9 @@ void TreeWriter::Loop() {
 			if( splitting && !isPhotonOrElectron && !isPhotonJet ) continue;
 
 			if( indexOfnearestParticle<tree::Particle>( photonToTree, genPhotons, .1, 0.9, 1.1, &hist2D["matchGenPhoton"] ) > -1 )
-				photonToTree.setGen( tree::kGenPhoton );
+				photonToTree.setStatus( tree::kGenPhoton );
 			if( indexOfnearestParticle<tree::Particle>( photonToTree, genElectrons, .1, -1e6, 1e6, &hist2D["matchGenPhoton"] ) > -1 )
-				photonToTree.setGen( tree::kGenElectron );
+				photonToTree.setStatus( tree::kGenElectron );
 
 			const char* histname = "";
 			if( isPhoton ) histname = "matchPhotonToJet";

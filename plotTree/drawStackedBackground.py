@@ -3,6 +3,7 @@
 
 from multiplot import Multihisto
 from treeFunctions import *
+from predictions import *
 
 colors = {
 		"GJets": ROOT.kCyan-7,
@@ -46,7 +47,7 @@ def drawStackedBackground( plot, treeName, listOfFiles, sumBinned, order=False )
 	tightCut = " photons[0].sigmaIetaIeta<0.011 && photons[0].chargedIso<0.7 && photons[0].neutralIso < 0.4+0.04*photons[0].pt && photons[0].photonIso < 0.5+0.005*photons[0].pt && photons[0].r9<0.9"
 	cut = "!@electrons.size() && !@muons.size()"
 	#cut = cut +"&&" + tightCut
-	cut = "1"
+	cut = "std::abs(photons[0].eta)>1.4442"
 
 	# if a data histogram is present, the mc integral will scaled to data
 	mcHists = []
@@ -97,6 +98,12 @@ def drawStackedBackground( plot, treeName, listOfFiles, sumBinned, order=False )
 
 		mh.addHisto( hist, datasetToLatex(abbr), toStack=True, draw="hist" )
 
+	egammaHist = True
+	if egammaHist:
+		egammaHist = multiDimFakeRate( [ filename for filename in listOfFiles if "PhotonHad" in filename ], plot, cut )
+		egammaHist.SetLineColor(ROOT.kGreen )
+		mh.addHisto( egammaHist, "e#rightarrow#gamma", toStack=True )
+
 	#totalBG = addHistos( [ h for abbr, h in mcHists ] )
 	#totalBG.SetLineColor(2)
 	#mh.addHisto( totalBG, "SM Simulation", toStack=False, draw="hist" )
@@ -104,11 +111,12 @@ def drawStackedBackground( plot, treeName, listOfFiles, sumBinned, order=False )
 	# add signal histos
 	#signalFiles = ["slimW_1000_1020_375_V02.44_tree.root", "slimW_1200_1120_375_V02.44_tree.root"]
 	signalFiles = ["slimW_1200_1120_375_V02.44_tree.root"]
+	signalFiles = ["slimW_1700_720_375_V03.22_tree.root"]
 	for iColor, sf in enumerate(signalFiles):
 		tree = readTree( sf, treeName )
 		histo = getHisto( tree, plot, color=ROOT.kBlue+iColor, cut=cut )
 		#mh.addHisto( histo, datasetToLatex(getDatasetAbbr(sf)), draw="hist" )
-		#mh.addHisto( histo, "Signal", draw="hist" )
+		mh.addHisto( histo, "Signal", draw="hist" )
 
 	infoText = ROOT.TLatex(0,.97, "#text{CMS Private Work  }#geq1#gamma_{#text{pixel}},#geq2#text{jets}" )
 	infoText.SetNDC()
