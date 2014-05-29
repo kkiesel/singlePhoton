@@ -21,18 +21,30 @@ enum jetMatches {
 	kJetCount
 };
 
+enum electronWorkingPoints {
+	kNoElectron,
+	kVetoElectron,
+	kLooseElectron,
+	kMediumElectron,
+	kTightElectron
+};
+
 class Particle {
 	public:
+		// functions
 		float DeltaR( const Particle &p2 ) const;
 		float DeltaR( const TLorentzVector &vec2 ) const;
 		float DeltaPhi( float phi2 ) const;
+		void setStatus( int status );
+		bool isStatus( int status ) const;
+
+		// variables
 		float pt, eta, phi;
+		short bitFlag;
 };
 
 class Photon : public Particle {
 	public:
-		bool isGen( genParticles id ) const;
-		void setGen( genParticles id );
 		float ptJet() const;
 		float _ptJet;
 		float _etaJet;
@@ -42,7 +54,6 @@ class Photon : public Particle {
 		float chargedIso, neutralIso, photonIso;
 		bool conversionSafeVeto;
 		int pixelseed;
-		short genInformation;
 		short matchedJetIndex;
 };
 
@@ -50,9 +61,6 @@ class Jet : public Particle{
 	public:
 		//float DeltaR( const Photon &p2 ) const;
 		//float DeltaR( const Jet &p2 ) const;
-		bool isMatch( jetMatches id ) const;
-		void setMatch( jetMatches id );
-		short matchInformation;
 		float bCSV;
 		float chargedHadronEnergy,
 			neutralHadronEnergy,
