@@ -38,7 +38,7 @@ def dPhiGammaMet( e ):
 
 def gammaTight( photon ):
 	return photon.ptJet() > 110 \
-    and photon.chargedIso < 2.6 \
+		and photon.chargedIso < 2.6 \
 		and photon.neutralIso < 3.5+0.04*photon.ptJet() \
 		and photon.photonIso < 1.3+0.005*photon.ptJet()
 
@@ -129,21 +129,21 @@ def mTMet( e, p1 ):
 def mTe( e ):
 	if e.GetName() == "photonTree":
 		if e.electrons.size() >= 1:
-			mTMet( e, e.electrons.at(0) )
+			return mTMet( e, e.electrons.at(0) )
 	return -10
 
 def mTm( e ):
 	if e.GetName() == "photonTree":
 		if e.muons.size() >= 1:
-			mTMet( e, e.muons.at(0) )
+			return mTMet( e, e.muons.at(0) )
 	return -10
 
 def mT( e ):
 	if e.GetName() == "photonTree":
 		if e.electrons.size() >= 1:
-			mTMet( e, e.electrons.at(0) )
+			return mTMet( e, e.electrons.at(0) )
 		if e.muons.size() >= 1:
-			mTMet( e, e.muons.at(0) )
+			return mTMet( e, e.muons.at(0) )
 	return -10
 
 
@@ -195,18 +195,18 @@ def createNewVariableTree( filename, treename, treeAppendix="AddVariables" ):
 
 	newVariables = []
 	newVariables.append( variableToTree( newTree, "metLL", metLLFunc ) )
-	newVariables.append( variableToTree( newTree, "dPhiGammaMet", dPhiGammaMet ) )
+	#newVariables.append( variableToTree( newTree, "dPhiGammaMet", dPhiGammaMet ) )
 	newVariables.append( variableToTree( newTree, "recoilChr", recoilChristian ) )
 	newVariables.append( variableToTree( newTree, "thisPt", leadingGPt ) )
 
 	#invariant masses
-	newVariables.append( variableToTree( newTree, "mee", mee ) )
-	newVariables.append( variableToTree( newTree, "mmm", mmm ) )
-	newVariables.append( variableToTree( newTree, "mll", mll ) )
+	#newVariables.append( variableToTree( newTree, "mee", mee ) )
+	#newVariables.append( variableToTree( newTree, "mmm", mmm ) )
+	#newVariables.append( variableToTree( newTree, "mll", mll ) )
 
-	newVariables.append( variableToTree( newTree, "mT", mT ) )
-	newVariables.append( variableToTree( newTree, "mTe", mTe ) )
-	newVariables.append( variableToTree( newTree, "mTm", mTm ) )
+	#newVariables.append( variableToTree( newTree, "mT", mT ) )
+	#newVariables.append( variableToTree( newTree, "mTe", mTe ) )
+	#newVariables.append( variableToTree( newTree, "mTm", mTm ) )
 	#newVariables.append( variableToTree( newTree, "metZcorr", metZcorr ) )
 	#newVariables.append( variableToTree( newTree, "metWcorr", metWcorr ) )
 
@@ -238,7 +238,7 @@ if __name__ == "__main__":
 		f.cd()
 
 		#for treename in [ "photonTree", "photonJetTree", "photonElectronTree" ]:
-		for treename in [ "photonTree", "photonJetTree" ]:
+		for treename in [ "photonTree", "photonJetTree"]:
 			treeFriend = createNewVariableTree( filename, treename )
 			treeFriend.Write("", ROOT.TObject.kOverwrite)
 		f.Close()
