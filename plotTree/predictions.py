@@ -25,6 +25,7 @@ def multiDimFakeRate( filenames, plot="met", cut="1", isData=True ):
 	eHist = None
 	for filename in filenames:
 		eTree = readTree( filename, "photonElectronTree" )
+		tryAddFriend( eTree )
 		recE = getHisto( eTree, plot, weight="weight*(%s)"%weightString, color=2, fillEmptyBins= not isData, cut=cut )
 
 		if eHist:
