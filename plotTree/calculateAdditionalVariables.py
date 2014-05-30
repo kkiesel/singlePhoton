@@ -38,7 +38,7 @@ def dPhiGammaMet( e ):
 
 def gammaTight( photon ):
 	return photon.ptJet() > 110 \
-    and photon.chargedIso < 2.6 \
+		and photon.chargedIso < 2.6 \
 		and photon.neutralIso < 3.5+0.04*photon.ptJet() \
 		and photon.photonIso < 1.3+0.005*photon.ptJet()
 
@@ -90,6 +90,19 @@ def leadingGPt( e ):
 				pt = photon.ptJet()
 				break
 	return pt
+
+def isoMet( e ):
+	metVect = ROOT.TVector3()
+	gVect = ROOT.TVector3()
+	metVect.SetPtEtaPhi( e.met, 0, e.metPhi )
+	iso = e.photons[0].chargedIso + e.photons[0].neutralIso + e.photons[0].photonIso
+	cIso = e.photons[0].chargedIso
+	nIso = e.photons[0].neutralIso
+	pIso = e.photons[0].photonIso
+	iso = nIso + pIso + 0.3*cIso
+	gVect.SetPtEtaPhi( iso, e.photons[0].eta, e.photons[0].phi )
+	return (metVect+gVect).Pt()
+
 
 def M( p1, p2 ):
 	# invariant mass
@@ -198,6 +211,7 @@ def createNewVariableTree( filename, treename, treeAppendix="AddVariables" ):
 	newVariables.append( variableToTree( newTree, "dPhiGammaMet", dPhiGammaMet ) )
 	newVariables.append( variableToTree( newTree, "recoilChr", recoilChristian ) )
 	newVariables.append( variableToTree( newTree, "thisPt", leadingGPt ) )
+	newVariables.append( variableToTree( newTree, "metCorr", isoMet ) )
 
 	#invariant masses
 	newVariables.append( variableToTree( newTree, "mee", mee ) )
@@ -238,7 +252,7 @@ if __name__ == "__main__":
 		f.cd()
 
 		#for treename in [ "photonTree", "photonJetTree", "photonElectronTree" ]:
-		for treename in [ "photonTree", "photonJetTree" ]:
+		for treename in [ "photonTree", "photonJetTree", "photonElectronTree" ]:
 			treeFriend = createNewVariableTree( filename, treename )
 			treeFriend.Write("", ROOT.TObject.kOverwrite)
 		f.Close()
