@@ -9,7 +9,7 @@ def drawWeightHisto( weight2D, saveName, writeWeightFile=False, control=True ):
 	regionString = "control" if control else "signal"
 	# Draw the histograms
 	info = PlotCaption(control=control, signal=not control,treeName="")
-	info = ROOT.TLatex(0,.96, "CMS Private Work  - 19.7fb^{-1} #sqrt{s}=8TeV #geq1#gamma,#geq2jets #met<100GeV" )
+	info = ROOT.TLatex(0,.96, "CMS Private Work  - 19.7fb^{-1} #sqrt{s}=8TeV #geq1#gamma,#geq2jets #slash{E}_{T}<100GeV" )
 	info.SetNDC()
 
 	# Display the weight errors as 2D histograms.
