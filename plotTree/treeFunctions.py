@@ -258,11 +258,6 @@ def getHists( filenames, plot="met", cut="1", treeName="photonTree" ):
 	for filename in filenames:
 		tree = readTree( filename, treeName )
 		tree = tryAddFriend( tree )
-		if "PhotonHadA" in filename and treeName == "photonTree":
-			for e in tree:
-				if e.electrons.size() or e.muons.size() or True:
-					continue
-				print "evt nr:%i, rn: %i, lbnr: %i, recoilPt: %.3f, gPt: %.3f, weight: 1, we: 0"%(e.eventNumber,e.runNumber,e.luminosityBlockNumber,e.recoilChr, e.thisPt )
 
 		hist = getHisto( tree, plot, color=1, fillEmptyBins=not ("PhotonHad" in filename), cut=cut )
 		if endHist:
