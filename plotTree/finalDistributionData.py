@@ -145,12 +145,11 @@ def finalDistributionData( plot ):
 
 	# Sample names
 	treeVersion = "13"
-	wg1 = "slimWGamma_50_130_V03.%s_tree.root"%treeVersion
-	wg2 = "slimWGamma_130_inf_V03.%s_tree.root"%treeVersion
-	tg = "slimTTGamma_V03.%s_tree.root"%treeVersion
-	zgn = "slimZGammaNuNu_V03.%s_tree.root"%treeVersion
-	zgn1 = "slimZGammaLL_V02.19b_tree.root"
-	zgll = "slimZGammaLL_V02.19b_tree.root"
+	wg = [ "slimWGamma_50_130_V03.%s_tree.root"%treeVersion,
+			"slimWGamma_130_inf_V03.%s_tree.root"%treeVersion ]
+	tg = [ "slimTTGamma_V03.%s_tree.root"%treeVersion ]
+	zgn = [ "slimZGammaNuNu_V03.%s_tree.root"%treeVersion ]
+	zgll = [ "slimZGammaLL_V02.19b_tree.root" ]
 	data = [ "PhotonHad%s_V03.%s_tree.root"%(x,treeVersion) for x in ["A","B","C","D" ] ]
 
 	# additional ISR uncertainty
@@ -179,12 +178,15 @@ def finalDistributionData( plot ):
 	egammaHist = multiDimFakeRate( data, plot, commonCut )
 	egammaHistsys = setRelativeUncertainty( egammaHist.Clone(randomName()), ewkUncertainty )
 
-	fsrZ = getHists( [zgn], plot, commonCut+"&&photons[0].pt>130" )
-	fsrZll = getHists( [zgll], plot, commonCut )
-	fsrZ2 = getHists( [zgn1], plot+"LL", commonCut+"&&photons[0].pt<130" )
+	fsrZ = getHists( zgn, plot, commonCut+"&&genPhotons[0].pt>130" )
+	fsrZll = getHists( zgll, plot, commonCut )
+	if plot=="met":
+		fsrZ2 = getHists( zgll, plot+"LL", commonCut+"&&genPhotons[0].pt<130" )
+	else:
+		fsrZ2 = getHists( zgll, plot, commonCut+"&&0" )
 	fsrZ2.Scale( 20./(2.*3.363) )
-	fsrW = getHists( [wg1,wg2], plot, commonCut )
-	fsrT = getHists( [tg], plot, commonCut )
+	fsrW = getHists( wg, plot, commonCut )
+	fsrT = getHists( tg, plot, commonCut )
 
 	# apply common scale factor
 	for h in fsrW, fsrT, fsrZ, fsrZ2, fsrZll:
@@ -205,6 +207,7 @@ def finalDistributionData( plot ):
 		signal.SetLineColor( ROOT.kBlue + i )
 		#signal.SetLineStyle(5+i)
 
+
 	# prettify histograms
 	fgammaHist.SetLineColor(7)
 	egammaHist.SetLineColor( 3 )
@@ -220,8 +223,8 @@ def finalDistributionData( plot ):
 	mh.addHisto( fgammaHist, "Multijet", True )
 	dataLegName = "Data"
 	mh.addHisto( dataHist, dataLegName, draw="pe x0" )
-	#mh.addHisto( signal2, "Bino-like #chi_{1}^{0}", draw="hist" )
-	#mh.addHisto( signal1, "Wino-like #chi_{1}^{0}", draw="hist" )
+	mh.addHisto( signal2, "Bino-like #chi_{1}^{0}", draw="hist" )
+	mh.addHisto( signal1, "Wino-like #chi_{1}^{0}", draw="hist" )
 
 
 	# get all SYSTEMATICAL uncertainties:
@@ -265,7 +268,7 @@ def finalDistributionData( plot ):
 
 	from myRatio import Ratio
 	r = Ratio( "Data / Bkg", dataHist, mh.stack.GetStack().Last(), systematicUncertHistStack.GetStack().Last() )
-	r.draw(0.,2.5)
+	r.draw(.5,1.5)
 
 	infoText.Draw()
 
