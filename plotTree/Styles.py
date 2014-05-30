@@ -133,6 +133,7 @@ def tdrStyle():
 	#tdrStyle.SetBarWidth(Float_t barwidth = 0.5)
 	#tdrStyle.SetPaintTextFormat(const char* format = "g")
 	tdrStyle.SetPalette(53)
+	tdrStyle.SetNumberContours(999)
 	#tdrStyle.SetTimeOffset(Double_t toffset)
 	#tdrStyle.SetHistMinimumZero(kTRUE)
 
