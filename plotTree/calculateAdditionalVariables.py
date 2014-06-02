@@ -142,21 +142,21 @@ def mTMet( e, p1 ):
 def mTe( e ):
 	if e.GetName() == "photonTree":
 		if e.electrons.size() >= 1:
-			mTMet( e, e.electrons.at(0) )
+			return mTMet( e, e.electrons.at(0) )
 	return -10
 
 def mTm( e ):
 	if e.GetName() == "photonTree":
 		if e.muons.size() >= 1:
-			mTMet( e, e.muons.at(0) )
+			return mTMet( e, e.muons.at(0) )
 	return -10
 
 def mT( e ):
 	if e.GetName() == "photonTree":
 		if e.electrons.size() >= 1:
-			mTMet( e, e.electrons.at(0) )
+			return mTMet( e, e.electrons.at(0) )
 		if e.muons.size() >= 1:
-			mTMet( e, e.muons.at(0) )
+			return mTMet( e, e.muons.at(0) )
 	return -10
 
 
@@ -199,6 +199,29 @@ def metWcorr( e ):
 		return (met+e1).Mt()
 	return -10
 
+def e1Tagger( e ):
+	#tags: (v)veto, (l)loose, (m)medium, (t)tight
+	# ignore order g1g2 = g2g1
+	if e.electrons.size() > 1:
+		if e.electrons.at(0).isStatus( 4 ):
+			return 4
+		if e.electrons.at(0).isStatus( 3 ):
+			return 3
+		if e.electrons.at(0).isStatus( 2):
+			return 2
+		if e.electrons.at(0).isStatus( 1 ):
+			return 1
+
+def e2Tagger( e ):
+	if e.electrons.size() > 1:
+		if e.electrons.at(1).isStatus( 4 ):
+			return 4
+		if e.electrons.at(1).isStatus( 3 ):
+			return 3
+		if e.electrons.at(1).isStatus( 2):
+			return 2
+		if e.electrons.at(1).isStatus( 1 ):
+			return 1
 
 def createNewVariableTree( filename, treename, treeAppendix="AddVariables" ):
 	import numpy
@@ -208,7 +231,7 @@ def createNewVariableTree( filename, treename, treeAppendix="AddVariables" ):
 
 	newVariables = []
 	newVariables.append( variableToTree( newTree, "metLL", metLLFunc ) )
-	newVariables.append( variableToTree( newTree, "dPhiGammaMet", dPhiGammaMet ) )
+	#newVariables.append( variableToTree( newTree, "dPhiGammaMet", dPhiGammaMet ) )
 	newVariables.append( variableToTree( newTree, "recoilChr", recoilChristian ) )
 	newVariables.append( variableToTree( newTree, "thisPt", leadingGPt ) )
 	newVariables.append( variableToTree( newTree, "metCorr", isoMet ) )
@@ -221,8 +244,10 @@ def createNewVariableTree( filename, treename, treeAppendix="AddVariables" ):
 	newVariables.append( variableToTree( newTree, "mT", mT ) )
 	newVariables.append( variableToTree( newTree, "mTe", mTe ) )
 	newVariables.append( variableToTree( newTree, "mTm", mTm ) )
-	#newVariables.append( variableToTree( newTree, "metZcorr", metZcorr ) )
-	#newVariables.append( variableToTree( newTree, "metWcorr", metWcorr ) )
+	newVariables.append( variableToTree( newTree, "metZcorr", metZcorr ) )
+	newVariables.append( variableToTree( newTree, "metWcorr", metWcorr ) )
+	newVariables.append( variableToTree( newTree, "e1Tag", e1Tagger ) )
+	newVariables.append( variableToTree( newTree, "e2Tag", e2Tagger ) )
 
 	origTree = readTree( filename, treename )
 	nEvents = origTree.GetEntries()

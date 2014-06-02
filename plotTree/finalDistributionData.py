@@ -145,7 +145,7 @@ def finalDistributionData( plot ):
 
 	# Sample names
 	treeVersion = "13"
-	wg = [ "slimWGamma_50_130_V03.%s_tree.root"%treeVersion,
+	wg = [ "slimWGamma_50_130_V03.%s_tree.root"%treeVersion, \
 			"slimWGamma_130_inf_V03.%s_tree.root"%treeVersion ]
 	tg = [ "slimTTGamma_V03.%s_tree.root"%treeVersion ]
 	zgn = [ "slimZGammaNuNu_V03.%s_tree.root"%treeVersion ]
