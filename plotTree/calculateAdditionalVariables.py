@@ -186,6 +186,29 @@ def metWcorr( e ):
 		return (met+e1).Mt()
 	return -10
 
+def e1Tagger( e ):
+	#tags: (v)veto, (l)loose, (m)medium, (t)tight
+	# ignore order g1g2 = g2g1
+	if e.electrons.size() > 1:
+		if e.electrons.at(0).isStatus( 4 ):
+			return 4
+		if e.electrons.at(0).isStatus( 3 ):
+			return 3
+		if e.electrons.at(0).isStatus( 2):
+			return 2
+		if e.electrons.at(0).isStatus( 1 ):
+			return 1
+
+def e2Tagger( e ):
+	if e.electrons.size() > 1:
+		if e.electrons.at(1).isStatus( 4 ):
+			return 4
+		if e.electrons.at(1).isStatus( 3 ):
+			return 3
+		if e.electrons.at(1).isStatus( 2):
+			return 2
+		if e.electrons.at(1).isStatus( 1 ):
+			return 1
 
 def createNewVariableTree( filename, treename, treeAppendix="AddVariables" ):
 	import numpy
@@ -200,15 +223,17 @@ def createNewVariableTree( filename, treename, treeAppendix="AddVariables" ):
 	newVariables.append( variableToTree( newTree, "thisPt", leadingGPt ) )
 
 	#invariant masses
-	#newVariables.append( variableToTree( newTree, "mee", mee ) )
-	#newVariables.append( variableToTree( newTree, "mmm", mmm ) )
-	#newVariables.append( variableToTree( newTree, "mll", mll ) )
+	newVariables.append( variableToTree( newTree, "mee", mee ) )
+	newVariables.append( variableToTree( newTree, "mmm", mmm ) )
+	newVariables.append( variableToTree( newTree, "mll", mll ) )
 
-	#newVariables.append( variableToTree( newTree, "mT", mT ) )
-	#newVariables.append( variableToTree( newTree, "mTe", mTe ) )
-	#newVariables.append( variableToTree( newTree, "mTm", mTm ) )
-	#newVariables.append( variableToTree( newTree, "metZcorr", metZcorr ) )
-	#newVariables.append( variableToTree( newTree, "metWcorr", metWcorr ) )
+	newVariables.append( variableToTree( newTree, "mT", mT ) )
+	newVariables.append( variableToTree( newTree, "mTe", mTe ) )
+	newVariables.append( variableToTree( newTree, "mTm", mTm ) )
+	newVariables.append( variableToTree( newTree, "metZcorr", metZcorr ) )
+	newVariables.append( variableToTree( newTree, "metWcorr", metWcorr ) )
+	newVariables.append( variableToTree( newTree, "e1Tag", e1Tagger ) )
+	newVariables.append( variableToTree( newTree, "e2Tag", e2Tagger ) )
 
 	origTree = readTree( filename, treename )
 	nEvents = origTree.GetEntries()
