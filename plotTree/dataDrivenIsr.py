@@ -95,21 +95,21 @@ if __name__ == "__main__":
 	cut = "std::abs(photons[0].eta)<1.4442 && mll>10 && met<100"
 	chi2Cut = cut + "&& 60<mll && mll<120"
 
-	treeVersion = 22
-	dataFiles = [ "PhotonHad%s_V03.%s_tree.root"%(x,treeVersion) for x in ["A","B","C","D" ] ]
+	treeVersion = 24
+	dataFiles = [ "PhotonHad%s_V03.%s_tree.root"%(x,treeVersion) for x in ["A","B","C", "D" ] ]
 	data = getHists( dataFiles, "mll", cut )
 
 	bkgFiles = []
-	bkgFiles.append( "slimZGammaLL_V02.22_tree.root" )
-	bkgFiles.append( "slimTTGamma_V03.22_tree.root" )
+	bkgFiles.append( "slimZGammaLL_V02.24_tree.root" )
+	bkgFiles.append( "slimTTGamma_V03.24_tree.root" )
 	#bkgFiles.extend( ["slimGJets_400_inf_V03.22_tree.root", "slimGJets_200_400_V03.22_tree.root" ] )
 
 	kFactor = getkFactor( dataFiles, bkgFiles, chi2Cut)
 
-	h2 = getHists( ["slimZGammaLL_V02.22_tree.root"], "mll", cut )
+	h2 = getHists( ["slimZGammaLL_V02.24_tree.root"], "mll", cut )
 	h2.SetLineColor(2)
 
-	h3 = getHists( ["slimTTGamma_V03.22_tree.root"], "mll", cut )
+	h3 = getHists( ["slimTTGamma_V03.24_tree.root"], "mll", cut )
 	h3.SetLineColor(4)
 
 	#gjets = getHists( ["slimGJets_400_inf_V03.22_tree.root", "slimGJets_200_400_V03.22_tree.root" ], "mll", cut )
@@ -118,11 +118,11 @@ if __name__ == "__main__":
 	#qcd = getHists( ["slimQCD_1000_inf_V03.22_tree.root", "slimQCD_250_500_V03.22_tree.root", "slimQCD_500_1000_V03.22_tree.root"], "mll", cut )
 	#qcd.SetLineColor( ROOT.kCyan+3 )
 
-	wjets = getHists( ["slimWJets_250_300_V03.22_tree.root", "slimWJets_300_400_V03.22_tree.root", "slimWJets_400_inf_V03.22_tree.root" ], "mll", cut )
-	wjets.SetLineColor( ROOT.kGreen+4 )
+	#wjets = getHists( ["slimWJets_250_300_V03.22_tree.root", "slimWJets_300_400_V03.22_tree.root", "slimWJets_400_inf_V03.22_tree.root" ], "mll", cut )
+	#wjets.SetLineColor( ROOT.kGreen+4 )
 
-	wgamma = getHists( ["slimWGamma_130_inf_V03.22_tree.root", "slimWGamma_50_130_V03.22_tree.root" ], "mll", cut )
-	wgamma.SetLineColor( ROOT.kGreen-4 )
+	#wgamma = getHists( ["slimWGamma_130_inf_V03.22_tree.root", "slimWGamma_50_130_V03.22_tree.root" ], "mll", cut )
+	#wgamma.SetLineColor( ROOT.kGreen-4 )
 
 	signal = getHists( ["slimW_1700_720_375_V03.22_tree.root" ], "mll", cut )
 	signal.SetLineColor( ROOT.kGreen )
@@ -139,9 +139,9 @@ if __name__ == "__main__":
 	mh.addHisto( h3, "#gammat#bar{t}", True )
 	#mh.addHisto( gjets, "#gammaJet", True )
 	#mh.addHisto( qcd, "Multijet", True )
-	mh.addHisto( wjets, "W", True )
-	mh.addHisto( wgamma, "#gammaW", True )
-	mh.addHisto( signal, "Wino", False )
+	#mh.addHisto( wjets, "W", True )
+	#mh.addHisto( wgamma, "#gammaW", True )
+	#mh.addHisto( signal, "Wino", False )
 
 	mh.Draw()
 
