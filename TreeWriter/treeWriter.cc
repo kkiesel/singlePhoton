@@ -350,6 +350,8 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 
 	// Define one dimensional histograms
 	hist1D["gMet"] = TH1F("", ";met;", 60, 0, 600 );
+	hist1D["gMetPuUp"] = TH1F("", ";met;", 60, 0, 600 );
+	hist1D["gMetPuDown"] = TH1F("", ";met;", 60, 0, 600 );
 	hist1D["eMet"] = TH1F("", ";met;", 60, 0, 600 );
 	hist1D["fMet"] = TH1F("", ";met;", 60, 0, 600 );
 	hist1D["fMetError"] = TH1F("", ";met;", 60, 0, 600 );
@@ -436,45 +438,6 @@ void TreeWriter::SetJsonFile(TString const& filename) {
 		std::cout << "JSON file for filtering included." << std::endl;
 }
 
-void TreeWriter::SetPileUpWeightFile( std::string const & filename ) {
-	/** Reads the pileup histogram from a given file.
-	 */
-
-	TFile puFile( filename.c_str() );
-	if( puFile.IsZombie() )
-		std::cerr << "ERROR: Could not read pileup weight file " << filename << std::endl;
-
-	std::string histogramName = "pileupWeight";
-	if( puFile.GetListOfKeys()->Contains( histogramName.c_str() ) )
-		pileupHisto = *((TH1F*) puFile.Get( histogramName.c_str() ));
-	else
-		std::cerr << "ERROR: Could not extract " << histogramName
-			<< " histogram from " << filename << std::endl;
-
-	if( loggingVerbosity > 1 )
-		std::cout << "Pile-up reweighting histogram added." << std::endl;
-}
-
-void TreeWriter::SetQcdWeightFile( std::string const & filename ) {
-	/** Reads the pileup histogram from a given file.
-	 */
-	gSystem->Load("libHistPainter"); // to avoid waring and errors when reading th2 from file
-
-	TFile qcdFile( filename.c_str() );
-	if( qcdFile.IsZombie() )
-		std::cerr << "ERROR: Could not read qcd weight file " << filename << std::endl;
-
-	std::string histogramName = "qcdWeight";
-	if( qcdFile.GetListOfKeys()->Contains( histogramName.c_str() ) )
-		qcdWeightHisto = *((TH2F*) qcdFile.Get( histogramName.c_str() ));
-	else
-		std::cerr << "ERROR: Could not extract " << histogramName
-			<< " histogram from " << filename << std::endl;
-
-	if( loggingVerbosity > 1 )
-		std::cout << "QCD weighting histogram added." << std::endl;
-}
-
 bool TreeWriter::passTrigger() {
 	/**
 	 * Checks if event passes the HLT trigger paths.
@@ -559,6 +522,8 @@ float TreeWriter::getPileUpWeight(){
 		if (iBX->BX == 0) { // find bunch crossing for this event
 			float trueNumInteractions = iBX->trueNumInteractions;
 			thisWeight = pileupHisto.GetBinContent( pileupHisto.FindBin( trueNumInteractions ) );
+			weightPuUp = pileupHistoUp.GetBinContent( pileupHistoUp.FindBin( trueNumInteractions ) );
+			weightPuDown = pileupHistoDown.GetBinContent( pileupHistoDown.FindBin( trueNumInteractions ) );
 			break;
 		}
 	}
@@ -653,7 +618,7 @@ void TreeWriter::fillLeptons() {
 		std::cout << "Found " << muons.size() << " muons" << std::endl;
 }
 
-void TreeWriter::fillJets() {
+void TreeWriter::fillJets( int jecScale=0 ) {
 	/* Read the jets from susyEvent and save them to jet vector.
 	 * All jets for HT calculation, and photon-jet matching are saved.
 	 * This are not the final jets in the analysis.
@@ -675,6 +640,7 @@ void TreeWriter::fillJets() {
 			it != jetVector.end(); ++it) {
 
 		TLorentzVector corrP4 = it->jecScaleFactors.at("L1FastL2L3") * it->momentum;
+		corrP4 *= (1 + jecScale*it->jecUncertainty );
 
 		if( std::abs(corrP4.Eta()) > 3 ) continue;
 		if( corrP4.Pt() < 30 ) continue;
@@ -878,7 +844,7 @@ void TreeWriter::SetBranches( TTree& tree ) {
 	tree.Branch("luminosityBlockNumber", &luminosityBlockNumber, "luminosityBlockNumber/i");
 }
 
-void TreeWriter::Loop() {
+void TreeWriter::Loop( int jetScale ) {
 	/**
 	 * \brief Loops over input chain and fills tree
 	 *
@@ -906,6 +872,12 @@ void TreeWriter::Loop() {
 
 	// Declaration for objects saved in Tree
 	tree::Photon photonToTree;
+
+	// clear all 1d histograms
+	for( std::map<std::string, TH1F>::iterator it = hist1D.begin();
+			it!= hist1D.end(); ++it ) {
+		it->second.Reset("ICES M");
+	}
 
 	for (long jentry=0; jentry < processNEvents; ++jentry) {
 		event.getEntry(jentry);
@@ -937,7 +909,7 @@ void TreeWriter::Loop() {
 
 		// The jets have to be filled before looping over the photons and searching
 		// for jet photon matches. The collections are not cross cleaned.
-		fillJets();
+		fillJets( jetScale );
 		fillGenParticles();
 
 		// met
@@ -1106,6 +1078,8 @@ void TreeWriter::Loop() {
 			if( eType == kPhotonEvent ) {
 				photonTree.Fill();
 				hist1D["gMet"].Fill( met, weight );
+				hist1D["gMetPuUp"].Fill( met, weightPuUp );
+				hist1D["gMetPuDown"].Fill( met, weightPuDown );
 				hist1D["gHt"].Fill( ht, weight );
 				hist1D["gNJets"].Fill( nGoodJets, weight );
 				hist1D["gPt"].Fill( photons.at(0).ptJet(), weight );
@@ -1126,9 +1100,8 @@ void TreeWriter::Loop() {
 
 	} // for jentry
 
-
 	outFile.cd();
-	if( !onlyMetPlots ) {
+	if( !onlyMetPlots && !jetScale ) {
 		photonTree.Write();
 		if( splitting ) {
 			photonElectronTree.Write();
@@ -1153,11 +1126,31 @@ void TreeWriter::Loop() {
 		std::cout << "Could not extract grid parameters from filename." << std::endl;
 
 	// Append the signal information to the histogram name
-	for( std::map<std::string, TH1F>::iterator it = hist1D.begin();
-			it!= hist1D.end(); ++it ) {
-		it->second.SetName( (it->second.GetName() + histoNameAppendix ).c_str() );
-		it->second.Write();
+	switch( jetScale ) {
+		case 0: {
+			for( std::map<std::string, TH1F>::iterator it = hist1D.begin();
+					it!= hist1D.end(); ++it ) {
+				it->second.SetName( (it->second.GetName() + histoNameAppendix ).c_str() );
+				it->second.Write();
+			}
+			break;
+		}
+		case 1: {
+			TH1F* upHist = (TH1F*)hist1D["gMet"].Clone();
+			upHist->SetName( ("gMet" + std::string("JecUp") + histoNameAppendix ).c_str() );
+			upHist->Write();
+			delete upHist;
+			break;
+		}
+		case -1: {
+			TH1F* downHist = (TH1F*)hist1D["gMet"].Clone();
+			downHist->SetName( ("gMet" + std::string("JecDown") + histoNameAppendix ).c_str() );
+			downHist->Write();
+			delete downHist;
+			break;
+		}
 	}
+
 }
 
 

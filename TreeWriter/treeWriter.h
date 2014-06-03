@@ -29,7 +29,7 @@ class TreeWriter {
 	public :
 		TreeWriter( int nFiles, char** fileList, std::string const& );
 		virtual ~TreeWriter();
-		virtual void Loop();
+		virtual void Loop( int jecScale=0 );
 
 		// Command line output settings
 		void SetProcessNEvents(int nEvents) { processNEvents = nEvents; }
@@ -45,9 +45,11 @@ class TreeWriter {
 
 		// Set tigger and input Files
 		void SetTriggerPaths( std::vector<const char*> const & tp ) { triggerNames = tp; }
-		void SetPileUpWeightFile( std::string const & filename );
 		void SetJsonFile( TString const & filename );
-		void SetQcdWeightFile( std::string const & filename );
+		void SetQcdWeightHisto( TH2F histo ) { qcdWeightHisto = histo; }
+		void SetPileUpWeightHisto( TH1F histo ) { pileupHisto = histo; }
+		void SetPileUpWeightHistoUp( TH1F histo ) { pileupHistoUp = histo; }
+		void SetPileUpWeightHistoDown( TH1F histo ) { pileupHistoDown = histo; }
 
 	private:
 		void SetBranches( TTree& tree );
@@ -61,7 +63,7 @@ class TreeWriter {
 		float getHt() const;
 		TVector3 getMhtVector() const;
 		TVector3 getRecoilVector( eventType eType ) const;
-		void fillJets();
+		void fillJets( int jecScale );
 		void fillGenParticles();
 		void fillLeptons();
 		unsigned int countGoodJets( bool clean );
@@ -81,6 +83,8 @@ class TreeWriter {
 
 		// Additional information for producing the output
 		TH1F pileupHisto;
+		TH1F pileupHistoUp;
+		TH1F pileupHistoDown;
 		TH2F qcdWeightHisto;
 		std::map<unsigned, std::set<unsigned> > goodLumiList;
 		std::vector<const char*> triggerNames;
@@ -134,6 +138,8 @@ class TreeWriter {
 
 		float ht;
 		float weight;
+		float weightPuUp;
+		float weightPuDown;
 		unsigned int nGoodJets;
 		unsigned int nTracksPV;
 		unsigned int nVertex;
