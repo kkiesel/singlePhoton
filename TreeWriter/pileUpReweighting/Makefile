@@ -5,7 +5,7 @@ PU_JSON=/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions12/8TeV/Pi
 
 PU_CALC=pileupCalc.py --calcMode true --maxPileupBin 60 --numPileupBins 60 -i $(ANA_JSON) --inputLumiJSON $(PU_JSON)
 
-puWeights.root: nTrueVertexMC.root nTrueVertexData.root
+puWeights.root: createWeights.py nTrueVertexMC.root nTrueVertexData.root
 	python createWeights.py --mc nTrueVertexMC.root --data nTrueVertexData.root -o $@
 
 nTrueVertexMC.root: createMChist.py
