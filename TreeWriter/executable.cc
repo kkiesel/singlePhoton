@@ -28,6 +28,7 @@ int main( int argc, char** argv ) {
 	tw.FinalDistriputionsOnly( false );
 	tw.SetPhotonPtThreshold( 110 );
 	tw.ApplyHadronicSelection( true );
+	std::string pileupScenario = "S10";
 
 	// for fake rate studies
 	//tw.SetPhotonPtThreshold( 0 ); tw.ApplyHadronicSelection( false ); tw.SkrinkTree( true );
@@ -40,9 +41,9 @@ int main( int argc, char** argv ) {
 
 	gSystem->Load("libHistPainter"); // to avoid waring and errors when reading th2 from file
 	tw.SetQcdWeightHisto( getHisto<TH2F>( "../plotTree/qcdWeight.root", "qcdWeight" ) );
-	tw.SetPileUpWeightHisto( getHisto<TH1F>( "pileUpReweighting/puWeights.root", "pileupWeight" )  );
-	tw.SetPileUpWeightHistoUp( getHisto<TH1F>( "pileUpReweighting/puWeights.root", "pileupWeightUp" )  );
-	tw.SetPileUpWeightHistoDown( getHisto<TH1F>( "pileUpReweighting/puWeights.root", "pileupWeightDown" )  );
+	tw.SetPileUpWeightHisto( getHisto<TH1F>( "pileUpReweighting/puWeights.root", "pileupWeight"+pileupScenario ) );
+	tw.SetPileUpWeightHistoUp( getHisto<TH1F>( "pileUpReweighting/puWeights.root", "pileupWeightUp"+pileupScenario ) );
+	tw.SetPileUpWeightHistoDown( getHisto<TH1F>( "pileUpReweighting/puWeights.root", "pileupWeightDown"+pileupScenario ) );
 
 	std::vector<const char*> triggerNames;
 	triggerNames.push_back( "HLT_Photon70_CaloIdXL_PFHT400_v" );
