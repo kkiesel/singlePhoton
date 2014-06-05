@@ -3,22 +3,20 @@
 ANA_JSON=/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions12/8TeV/Reprocessing/Cert_190456-208686_8TeV_22Jan2013ReReco_Collisions12_JSON.txt
 PU_JSON=/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions12/8TeV/PileUp/pileup_latest.txt
 
-PU_CALC=pileupCalc.py --calcMode true --maxPileupBin 60 --numPileupBins 60
+PU_CALC=pileupCalc.py --calcMode true --maxPileupBin 60 --numPileupBins 60 -i $(ANA_JSON) --inputLumiJSON $(PU_JSON)
 
-puWeights.root: PU_dist.root PU_dist_up.root PU_dist_down.root PU_dist_S10.root
-	python createWeights.py
+puWeights.root: nTrueVertexMC.root nTrueVertexData.root
+	python createWeights.py --mc nTrueVertexMC.root --data nTrueVertexData.root -o $@
 
-PU_dist_S10.root: createMChist.py
+nTrueVertexMC.root: createMChist.py
 	python $^ $@
 
-PU_dist.root: $(ANA_JSON) $(PU_JSON) Makefile
-	$(PU_CALC) --minBiasXsec 69400 -i $(ANA_JSON) --inputLumiJSON $(PU_JSON) $@
-
-PU_dist_up.root: $(ANA_JSON) $(PU_JSON) Makefile
-	$(PU_CALC) --minBiasXsec 72870 -i $(ANA_JSON) --inputLumiJSON $(PU_JSON) $@
-
-PU_dist_down.root: $(ANA_JSON) $(PU_JSON) Makefile
-	$(PU_CALC) --minBiasXsec 65930 -i $(ANA_JSON) --inputLumiJSON $(PU_JSON) $@
+nTrueVertexData.root: $(ANA_JSON) $(PU_JSON) Makefile
+	$(PU_CALC) --minBiasXsec 69400 --pileupHistName pileup tmpHist1.root
+	$(PU_CALC) --minBiasXsec 72870 --pileupHistName pileupUp tmpHist2.root
+	$(PU_CALC) --minBiasXsec 65930 --pileupHistName pileupDown tmpHist3.root
+	hadd -f $@ tmpHist1.root tmpHist2.root tmpHist3.root
+	rm tmpHist1.root tmpHist2.root tmpHist3.root
 
 
 
