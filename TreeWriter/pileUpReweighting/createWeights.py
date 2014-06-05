@@ -31,15 +31,15 @@ if __name__ == "__main__":
 		h.Scale( 1./h.Integral() )
 
 	pileupWeightS10 = dataHist.Clone( "pileupWeightS10" )
-	pileupWeightS10Up = dataHist.Clone( "pileupWeightS10Up" )
-	pileupWeightS10Down = dataHist.Clone( "pileupWeightS10Down" )
+	pileupWeightS10Up = dataHist.Clone( "pileupWeightUpS10" )
+	pileupWeightS10Down = dataHist.Clone( "pileupWeightDownS10" )
 
 	for h in pileupWeightS10, pileupWeightS10Up, pileupWeightS10Down:
 		h.Divide( s10Scenario )
 
 	pileupWeightS7 = dataHist.Clone( "pileupWeightS7" )
-	pileupWeightS7Up = dataHist.Clone( "pileupWeightS7Up" )
-	pileupWeightS7Down = dataHist.Clone( "pileupWeightS7Down" )
+	pileupWeightS7Up = dataHist.Clone( "pileupWeightUpS7" )
+	pileupWeightS7Down = dataHist.Clone( "pileupWeightDownS7" )
 
 	for h in pileupWeightS7, pileupWeightS7Up, pileupWeightS7Down:
 		h.Divide( s7Scenario )
