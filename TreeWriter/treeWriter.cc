@@ -942,6 +942,8 @@ void TreeWriter::Loop( int jetScale ) {
 		for(std::vector<susy::Photon>::iterator it = photonVector.begin();
 				it != photonVector.end(); ++it ) {
 
+			if( std::abs( it->momentum.Eta() ) > susy::etaGapBegin ) continue;
+
 			photonToTree.chargedIso = chargedHadronIso_corrected(*it, event.rho);
 			photonToTree.neutralIso = neutralHadronIso_corrected(*it, event.rho);
 			photonToTree.photonIso = photonIso_corrected(*it, event.rho);
