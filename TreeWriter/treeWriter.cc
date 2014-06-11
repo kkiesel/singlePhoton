@@ -1116,7 +1116,7 @@ void TreeWriter::Loop( int jetScale ) {
 
 	// If running over signal scans, the mass point information is appended to
 	// the histogram name.
-	TPRegexp expFilename( ".*/tree_([0-9]+_[0-9]+)_375.root" ); // eg. /path/to/mc/tree_1200_1220_375.root
+	TPRegexp expFilename( ".*/tree_fastsim_([0-9]+_[0-9]+)_375.root" ); // eg. /path/to/mc/tree_fastsim_1200_1220_375.root
 	TObjArray *arr = expFilename.MatchS( inputTree.GetCurrentFile()->GetName() );
 
 	std::string histoNameAppendix = "";
