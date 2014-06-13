@@ -318,6 +318,15 @@ void fillMetFilterBitHistogram( TH1F& hist, int filterBit ) {
 		hist.AddBinContent( 0 );
 }
 
+void tryFill( std::map< std::string, TH1F >& histMap, const std::string& histname, const std::string& appendix, float var, float weight ) {
+	if ( histMap.find( histname+appendix ) == histMap.end() ) {
+		histMap[ histname+appendix ] = *((TH1F*) histMap[ histname ].Clone( (histname+appendix).c_str() ));
+		histMap[ histname+appendix ].Reset( "ICESM" );
+	}
+	histMap[ histname+appendix ].Fill( var, weight );
+}
+
+
 ///////////////////////////////////////////////////////////////////////////////
 // Here the class implementation begins ///////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -1077,25 +1086,43 @@ void TreeWriter::Loop( int jetScale ) {
 			recoil = recoilVector.Pt();
 			recoilPhi = recoilVector.Phi();
 
+			// get signal point from generated particles
+			int mGluino=0, mLSP=0;
+			for( susy::ParticleCollection::const_iterator it = event.genParticles.begin();
+					it != event.genParticles.end(); ++it ) {
+				if( it->status == 3 ) { // only particles from matrix element
+					if( std::abs(it->pdgId) == 1000023 ) mLSP = 25*round(it->momentum.M()/25); // mass is in steps of 25 GeV, but not always at exact this value
+					if( it->pdgId == 1000021 ) mGluino = 50*round(it->momentum.M()/50);
+				}
+			}
+			std::stringstream signalPointStringStream;
+			signalPointStringStream << mGluino << "_" << mLSP;
+			//signalPointStringStream << "_mGl" << mGluino << "_mLSP" << mLSP;
+			std::string signalPointString = signalPointStringStream.str();
+
+
 			if( eType == kPhotonEvent ) {
 				photonTree.Fill();
-				hist1D["gMet"].Fill( met, weight );
-				hist1D["gMetPuUp"].Fill( met, weightPuUp );
-				hist1D["gMetPuDown"].Fill( met, weightPuDown );
-				hist1D["gHt"].Fill( ht, weight );
-				hist1D["gNJets"].Fill( nGoodJets, weight );
-				hist1D["gPt"].Fill( photons.at(0).ptJet(), weight );
+				tryFill( hist1D, "gMet",signalPointString, met, weight );
+				tryFill( hist1D, "gMetPuUp",signalPointString, met, weightPuUp );
+				tryFill( hist1D, "gMetPuDown",signalPointString, met, weightPuDown );
+				tryFill( hist1D, "gHt",signalPointString, ht, weight );
+				tryFill( hist1D, "gNJets",signalPointString, nGoodJets, weight );
+				tryFill( hist1D, "gPt",signalPointString, photons.at(0).ptJet(), weight );
 			}
 			if( eType == kJetEvent ) {
 				photonJetTree.Fill();
 				float qcdWeight=0, qcdWeightError=0;
-				getQcdWeights( photonJets.at(0).ptJet(), ht, qcdWeight, qcdWeightError );
-				hist1D["fMet"].Fill( met, weight*qcdWeight );
-				hist1D["fMetError"].Fill( met, weight*qcdWeightError );
+				getQcdWeights( photonJets.at(0).ptJet(), recoil, qcdWeight, qcdWeightError );
+				tryFill( hist1D, "fMet",signalPointString, met, weight*qcdWeight );
+				tryFill( hist1D, "fMetError",signalPointString, met, weight*qcdWeightError );
 			}
 			if( eType == kElectronEvent ) {
 				photonElectronTree.Fill();
-				hist1D["eMet"].Fill( met, weight );
+				float ewkFakeRate = event.isRealData ?
+					1. - 0.993 * (1. - std::pow(photonElectrons.at(0).pt / 2.9 + 1., -2.4)) * (1. - 0.23 * std::exp(-0.2777 * nTracksPV))* (1. - 5.66e-4 * nVertex) 
+					: 1 - (1 - 0.00623) * (1 - std::pow(photonElectrons.at(0).pt / 4.2 + 1,-2.9)) * (1 - 0.29 * std::exp(-0.335 * nTracksPV)) * (1 - 0.000223 * nVertex);
+				tryFill( hist1D, "eMet",signalPointString, met, weight*ewkFakeRate );
 			}
 		} else if( photons.size() ) // no splitting
 				photonTree.Fill();
