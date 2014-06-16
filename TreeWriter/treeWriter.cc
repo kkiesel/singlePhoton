@@ -91,8 +91,8 @@ tree::electronWorkingPoints getElectronWorkingPoint ( const susy::Electron& elec
 	float fabsdPhiIn = fabs(electron.deltaPhiSuperClusterTrackAtVtx);
 	// electron.sigmaIetaIeta
 	// electron.hcalOverEcalBc
-	float d0 = fabs( electron.gsfTrack->d0( event.vertices.at(0).position ) );
-	float dZ = fabs( electron.gsfTrack->dz( event.vertices.at(0).position ) );
+	float d0 = fabs( electron.gsfTrack->d0( electron.vertex ) );
+	float dZ = fabs( electron.gsfTrack->dz( electron.vertex ) );
 	float fabsInvDiff = fabs( 1./electron.ecalEnergy - 1./electron.trackMomentumAtVtx.Pt() );
 	float iso = ( electron.chargedHadronIso +
 		std::max(electron.neutralHadronIso+electron.photonIso -
