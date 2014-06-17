@@ -1095,11 +1095,15 @@ void TreeWriter::Loop( int jetScale ) {
 					if( it->pdgId == 1000021 ) mGluino = 50*round(it->momentum.M()/50);
 				}
 			}
+
 			std::stringstream signalPointStringStream;
+			switch( jetScale ) {
+				case 1: { signalPointStringStream << "JecUp"; break;}
+				case -1: { signalPointStringStream << "JecDown"; break;}
+			}
 			signalPointStringStream << mGluino << "_" << mLSP;
 			//signalPointStringStream << "_mGl" << mGluino << "_mLSP" << mLSP;
 			std::string signalPointString = signalPointStringStream.str();
-
 
 			if( eType == kPhotonEvent ) {
 				photonTree.Fill();
@@ -1155,7 +1159,23 @@ void TreeWriter::Loop( int jetScale ) {
 		std::cout << "Could not extract grid parameters from filename." << std::endl;
 
 	// Append the signal information to the histogram name
-	switch( jetScale ) {
+	if( jetScale == 0 ) {
+			for( std::map<std::string, TH1F>::iterator it = hist1D.begin();
+					it!= hist1D.end(); ++it ) {
+				it->second.SetName( (it->second.GetName() + histoNameAppendix ).c_str() );
+				it->second.Write();
+			}
+	} else {
+			for( std::map<std::string, TH1F>::iterator it = hist1D.begin();
+					it!= hist1D.end(); ++it ) {
+				std::string name(it->second.GetName());
+				if( name.find("gMetJec") == std::string::npos ) continue;
+				it->second.SetName( (it->second.GetName() + histoNameAppendix ).c_str() );
+				it->second.Write();
+			}
+	}
+
+	/*switch( jetScale ) {
 		case 0: {
 			for( std::map<std::string, TH1F>::iterator it = hist1D.begin();
 					it!= hist1D.end(); ++it ) {
@@ -1178,7 +1198,7 @@ void TreeWriter::Loop( int jetScale ) {
 			delete downHist;
 			break;
 		}
-	}
+	}*/
 
 }
 
