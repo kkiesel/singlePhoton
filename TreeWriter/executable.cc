@@ -25,7 +25,7 @@ int main( int argc, char** argv ) {
 
 	// common settings
 	tw.SplitTree( true );
-	tw.FinalDistriputionsOnly( false );
+	tw.FinalDistriputionsOnly( true );
 	tw.SetPhotonPtThreshold( 110 );
 	tw.ApplyHadronicSelection( true );
 	std::string pileupScenario = "S10";

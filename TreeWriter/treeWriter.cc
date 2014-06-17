@@ -1091,7 +1091,7 @@ void TreeWriter::Loop( int jetScale ) {
 			for( susy::ParticleCollection::const_iterator it = event.genParticles.begin();
 					it != event.genParticles.end(); ++it ) {
 				if( it->status == 3 ) { // only particles from matrix element
-					if( std::abs(it->pdgId) == 1000023 ) mLSP = 25*round(it->momentum.M()/25); // mass is in steps of 25 GeV, but not always at exact this value
+					if( std::abs(it->pdgId) == 1000023 ) mLSP = -25+50*round((it->momentum.M()+25)/50); // mass is in steps of 50 GeV, but not always at exact this value
 					if( it->pdgId == 1000021 ) mGluino = 50*round(it->momentum.M()/50);
 				}
 			}
@@ -1124,7 +1124,7 @@ void TreeWriter::Loop( int jetScale ) {
 			if( eType == kElectronEvent ) {
 				photonElectronTree.Fill();
 				float ewkFakeRate = event.isRealData ?
-					1. - 0.993 * (1. - std::pow(photonElectrons.at(0).pt / 2.9 + 1., -2.4)) * (1. - 0.23 * std::exp(-0.2777 * nTracksPV))* (1. - 5.66e-4 * nVertex) 
+					1. - 0.993 * (1. - std::pow(photonElectrons.at(0).pt / 2.9 + 1., -2.4)) * (1. - 0.23 * std::exp(-0.2777 * nTracksPV))* (1. - 5.66e-4 * nVertex)
 					: 1 - (1 - 0.00623) * (1 - std::pow(photonElectrons.at(0).pt / 4.2 + 1,-2.9)) * (1 - 0.29 * std::exp(-0.335 * nTracksPV)) * (1 - 0.000223 * nVertex);
 				tryFill( hist1D, "eMet",signalPointString, met, weight*ewkFakeRate );
 			}
