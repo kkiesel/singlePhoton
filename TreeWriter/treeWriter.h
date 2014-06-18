@@ -26,23 +26,25 @@ enum eventType {
 	kJetEvent
 };
 
+enum runTypes {
+	kFullTree,
+	kTree, // without systematic shifting, 33% computing time
+	kGMSB,
+	kSimplifiedModel
+};
+
 class TreeWriter {
 	public :
 		TreeWriter( int nFiles, char** fileList, std::string const& );
 		virtual ~TreeWriter();
 		virtual void Loop( int jecScale=0 );
 
+		void SetRunType( runTypes t ) { runType = t; }
+
 		// Command line output settings
 		void SetProcessNEvents(int nEvents) { processNEvents = nEvents; }
 		void SetReportEvents(unsigned int nEvents) { reportEvery = nEvents; }
 		void SetLoggingVerbosity(unsigned int logVerb) { loggingVerbosity = logVerb; }
-
-		// Configure output version
-		void SplitTree( bool v = true ) { splitting = v; }
-		void SkrinkTree( bool v = true ) { shrinkTree = v; }
-		void FinalDistriputionsOnly( bool v = true ) { onlyMetPlots = v; }
-		void ApplyHadronicSelection( bool v = true ) { hadronicSelection = v; }
-		void SetPhotonPtThreshold( float th = 80 ) { photonPtThreshold = th; }
 
 		// Set tigger and input Files
 		void SetTriggerPaths( std::vector<const char*> const & tp ) { triggerNames = tp; }
@@ -51,8 +53,10 @@ class TreeWriter {
 		void SetPileUpWeightHisto( TH1F histo ) { pileupHisto = histo; }
 		void SetPileUpWeightHistoUp( TH1F histo ) { pileupHistoUp = histo; }
 		void SetPileUpWeightHistoDown( TH1F histo ) { pileupHistoDown = histo; }
+		runTypes GetRunType() { return runType; }
 
 	private:
+		runTypes runType;
 		void SetBranches( TTree& tree );
 		bool passTrigger();
 		bool isGoodLumi() const;
@@ -67,20 +71,13 @@ class TreeWriter {
 		void fillJets( int jecScale );
 		void fillGenParticles();
 		void fillLeptons();
-		unsigned int countGoodJets( bool clean );
+		unsigned int countGoodJets();
 		void getQcdWeights( float pt, float ht, float & qcdWeight, float & qcdWeightError );
 
 		// Command line output settings
 		unsigned int reportEvery;
 		int processNEvents;
 		unsigned int loggingVerbosity;
-
-		// Configure output version
-		bool splitting;
-		bool onlyMetPlots;
-		bool hadronicSelection;
-		bool shrinkTree;
-		float photonPtThreshold;
 
 		// Additional information for producing the output
 		TH1F pileupHisto;

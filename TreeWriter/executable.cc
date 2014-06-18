@@ -4,7 +4,7 @@ template <class HIST>
 HIST getHisto( std::string const & filename, std::string const & histname ) {
 	TFile file( filename.c_str() );
 	if( file.IsZombie() )
-		std::cerr << "ERROR: Could not read pileup weight file " << filename << std::endl;
+		std::cerr << "ERROR: Could not open file " << filename << std::endl;
 
 	if( file.GetListOfKeys()->Contains( histname.c_str() ) )
 		return *((HIST*) file.Get( histname.c_str() ));
@@ -23,15 +23,7 @@ int main( int argc, char** argv ) {
 
 	TreeWriter tw( argc-2, argv+2, argv[1] );
 
-	// common settings
-	tw.SplitTree( true );
-	tw.FinalDistriputionsOnly( true );
-	tw.SetPhotonPtThreshold( 110 );
-	tw.ApplyHadronicSelection( true );
-	std::string pileupScenario = "S10";
-
-	// for fake rate studies
-	//tw.SetPhotonPtThreshold( 0 ); tw.ApplyHadronicSelection( false ); tw.SkrinkTree( true );
+	tw.SetRunType( kFullTree );
 
 	const std::string lumiJsonName = "/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions12/8TeV/Reprocessing/Cert_190456-208686_8TeV_22Jan2013ReReco_Collisions12_JSON.txt";
 	if( access( lumiJsonName.c_str(), F_OK ) != -1 )
@@ -41,6 +33,12 @@ int main( int argc, char** argv ) {
 
 	gSystem->Load("libHistPainter"); // to avoid waring and errors when reading th2 from file
 	tw.SetQcdWeightHisto( getHisto<TH2F>( "../plotTree/qcdWeight.root", "qcdWeight" ) );
+
+	std::string pileupScenario;
+	if( tw.GetRunType() == kGMSB )
+		pileupScenario = "S7";
+	else
+		pileupScenario = "S10";
 	tw.SetPileUpWeightHisto( getHisto<TH1F>( "pileUpReweighting/puWeights.root", "pileupWeight"+pileupScenario ) );
 	tw.SetPileUpWeightHistoUp( getHisto<TH1F>( "pileUpReweighting/puWeights.root", "pileupWeightUp"+pileupScenario ) );
 	tw.SetPileUpWeightHistoDown( getHisto<TH1F>( "pileUpReweighting/puWeights.root", "pileupWeightDown"+pileupScenario ) );
