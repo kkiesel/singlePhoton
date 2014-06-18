@@ -997,6 +997,9 @@ void TreeWriter::Loop( int jetScale ) {
 
 			int jetIndex = indexOfnearestParticle<tree::Jet>( photonToTree, jets, .2, .8, 3 );
 			photonToTree._ptJet = jetIndex>-1 ? jets.at(jetIndex).pt : 0;
+			photonToTree._etaJet = jetIndex>-1 ? jets.at(jetIndex).eta : 0;
+			photonToTree._phiJet = jetIndex>-1 ? jets.at(jetIndex).phi : 0;
+
 
 			//photon definition barrel
 			bool isPhotonOrElectron =
@@ -1048,15 +1051,12 @@ void TreeWriter::Loop( int jetScale ) {
 			if( indexOfnearestParticle<tree::Particle>( photonToTree, genElectrons, .1, -1e6, 1e6, &hist2D["matchGenPhoton"] ) > -1 )
 				photonToTree.setStatus( tree::kGenElectron );
 
+			// for plotting only
 			const char* histname = "";
 			if( isPhoton ) histname = "matchPhotonToJet";
 			if( isPhotonJet ) histname = "matchPhotonJetToJet";
 			if( isPhotonElectron ) histname = "matchPhotonElectronToJet";
-
-			int jetIndex = indexOfnearestParticle<tree::Jet>( photonToTree, jets, .2, .8, 3, &hist2D[histname] );
-			photonToTree._ptJet = jetIndex>-1 ? jets.at(jetIndex).pt : 0;
-			photonToTree._etaJet = jetIndex>-1 ? jets.at(jetIndex).eta : 0;
-			photonToTree._phiJet = jetIndex>-1 ? jets.at(jetIndex).phi : 0;
+			indexOfnearestParticle<tree::Jet>( photonToTree, jets, .2, .8, 3, &hist2D[histname] );
 
 			if( loggingVerbosity > 2 )
 				std::cout << "  ->jet pT = " << photonToTree._ptJet << std::endl;
