@@ -1086,6 +1086,9 @@ void TreeWriter::Loop( int jetScale ) {
 		// this has to be done after the photon block, since leptons are cleared from photons
 		fillLeptons();
 
+		// do not allow leptons
+		if( runType == kSimplifiedModel && ( electrons.size() || muons.size() ) ) continue;
+
 		ht = getHt();
 		nGoodJets = countGoodJets();
 		if( loggingVerbosity > 1 ) {
