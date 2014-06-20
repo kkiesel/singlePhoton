@@ -18,6 +18,18 @@ class variableToTree:
 	def calc(self, event):
 		self.x[0] = self.function( event )
 
+def jgb( e ):
+	# jet-gamma balance
+	metVect = ROOT.TVector3()
+	metVect.SetPtEtaPhi( e.met, 0, e.metPhi )
+
+	gVect = ROOT.TVector3()
+	gVect.SetPtEtaPhi( e.photons[0].pt, 0, e.photons[0].phi )
+	metVect += gVect
+	return metVect.Pt() - e.photons[0].pt
+
+
+
 def metLLFunc( e ):
 	metVect = ROOT.TVector3()
 	metVect.SetPtEtaPhi( e.met, 0, e.metPhi )
@@ -230,14 +242,15 @@ def createNewVariableTree( filename, treename, treeAppendix="AddVariables" ):
 	newTree = ROOT.TTree( newTreeName, "Tree containing additional Variables" )
 
 	newVariables = []
-	newVariables.append( variableToTree( newTree, "metLL", metLLFunc ) )
+	#newVariables.append( variableToTree( newTree, "jgb", jgb ) )
+	#newVariables.append( variableToTree( newTree, "metLL", metLLFunc ) )
 	#newVariables.append( variableToTree( newTree, "dPhiGammaMet", dPhiGammaMet ) )
 	newVariables.append( variableToTree( newTree, "recoilChr", recoilChristian ) )
 	newVariables.append( variableToTree( newTree, "thisPt", leadingGPt ) )
-	newVariables.append( variableToTree( newTree, "metCorr", isoMet ) )
+	#newVariables.append( variableToTree( newTree, "metCorr", isoMet ) )
 
 	#invariant masses
-	newVariables.append( variableToTree( newTree, "mee", mee ) )
+	"""newVariables.append( variableToTree( newTree, "mee", mee ) )
 	newVariables.append( variableToTree( newTree, "mmm", mmm ) )
 	newVariables.append( variableToTree( newTree, "mll", mll ) )
 
@@ -248,6 +261,7 @@ def createNewVariableTree( filename, treename, treeAppendix="AddVariables" ):
 	newVariables.append( variableToTree( newTree, "metWcorr", metWcorr ) )
 	newVariables.append( variableToTree( newTree, "e1Tag", e1Tagger ) )
 	newVariables.append( variableToTree( newTree, "e2Tag", e2Tagger ) )
+	"""
 
 	origTree = readTree( filename, treename )
 	nEvents = origTree.GetEntries()
@@ -279,5 +293,6 @@ if __name__ == "__main__":
 		#for treename in [ "photonTree", "photonJetTree", "photonElectronTree" ]:
 		for treename in [ "photonTree", "photonJetTree", "photonElectronTree" ]:
 			treeFriend = createNewVariableTree( filename, treename )
-			treeFriend.Write("", ROOT.TObject.kOverwrite)
+			treeFriend.Write("", ROOT.TObject.kWriteDelete )
 		f.Close()
+
