@@ -1110,6 +1110,7 @@ void TreeWriter::Loop( int jetScale ) {
 		recoilPhi = recoilVector.Phi();
 
 		if( eType == kPhotonEvent ) {
+		if ( runType == kTree || runType == kFullTree )
 			photonTree.Fill();
 			tryFill( hist1D, "gMet",signalPointString, met, weight );
 			tryFill( hist1D, "gMetJesUp",signalPointString, met, weight );
@@ -1121,6 +1122,7 @@ void TreeWriter::Loop( int jetScale ) {
 			tryFill( hist1D, "gPt",signalPointString, photons.at(0).ptJet(), weight );
 		}
 		if( eType == kJetEvent ) {
+		if ( runType == kTree || runType == kFullTree )
 			photonJetTree.Fill();
 			float qcdWeight=0, qcdWeightError=0;
 			getQcdWeights( photonJets.at(0).ptJet(), recoil, qcdWeight, qcdWeightError );
@@ -1128,6 +1130,7 @@ void TreeWriter::Loop( int jetScale ) {
 			tryFill( hist1D, "fMetError",signalPointString, met, weight*qcdWeightError );
 		}
 		if( eType == kElectronEvent ) {
+		if ( runType == kTree || runType == kFullTree )
 			photonElectronTree.Fill();
 			float ewkFakeRate = event.isRealData ?
 				1. - 0.993 * (1. - std::pow(photonElectrons.at(0).pt / 2.9 + 1., -2.4)) * (1. - 0.23 * std::exp(-0.2777 * nTracksPV))* (1. - 5.66e-4 * nVertex)

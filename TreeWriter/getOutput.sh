@@ -60,3 +60,6 @@ for dataset in "${datasets[@]}"; do
 		rm -f $outputPath/${abbr}__*.root
 	fi
 done
+
+hadd -f -k $outputPath/T5gg_V03.${version}_tree.root $outputPath/T5gg_*_V03.${version}_tree.root
+hadd -f -k $outputPath/T5wg_V03.${version}_tree.root $outputPath/T5wg_*_V03.${version}_tree.root

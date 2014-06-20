@@ -23,7 +23,7 @@ int main( int argc, char** argv ) {
 
 	TreeWriter tw( argc-2, argv+2, argv[1] );
 
-	tw.SetRunType( kFullTree );
+	tw.SetRunType( kSimplifiedModel );
 
 	const std::string lumiJsonName = "/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions12/8TeV/Reprocessing/Cert_190456-208686_8TeV_22Jan2013ReReco_Collisions12_JSON.txt";
 	if( access( lumiJsonName.c_str(), F_OK ) != -1 )
