@@ -136,22 +136,22 @@ if __name__ == "__main__":
 	dataFiles = [ "PhotonHad%s_V03.%s_tree.root"%(x,treeVersion) for x in ["A","B","C","D" ] ]
 	data = getHists( dataFiles, opts.plot, cut )
 
-	tree = getCombinatoricalBkg( dataFiles )
-	tree.SetLineWidth(2)
-	tree.SetLineColor( ROOT.kBlue )
-	tree.Scale( data.Integral(0, data.FindBin(70), "width") / tree.Integral(0,data.FindBin(70),"width"))
+	combiBkg = getCombinatoricalBkg( dataFiles )
+	combiBkg.SetLineWidth(2)
+	combiBkg.SetLineColor( ROOT.kBlue )
+	combiBkg.Scale( data.Integral(0, data.FindBin(70), "width") / combiBkg.Integral(0,data.FindBin(70),"width"))
 
 	bkgFiles = []
 	bkgFiles.append( "slimZGammaLL_V02.%s_tree.root"%treeVersion )
 	bkgFiles.append( "slimTTGamma_V03.%s_tree.root"%treeVersion )
-	bkgFiles.extend( ["slimGJets_400_inf_V03.%s_tree.root"%treeVersion, "slimGJets_200_400_V03.%s_tree.root"%treeVersioni ] )
+	bkgFiles.extend( ["slimGJets_400_inf_V03.%s_tree.root"%treeVersion, "slimGJets_200_400_V03.%s_tree.root"%treeVersion ] )
 
 	kFactor = getkFactor( dataFiles, bkgFiles, opts.plot, chi2Cut )
 
 	zgammall = getHists( ["slimZGammaLL_V02.%s_tree.root"%treeVersion], opts.plot, cut )
 	zgammall.SetLineColor(2)
 
-	ttgamma = getHists( ["slimTTGamma_V03.%s_tree.root"%treeVersioni], opts.plot, cut )
+	ttgamma = getHists( ["slimTTGamma_V03.%s_tree.root"%treeVersion], opts.plot, cut )
 	ttgamma.SetLineColor(4)
 
 	gjets = getHists( ["slimGJets_400_inf_V03.%s_tree.root"%treeVersion, "slimGJets_200_400_V03.%s_tree.root"%treeVersion ], opts.plot, cut )
@@ -180,7 +180,7 @@ if __name__ == "__main__":
 	mh.addHisto( zgammall, "#gammaZ(ll)", True )
 	mh.addHisto( ttgamma, "#gammat#bar{t}", True )
 	mh.addHisto( gjets, "#gammaJet", True )
-	mh.addHisto( tree, "bkg", draw="hist e" )
+	mh.addHisto( combiBkg, "bkg", draw="hist e" )
 	#mh.addHisto( qcd, "Multijet", True )
 	#mh.addHisto( wjets, "W", True )
 	#mh.addHisto( wgamma, "#gammaW", True )
