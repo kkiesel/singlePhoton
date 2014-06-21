@@ -8,6 +8,34 @@ from qcdClosure import drawWeightHisto
 
 ROOT.gStyle.SetOptLogy(0)
 
+def getCombinatoricalBkg( filenames ):
+	tree = ROOT.TChain("photonTree")
+	for filename in filenames[0:1]:
+		tree.AddFile( filename )
+
+	import copy
+	muons = []
+	for event in tree:
+		for muon in event.muons:
+			muons.append( copy.copy(muon) )
+
+	histo = ROOT.TH1F( randomName(), "", 16, 0, 160 )
+	histo.Sumw2()
+	#newTree = ROOT.TTree("combiTree", "Tree for combinatorical bkg")
+	import numpy
+	m = numpy.zeros(1, dtype=float)
+	#newTree.Branch('mmmCombi', m, 'mmmCombi/D')
+	from calculateAdditionalVariables import M
+	for event in tree:
+		if event.muons.size() == 1:
+			for muon in muons:
+				m[0] = M( event.muons.at(0), muon )
+				histo.Fill( m[0] )
+				#newTree.Fill()
+
+	return histo
+
+
 def drawChi2( tuples ):
 
 	# draw graph
@@ -47,15 +75,23 @@ def drawChi2( tuples ):
 	kText = ROOT.TLatex(0.4, .8, text )
 	kText.SetNDC()
 	kText.Draw()
+	if len(interceptions):
+		up = minkFactor-interceptions[0][0]
+		down = interceptions[1][0]-minkFactor if len(interceptions)>1 else up
+		relUncert = (up+down)/(2*minkFactor)*100
+
+		skText = ROOT.TLatex(0.5, .7, "rel uncert = %i%%"%relUncert )
+		skText.SetNDC()
+		skText.Draw()
 
 	ROOT.gPad.SaveAs("plots/chi2MinimizationZmumu.pdf")
 
 
 def getkFactor( dataFiles, bkgFiles, plot, cut ):
 
-	kFactorMin = 1
-	kFactorMax = 4
-	kFactorN = 100
+	kFactorMin = 0.5
+	kFactorMax = 7
+	kFactorN = 1000
 
 	data = getHists( dataFiles, plot, cut )
 	bkg = getHists( bkgFiles, plot, cut )
@@ -96,36 +132,41 @@ if __name__ == "__main__":
 	cut += " && {} > 10".format(opts.plot)
 	chi2Cut = cut + "&& 60<{0} && {0}<120".format(opts.plot)
 
-	treeVersion = 22
+	treeVersion = 24
 	dataFiles = [ "PhotonHad%s_V03.%s_tree.root"%(x,treeVersion) for x in ["A","B","C","D" ] ]
 	data = getHists( dataFiles, opts.plot, cut )
 
+	tree = getCombinatoricalBkg( dataFiles )
+	tree.SetLineWidth(2)
+	tree.SetLineColor( ROOT.kBlue )
+	tree.Scale( data.Integral(0, data.FindBin(70), "width") / tree.Integral(0,data.FindBin(70),"width"))
+
 	bkgFiles = []
-	bkgFiles.append( "slimZGammaLL_V02.22_tree.root" )
-	bkgFiles.append( "slimTTGamma_V03.22_tree.root" )
-	bkgFiles.extend( ["slimGJets_400_inf_V03.22_tree.root", "slimGJets_200_400_V03.22_tree.root" ] )
+	bkgFiles.append( "slimZGammaLL_V02.%s_tree.root"%treeVersion )
+	bkgFiles.append( "slimTTGamma_V03.%s_tree.root"%treeVersion )
+	bkgFiles.extend( ["slimGJets_400_inf_V03.%s_tree.root"%treeVersion, "slimGJets_200_400_V03.%s_tree.root"%treeVersioni ] )
 
 	kFactor = getkFactor( dataFiles, bkgFiles, opts.plot, chi2Cut )
 
-	zgammall = getHists( ["slimZGammaLL_V02.22_tree.root"], opts.plot, cut )
+	zgammall = getHists( ["slimZGammaLL_V02.%s_tree.root"%treeVersion], opts.plot, cut )
 	zgammall.SetLineColor(2)
 
-	ttgamma = getHists( ["slimTTGamma_V03.22_tree.root"], opts.plot, cut )
+	ttgamma = getHists( ["slimTTGamma_V03.%s_tree.root"%treeVersioni], opts.plot, cut )
 	ttgamma.SetLineColor(4)
 
-	gjets = getHists( ["slimGJets_400_inf_V03.22_tree.root", "slimGJets_200_400_V03.22_tree.root" ], opts.plot, cut )
+	gjets = getHists( ["slimGJets_400_inf_V03.%s_tree.root"%treeVersion, "slimGJets_200_400_V03.%s_tree.root"%treeVersion ], opts.plot, cut )
 	gjets.SetLineColor( ROOT.kCyan )
 
-	#qcd = getHists( ["slimQCD_1000_inf_V03.22_tree.root", "slimQCD_250_500_V03.22_tree.root", "slimQCD_500_1000_V03.22_tree.root"], opts.plot, cut )
+	#qcd = getHists( ["slimQCD_1000_inf_V03.24_tree.root", "slimQCD_250_500_V03.24_tree.root", "slimQCD_500_1000_V03.24_tree.root"], opts.plot, cut )
 	#qcd.SetLineColor( ROOT.kCyan+3 )
 
-	#wjets = getHists( ["slimWJets_250_300_V03.22_tree.root", "slimWJets_300_400_V03.22_tree.root", "slimWJets_400_inf_V03.22_tree.root" ], opts.plot, cut )
+	#wjets = getHists( ["slimWJets_250_300_V03.24_tree.root", "slimWJets_300_400_V03.24_tree.root", "slimWJets_400_inf_V03.24_tree.root" ], opts.plot, cut )
 	#wjets.SetLineColor( ROOT.kGreen+4 )
 
-	#wgamma = getHists( ["slimWGamma_130_inf_V03.22_tree.root", "slimWGamma_50_130_V03.22_tree.root" ], opts.plot, cut )
+	#wgamma = getHists( ["slimWGamma_130_inf_V03.24_tree.root", "slimWGamma_50_130_V03.24_tree.root" ], opts.plot, cut )
 	#wgamma.SetLineColor( ROOT.kGreen-4 )
 
-	#signal = getHists( ["slimW_1700_720_375_V03.22_tree.root" ], opts.plot, cut )
+	#signal = getHists( ["slimW_1700_720_375_V03.24_tree.root" ], opts.plot, cut )
 	#signal.SetLineColor( ROOT.kGreen )
 	#signal.SetLineWidth(2)
 
@@ -139,6 +180,7 @@ if __name__ == "__main__":
 	mh.addHisto( zgammall, "#gammaZ(ll)", True )
 	mh.addHisto( ttgamma, "#gammat#bar{t}", True )
 	mh.addHisto( gjets, "#gammaJet", True )
+	mh.addHisto( tree, "bkg", draw="hist e" )
 	#mh.addHisto( qcd, "Multijet", True )
 	#mh.addHisto( wjets, "W", True )
 	#mh.addHisto( wgamma, "#gammaW", True )
