@@ -157,10 +157,10 @@ def drawClosure( filenames, predFilenames, plot, commonCut, infoText, additional
 
 	muhisto = Multihisto()
 	muhisto.leg.SetHeader( ",".join( [ datasetToLatex(x) for x in signalAbbrs ] ) )
-	muhisto.addHisto( gHist, "Simulation", draw="hist e0" )
+	muhisto.addHisto( gHist, "Simulation", draw="" )
 	muhisto.addHisto( fHist, "Prediction", draw="hist e")
 	muhisto.addHisto( sysHist, "#sigma_{w}", draw="e2")
-	muhisto.addHisto( gHist, "", draw="hist e" ) # add a second time to draw on top
+	muhisto.addHisto( gHist, "", draw="e0" ) ## add a second time to draw on top
 
 	can = ROOT.TCanvas("", "", 1000, 1200)
 	can.cd()
@@ -191,7 +191,7 @@ def qcdClosure( filenames, plots ):
 
 	weights = getMixedWeigthHisto( filenames, filenames, commonCut )
 	attachWeightsToFiles( filenames, weights, "foWeights" )
-	#drawWeightHisto( weights, getSaveNameFromDatasets(filenames) )
+	drawWeightHisto( weights, getSaveNameFromDatasets(filenames) )
 
 	for plot in plots:
 		if plot != "met":
