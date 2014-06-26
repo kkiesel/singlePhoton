@@ -149,9 +149,9 @@ def drawClosure( filenames, predFilenames, plot, commonCut, infoText, additional
 
 	for bin in range(gHist.FindBin(101), gHist.GetNbinsX()+1):
 		w = gHist.GetBinWidth(bin)
-		print gHist.GetBinLowEdge(bin)
-		print gHist.GetBinContent(bin)*w, "±", gHist.GetBinError(bin)*w
-		print fHist.GetBinContent(bin)*w, "±", fHist.GetBinError(bin)*w, "±", sysHist.GetBinContent(bin)*w
+		#print gHist.GetBinLowEdge(bin)
+		#print gHist.GetBinContent(bin)*w, "±", gHist.GetBinError(bin)*w
+		#print fHist.GetBinContent(bin)*w, "±", fHist.GetBinError(bin)*w, "±", sysHist.GetBinContent(bin)*w
 
 	signalAbbrs = mergeDatasetAbbr( [ getDatasetAbbr(x) for x in filenames ] )
 
