@@ -8,9 +8,6 @@ from qcdClosure import drawWeightHisto
 
 ROOT.gStyle.SetOptLogy(0)
 
-<<<<<<< HEAD
-def drawChi2( tuples, plot ):
-=======
 def getCombinatoricalBkg( filenames ):
 	tree = ROOT.TChain("photonTree")
 	for filename in filenames[0:1]:
@@ -40,7 +37,6 @@ def getCombinatoricalBkg( filenames ):
 
 
 def drawChi2( tuples ):
->>>>>>> 4cc9a1463cba7c40a792b0c2aa090b0b8eac6d0c
 
 	# draw graph
 	gr = ROOT.TGraph()
@@ -148,11 +144,7 @@ if __name__ == "__main__":
 	bkgFiles = []
 	bkgFiles.append( "slimZGammaLL_V02.%s_tree.root"%treeVersion )
 	bkgFiles.append( "slimTTGamma_V03.%s_tree.root"%treeVersion )
-<<<<<<< HEAD
-	#bkgFiles.extend( ["slimGJets_400_inf_V03.%s_tree.root"%treeVersion, "slimGJets_200_400_V03.%s_tree.root"%treeVersion ] )
-=======
 	bkgFiles.extend( ["slimGJets_400_inf_V03.%s_tree.root"%treeVersion, "slimGJets_200_400_V03.%s_tree.root"%treeVersion ] )
->>>>>>> 4cc9a1463cba7c40a792b0c2aa090b0b8eac6d0c
 
 	kFactor = getkFactor( dataFiles, bkgFiles, opts.plot, chi2Cut )
 
@@ -163,13 +155,8 @@ if __name__ == "__main__":
 	ttgamma = getHists( ["slimTTGamma_V03.%s_tree.root"%treeVersion], opts.plot, cut )
 	ttgamma.SetLineColor(4)
 
-<<<<<<< HEAD
-	#gjets = getHists( ["slimGJets_400_inf_V03.%s_tree.root"%treeVersion, "slimGJets_200_400_V03.%s_tree.root"%treeVersion ], opts.plot, cut )
-	#gjets.SetLineColor( ROOT.kCyan )
-=======
 	gjets = getHists( ["slimGJets_400_inf_V03.%s_tree.root"%treeVersion, "slimGJets_200_400_V03.%s_tree.root"%treeVersion ], opts.plot, cut )
 	gjets.SetLineColor( ROOT.kCyan )
->>>>>>> 4cc9a1463cba7c40a792b0c2aa090b0b8eac6d0c
 
 	#qcd = getHists( ["slimQCD_1000_inf_V03.24_tree.root", "slimQCD_250_500_V03.24_tree.root", "slimQCD_500_1000_V03.24_tree.root"], opts.plot, cut )
 	#qcd.SetLineColor( ROOT.kCyan+3 )
@@ -193,12 +180,8 @@ if __name__ == "__main__":
 	mh.addHisto( data, "Data", draw="pe" )
 	mh.addHisto( zgammall, "#gammaZ(ll)", True )
 	mh.addHisto( ttgamma, "#gammat#bar{t}", True )
-<<<<<<< HEAD
-	#mh.addHisto( gjets, "#gammaJet", True )
-=======
 	mh.addHisto( gjets, "#gammaJet", True )
 	mh.addHisto( combiBkg, "bkg", draw="hist e" )
->>>>>>> 4cc9a1463cba7c40a792b0c2aa090b0b8eac6d0c
 	#mh.addHisto( qcd, "Multijet", True )
 	#mh.addHisto( wjets, "W", True )
 	#mh.addHisto( wgamma, "#gammaW", True )
