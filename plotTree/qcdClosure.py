@@ -35,7 +35,7 @@ def drawWeightHisto( weight2D, saveName, writeWeightFile=False, control=True ):
 
 		name = hist.GetName()
 		if name == "weight2D":
-			hist.GetZaxis().SetRangeUser(0.8,20)
+			#hist.GetZaxis().SetRangeUser(0.8,20)
 			hist.GetZaxis().SetTitle("\qcdRatio")
 		if name == "weightRelError":
 			#hist.GetZaxis().SetRangeUser(0,1.2)
@@ -147,11 +147,11 @@ def drawClosure( filenames, predFilenames, plot, commonCut, infoText, additional
 	sysHist.SetFillStyle(3254)
 	sysHist.SetFillColor( sysHist.GetLineColor() )
 
-	for bin in range(gHist.FindBin(101), gHist.GetNbinsX()+1):
-		w = gHist.GetBinWidth(bin)
-		print gHist.GetBinLowEdge(bin)
-		print gHist.GetBinContent(bin)*w, "±", gHist.GetBinError(bin)*w
-		print fHist.GetBinContent(bin)*w, "±", fHist.GetBinError(bin)*w, "±", sysHist.GetBinContent(bin)*w
+	#for bin in range(gHist.FindBin(101), gHist.GetNbinsX()+1):
+	#	w = gHist.GetBinWidth(bin)
+	#	print gHist.GetBinLowEdge(bin)
+	#	print gHist.GetBinContent(bin)*w, "±", gHist.GetBinError(bin)*w
+	#	print fHist.GetBinContent(bin)*w, "±", fHist.GetBinError(bin)*w, "±", sysHist.GetBinContent(bin)*w
 
 	signalAbbrs = mergeDatasetAbbr( [ getDatasetAbbr(x) for x in filenames ] )
 
@@ -182,7 +182,7 @@ def drawClosure( filenames, predFilenames, plot, commonCut, infoText, additional
 def qcdClosure( filenames, plots ):
 	signalCut = "met>=100"
 	controlCut = "!(%s)"%signalCut
-	commonCut = "!@electrons.size() && !@muons.size()"
+	commonCut = "!@electrons.size() && !@muons.size() && thisPt > 0 && recoilChr > 0"
 
 	# Definition of labels
 	infoControl = PlotCaption( control=True )
@@ -191,11 +191,11 @@ def qcdClosure( filenames, plots ):
 
 	weights = getMixedWeigthHisto( filenames, filenames, commonCut )
 	attachWeightsToFiles( filenames, weights, "foWeights" )
-	#drawWeightHisto( weights, getSaveNameFromDatasets(filenames) )
+	drawWeightHisto( weights, getSaveNameFromDatasets(filenames) )
 
 	for plot in plots:
 		if plot != "met":
-			drawClosure( filenames, fenames, plot, commonCut+"&&"+signalCut, infoSignal, "_signal" )
+			drawClosure( filenames, filenames, plot, commonCut+"&&"+signalCut, infoSignal, "_signal" )
 			drawClosure( filenames, filenames, plot, commonCut+"&&"+controlCut, infoControl, "_control" )
 		drawClosure( filenames, filenames, plot, commonCut, info, modifyEmptyBins=True )
 		#drawSignleClosure( filenames, plot, commonCut, info )
