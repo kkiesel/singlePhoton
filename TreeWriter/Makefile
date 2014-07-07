@@ -4,8 +4,8 @@ INCS = -I$(shell root-config --incdir) -I.
 WARN = -Wall -Wshadow
 
 SHARED_LIB = libSusyEvent.so libTreeObjects.so
-OBJ = treeWriter.o executable.o
-EXE = executable
+OBJ = treeWriter.o main.o
+EXE = treeWriter
 
 all: $(SHARED_LIB) $(EXE)
 	@if [ -d /afs ]; then make -C pileUpReweighting --no-print-directory; fi
