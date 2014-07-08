@@ -8,35 +8,33 @@ from qcdClosure import drawWeightHisto
 
 ROOT.gStyle.SetOptLogy(0)
 
-def getCombinatoricalBkg( filenames ):
+def getCombinatoricalBkg( filenames, plot ):
+	# calculates invariant masses between all muons (also from different events)
+
 	tree = ROOT.TChain("photonTree")
 	for filename in filenames[0:1]:
 		tree.AddFile( filename )
 
+	# 1st loop to get all muons
 	import copy
 	muons = []
 	for event in tree:
 		for muon in event.muons:
 			muons.append( copy.copy(muon) )
 
-	histo = ROOT.TH1F( randomName(), "", 16, 0, 160 )
-	histo.Sumw2()
-	#newTree = ROOT.TTree("combiTree", "Tree for combinatorical bkg")
-	import numpy
-	m = numpy.zeros(1, dtype=float)
-	#newTree.Branch('mmmCombi', m, 'mmmCombi/D')
+	# create empty histogram
+	histo = getHisto( tree, plot, cut="0" )
 	from calculateAdditionalVariables import M
 	for event in tree:
 		if event.muons.size() == 1:
 			for muon in muons:
-				m[0] = M( event.muons.at(0), muon )
-				histo.Fill( m[0] )
-				#newTree.Fill()
+				minv = M( event.muons.at(0), muon )
+				histo.Fill( minv )
 
 	return histo
 
 
-def drawChi2( tuples ):
+def drawChi2( tuples, plot ):
 
 	# draw graph
 	gr = ROOT.TGraph()
@@ -75,7 +73,7 @@ def drawChi2( tuples ):
 	kText = ROOT.TLatex(0.4, .8, text )
 	kText.SetNDC()
 	kText.Draw()
-	if len(interceptions):
+	if len(interceptions) and False:
 		up = minkFactor-interceptions[0][0]
 		down = interceptions[1][0]-minkFactor if len(interceptions)>1 else up
 		relUncert = (up+down)/(2*minkFactor)*100
@@ -90,8 +88,8 @@ def drawChi2( tuples ):
 def getkFactor( dataFiles, bkgFiles, plot, cut ):
 
 	kFactorMin = 0.5
-	kFactorMax = 7
-	kFactorN = 1000
+	kFactorMax = 4
+	kFactorN = 100
 
 	data = getHists( dataFiles, plot, cut )
 	bkg = getHists( bkgFiles, plot, cut )
@@ -136,82 +134,43 @@ if __name__ == "__main__":
 	dataFiles = [ "PhotonHad%s_V03.%s_tree.root"%(x,treeVersion) for x in ["A","B","C","D" ] ]
 	data = getHists( dataFiles, opts.plot, cut )
 
-	combiBkg = getCombinatoricalBkg( dataFiles )
-	combiBkg.SetLineWidth(2)
-	combiBkg.SetLineColor( ROOT.kBlue )
-	combiBkg.Scale( data.Integral(0, data.FindBin(70), "width") / combiBkg.Integral(0,data.FindBin(70),"width"))
+	bkg = {}
+	bkg["gjets"] = { "files": ["slimGJets_400_inf_V03.%s_tree.root"%treeVersion, "slimGJets_200_400_V03.%s_tree.root"%treeVersion ], "title":"#gammaJet", "color": ROOT.kCyan }
 
-	bkgFiles = []
-	bkgFiles.append( "slimZGammaLL_V02.%s_tree.root"%treeVersion )
-	bkgFiles.append( "slimTTGamma_V03.%s_tree.root"%treeVersion )
-	bkgFiles.extend( ["slimGJets_400_inf_V03.%s_tree.root"%treeVersion, "slimGJets_200_400_V03.%s_tree.root"%treeVersion ] )
+	bkg["zll"] = { "files": ["slimZGammaLL_V02.%s_tree.root"%treeVersion], "title": "#gammaZ#rightarrow#gammall", "color": 2 }
+	bkg["tt"] = { "files": ["slimTTGamma_V03.%s_tree.root"%treeVersion], "title": "#gammat#bar{t}", "color": ROOT.kBlue }
+	bkg["wjets"] = { "files": ["slimWJets_250_300_V03.24_tree.root", "slimWJets_300_400_V03.24_tree.root", "slimWJets_400_inf_V03.24_tree.root" ], "title": "W", "color": ROOT.kGreen+4 }
+	bkg["wgamma"] = { "files": ["slimWGamma_130_inf_V03.24_tree.root", "slimWGamma_50_130_V03.24_tree.root" ], "title": "#gammaW", "color": ROOT.kGreen-4 }
+	#bkg["qcd"] = { "files": ["slimQCD_1000_inf_V03.24_tree.root", "slimQCD_250_500_V03.24_tree.root", "slimQCD_500_1000_V03.24_tree.root"], "title":"Multijet", "color": ROOT.kCyan+3 }
+
+	nestedBkgFiles = [ bkg[a]["files"] for a in bkg.keys()]
+	bkgFiles = [item for sublist in nestedBkgFiles for item in sublist]
 
 	kFactor = getkFactor( dataFiles, bkgFiles, opts.plot, chi2Cut )
-
-	zgammall = getHists( ["slimZGammaLL_V02.%s_tree.root"%treeVersion], opts.plot, cut )
-	zgammall.SetLineColor(2)
-	zgammaIntegral,zgammaIntegralError = integralAndError(zgammall, zgammall.FindBin(60), zgammall.FindBin(119 ), "width" )
-
-	ttgamma = getHists( ["slimTTGamma_V03.%s_tree.root"%treeVersion], opts.plot, cut )
-	ttgamma.SetLineColor(4)
-
-	gjets = getHists( ["slimGJets_400_inf_V03.%s_tree.root"%treeVersion, "slimGJets_200_400_V03.%s_tree.root"%treeVersion ], opts.plot, cut )
-	gjets.SetLineColor( ROOT.kCyan )
-
-	#qcd = getHists( ["slimQCD_1000_inf_V03.24_tree.root", "slimQCD_250_500_V03.24_tree.root", "slimQCD_500_1000_V03.24_tree.root"], opts.plot, cut )
-	#qcd.SetLineColor( ROOT.kCyan+3 )
-
-	#wjets = getHists( ["slimWJets_250_300_V03.24_tree.root", "slimWJets_300_400_V03.24_tree.root", "slimWJets_400_inf_V03.24_tree.root" ], opts.plot, cut )
-	#wjets.SetLineColor( ROOT.kGreen+4 )
-
-	#wgamma = getHists( ["slimWGamma_130_inf_V03.24_tree.root", "slimWGamma_50_130_V03.24_tree.root" ], opts.plot, cut )
-	#wgamma.SetLineColor( ROOT.kGreen-4 )
 
 	#signal = getHists( ["slimW_1700_720_375_V03.24_tree.root" ], opts.plot, cut )
 	#signal.SetLineColor( ROOT.kGreen )
 	#signal.SetLineWidth(2)
 
-
-	for h in zgammall,ttgamma:#, gjets:
-		h.Scale( kFactor )
-
 	mh = Multihisto()
 	mh.setMinimum(0)
 	mh.addHisto( data, "Data", draw="pe" )
-	mh.addHisto( zgammall, "#gammaZ(ll)", True )
-	mh.addHisto( ttgamma, "#gammat#bar{t}", True )
-	mh.addHisto( gjets, "#gammaJet", True )
-	mh.addHisto( combiBkg, "bkg", draw="hist e" )
-	#mh.addHisto( qcd, "Multijet", True )
-	#mh.addHisto( wjets, "W", True )
-	#mh.addHisto( wgamma, "#gammaW", True )
+	for name, d in bkg.iteritems():
+		histo = getHists( d["files"], opts.plot, cut )
+		histo.SetLineColor( d["color"] )
+		histo.Scale( kFactor )
+		mh.addHisto( histo, d["title"], True )
+
 	#mh.addHisto( signal, "Wino", False )
 
+	#combiBkg = getCombinatoricalBkg( dataFiles, opts.plot )
+	#combiBkg.SetLineWidth(2)
+	#combiBkg.SetLineColor( ROOT.kBlue )
+	#combiBkg.Scale( data.Integral(0, data.FindBin(70), "width") / combiBkg.Integral(0,data.FindBin(70),"width"))
+	#mh.addHisto( combiBkg, "bkg", draw="hist e" )
+
+
 	mh.Draw()
-
-	fitFunc = ROOT.TF1( "fitfunc", "gaus(0)+pol1(3)", 20, 140 )
-	fitFunc.SetParameters( 2, 91, 13, -0.1, 0.8 )
-	fitFunc.FixParameter(1, 91 )
-	data.Fit( "fitfunc", "IMRN" )
-	fitFunc.SetLineColor(1)
-	fitFunc.SetLineWidth(2)
-	fitFunc.Draw("same")
-	fitDataIntegral =  fitFunc.Integral(60, 120)
-	fitDataIntegral -= ( fitFunc.GetParameter(3)*(120-60) + fitFunc.GetParameter(4)*(120**2-60**2)/2 ) # subtract integral of pol1
-	fitDataIntegralError =  fitFunc.IntegralError(60, 120)
-
-	#gausFunc = ROOT.TF1( "gausfunc", "gaus", 60, 120 )
-	#gausFunc.SetParameters( fitFunc.GetParameter(0), fitFunc.GetParameter(1), fitFunc.GetParameter(2) )
-	#gausFunc.SetParError( 0, fitFunc.GetParError(0) )
-	#gausFunc.SetParError( 1, fitFunc.GetParError(1) )
-	#gausFunc.SetParError( 2, fitFunc.GetParError(2) )
-	#fitDataIntegral =  gausFunc.Integral(60, 120)
-	#fitDataIntegralError =  gausFunc.IntegralError(60, 120)
-	kFactorFit = fitDataIntegral/zgammaIntegral
-	kFactorFitError = kFactorFit * sqrt( (zgammaIntegralError / zgammaIntegral)**2 + (fitDataIntegralError/fitDataIntegral)**2 )
-
-	print "k-factor(Fit) = %s ± %s"%(kFactorFit, kFactorFitError )
-
 
 	ROOT.gPad.SaveAs( "plots/isrkFactor_%s.pdf"%opts.plot )
 
