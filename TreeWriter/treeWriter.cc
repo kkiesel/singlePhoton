@@ -395,7 +395,7 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 	hist2D["matchGenElectron"] = TH2F("", ";#DeltaR;p_{T}^{gen} / p_{T}", 1000, 0, .5, 200, 0, 2 );
 
 	std::string histoNameAppendix = "";
-	if( runType == kGMSB ) {
+	if( runType == kGMSB || runType == kGMSB525 ) {
 		// If running over signal scans, the mass point information is appended to
 		// the histogram name.
 		TPRegexp expFilename( ".*/tree_([0-9]+_[0-9]+)_375.root" ); // eg. /path/to/mc/tree_1200_1220_375.root
@@ -674,17 +674,16 @@ void TreeWriter::fillJets( int jecScale=0 ) {
 		jecDir + "FT_53_V21_AN5_L2RelativeL3AbsoluteResidual_AK5PFchs.txt" );
 	*/
 
+#ifdef CMSSW525
+	std::vector<susy::PFJet> jetVector = event.pfJets.find("ak5")->second;
+#else
 	std::vector<susy::PFJet> jetVector = event.pfJets.find("ak5chs")->second;
+#endif
 	for(std::vector<susy::PFJet>::const_iterator it = jetVector.begin();
 			it != jetVector.end(); ++it) {
 
 		TLorentzVector corrP4 = it->jecScaleFactors.at("L1FastL2L3") * it->momentum;
 #ifdef CMSSW525
-		for( std::map<TString, float>::const_iterator mapIt = it->jecScaleFactors.begin();
-			mapIt != it->jecScaleFactors.end(); ++mapIt )
-			std::cout << mapIt->first << "\t" << mapIt->second << std::endl;
-		std::cout << std::endl;
-		// todo: find jecuncertainty in cmssw525
 #else
 		corrP4 *= (1 + jecScale*it->jecUncertainty );
 #endif
@@ -926,13 +925,6 @@ void TreeWriter::Loop( int jetScale ) {
 #ifdef CMSSW525
 		inputTree.GetEntry( jentry );
 		event = *eventp;
-		for( std::map<TString,susy::PFJetCollection>::const_iterator it = event.pfJets.begin();
-			it != event.pfJets.end(); ++it )
-			std::cout << it->first << "\t" << it->second.size() << std::endl;
-		std::cout << event.pfJets.find("ak5chs")->second.size() << std::endl;
-		std::cout << event.rho25 << std::endl;
-		loggingVerbosity = 5;
-		//todo: find out what jet collection there is in v01 signal scan
 #else
 		event.getEntry(jentry);
 #endif

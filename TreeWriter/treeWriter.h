@@ -39,6 +39,7 @@ enum runTypes {
 	kFullTree,
 	kTree, // without systematic shifting, 33% computing time
 	kGMSB,
+	kGMSB525,
 	kSimplifiedModel
 };
 
