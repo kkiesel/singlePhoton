@@ -1,5 +1,4 @@
 #doku in https://twiki.cern.ch/twiki/bin/view/CMS/PileupJSONFileforData
-#TODO: look up json ntupelized data and update ANA_JSON
 ANA_JSON=/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions12/8TeV/Reprocessing/Cert_190456-208686_8TeV_22Jan2013ReReco_Collisions12_JSON.txt
 PU_JSON=/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions12/8TeV/PileUp/pileup_latest.txt
 
@@ -11,6 +10,9 @@ puWeights.root: createWeights.py nTrueVertexMC.root nTrueVertexData.root
 nTrueVertexMC.root: createMChist.py
 	python $^ $@
 
+# for the pileup uncertainties shift cross section by 5% as proposed in
+# https://twiki.cern.ch/twiki/bin/viewauth/CMS/PdmVPileUpDescription#Pileup_Systematic_Errors
+# and https://twiki.cern.ch/twiki/bin/viewauth/CMS/PileupSystematicErrors
 nTrueVertexData.root: $(ANA_JSON) $(PU_JSON) Makefile
 	$(PU_CALC) --minBiasXsec 69400 --pileupHistName pileup tmpHist1.root
 	$(PU_CALC) --minBiasXsec 72870 --pileupHistName pileupUp tmpHist2.root

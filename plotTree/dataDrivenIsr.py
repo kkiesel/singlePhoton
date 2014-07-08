@@ -8,7 +8,33 @@ from qcdClosure import drawWeightHisto
 
 ROOT.gStyle.SetOptLogy(0)
 
-def drawChi2( tuples ):
+def getCombinatoricalBkg( filenames, plot ):
+	# calculates invariant masses between all muons (also from different events)
+
+	tree = ROOT.TChain("photonTree")
+	for filename in filenames[0:1]:
+		tree.AddFile( filename )
+
+	# 1st loop to get all muons
+	import copy
+	muons = []
+	for event in tree:
+		for muon in event.muons:
+			muons.append( copy.copy(muon) )
+
+	# create empty histogram
+	histo = getHisto( tree, plot, cut="0" )
+	from calculateAdditionalVariables import M
+	for event in tree:
+		if event.muons.size() == 1:
+			for muon in muons:
+				minv = M( event.muons.at(0), muon )
+				histo.Fill( minv )
+
+	return histo
+
+
+def drawChi2( tuples, plot ):
 
 	# draw graph
 	gr = ROOT.TGraph()
@@ -47,13 +73,21 @@ def drawChi2( tuples ):
 	kText = ROOT.TLatex(0.4, .8, text )
 	kText.SetNDC()
 	kText.Draw()
+	if len(interceptions) and False:
+		up = minkFactor-interceptions[0][0]
+		down = interceptions[1][0]-minkFactor if len(interceptions)>1 else up
+		relUncert = (up+down)/(2*minkFactor)*100
 
-	ROOT.gPad.SaveAs("plots/chi2MinimizationZmumu.pdf")
+		skText = ROOT.TLatex(0.5, .7, "rel uncert = %i%%"%relUncert )
+		skText.SetNDC()
+		skText.Draw()
+
+	ROOT.gPad.SaveAs("plots/chi2Minimization_%s.pdf"%plot)
 
 
 def getkFactor( dataFiles, bkgFiles, plot, cut ):
 
-	kFactorMin = 1
+	kFactorMin = 0.5
 	kFactorMax = 4
 	kFactorN = 100
 
@@ -81,7 +115,7 @@ def getkFactor( dataFiles, bkgFiles, plot, cut ):
 		#print kFactor, chi2
 		tuples.append( (kFactor, chi2) )
 
-	drawChi2( tuples )
+	drawChi2( tuples, plot )
 
 	return min( tuples, key=lambda t: t[1] )[0]
 
@@ -96,55 +130,47 @@ if __name__ == "__main__":
 	cut += " && {} > 10".format(opts.plot)
 	chi2Cut = cut + "&& 60<{0} && {0}<120".format(opts.plot)
 
-	treeVersion = 22
+	treeVersion = 24
 	dataFiles = [ "PhotonHad%s_V03.%s_tree.root"%(x,treeVersion) for x in ["A","B","C","D" ] ]
 	data = getHists( dataFiles, opts.plot, cut )
 
-	bkgFiles = []
-	bkgFiles.append( "slimZGammaLL_V02.22_tree.root" )
-	bkgFiles.append( "slimTTGamma_V03.22_tree.root" )
-	bkgFiles.extend( ["slimGJets_400_inf_V03.22_tree.root", "slimGJets_200_400_V03.22_tree.root" ] )
+	bkg = {}
+	bkg["gjets"] = { "files": ["slimGJets_400_inf_V03.%s_tree.root"%treeVersion, "slimGJets_200_400_V03.%s_tree.root"%treeVersion ], "title":"#gammaJet", "color": ROOT.kCyan }
+
+	bkg["zll"] = { "files": ["slimZGammaLL_V02.%s_tree.root"%treeVersion], "title": "#gammaZ#rightarrow#gammall", "color": 2 }
+	bkg["tt"] = { "files": ["slimTTGamma_V03.%s_tree.root"%treeVersion], "title": "#gammat#bar{t}", "color": ROOT.kBlue }
+	bkg["wjets"] = { "files": ["slimWJets_250_300_V03.24_tree.root", "slimWJets_300_400_V03.24_tree.root", "slimWJets_400_inf_V03.24_tree.root" ], "title": "W", "color": ROOT.kGreen+4 }
+	bkg["wgamma"] = { "files": ["slimWGamma_130_inf_V03.24_tree.root", "slimWGamma_50_130_V03.24_tree.root" ], "title": "#gammaW", "color": ROOT.kGreen-4 }
+	#bkg["qcd"] = { "files": ["slimQCD_1000_inf_V03.24_tree.root", "slimQCD_250_500_V03.24_tree.root", "slimQCD_500_1000_V03.24_tree.root"], "title":"Multijet", "color": ROOT.kCyan+3 }
+
+	nestedBkgFiles = [ bkg[a]["files"] for a in bkg.keys()]
+	bkgFiles = [item for sublist in nestedBkgFiles for item in sublist]
 
 	kFactor = getkFactor( dataFiles, bkgFiles, opts.plot, chi2Cut )
 
-	zgammall = getHists( ["slimZGammaLL_V02.22_tree.root"], opts.plot, cut )
-	zgammall.SetLineColor(2)
-
-	ttgamma = getHists( ["slimTTGamma_V03.22_tree.root"], opts.plot, cut )
-	ttgamma.SetLineColor(4)
-
-	gjets = getHists( ["slimGJets_400_inf_V03.22_tree.root", "slimGJets_200_400_V03.22_tree.root" ], opts.plot, cut )
-	gjets.SetLineColor( ROOT.kCyan )
-
-	#qcd = getHists( ["slimQCD_1000_inf_V03.22_tree.root", "slimQCD_250_500_V03.22_tree.root", "slimQCD_500_1000_V03.22_tree.root"], opts.plot, cut )
-	#qcd.SetLineColor( ROOT.kCyan+3 )
-
-	#wjets = getHists( ["slimWJets_250_300_V03.22_tree.root", "slimWJets_300_400_V03.22_tree.root", "slimWJets_400_inf_V03.22_tree.root" ], opts.plot, cut )
-	#wjets.SetLineColor( ROOT.kGreen+4 )
-
-	#wgamma = getHists( ["slimWGamma_130_inf_V03.22_tree.root", "slimWGamma_50_130_V03.22_tree.root" ], opts.plot, cut )
-	#wgamma.SetLineColor( ROOT.kGreen-4 )
-
-	#signal = getHists( ["slimW_1700_720_375_V03.22_tree.root" ], opts.plot, cut )
+	#signal = getHists( ["slimW_1700_720_375_V03.24_tree.root" ], opts.plot, cut )
 	#signal.SetLineColor( ROOT.kGreen )
 	#signal.SetLineWidth(2)
-
-
-	for h in zgammall,ttgamma, gjets:
-		h.Scale( kFactor )
 
 	mh = Multihisto()
 	mh.setMinimum(0)
 	mh.addHisto( data, "Data", draw="pe" )
-	mh.addHisto( zgammall, "#gammaZ(ll)", True )
-	mh.addHisto( ttgamma, "#gammat#bar{t}", True )
-	mh.addHisto( gjets, "#gammaJet", True )
-	#mh.addHisto( qcd, "Multijet", True )
-	#mh.addHisto( wjets, "W", True )
-	#mh.addHisto( wgamma, "#gammaW", True )
+	for name, d in bkg.iteritems():
+		histo = getHists( d["files"], opts.plot, cut )
+		histo.SetLineColor( d["color"] )
+		histo.Scale( kFactor )
+		mh.addHisto( histo, d["title"], True )
+
 	#mh.addHisto( signal, "Wino", False )
+
+	#combiBkg = getCombinatoricalBkg( dataFiles, opts.plot )
+	#combiBkg.SetLineWidth(2)
+	#combiBkg.SetLineColor( ROOT.kBlue )
+	#combiBkg.Scale( data.Integral(0, data.FindBin(70), "width") / combiBkg.Integral(0,data.FindBin(70),"width"))
+	#mh.addHisto( combiBkg, "bkg", draw="hist e" )
+
 
 	mh.Draw()
 
-	ROOT.gPad.SaveAs( "plots/data_invariantMassMuMu.pdf" )
+	ROOT.gPad.SaveAs( "plots/isrkFactor_%s.pdf"%opts.plot )
 

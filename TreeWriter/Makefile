@@ -3,11 +3,11 @@ INCS = -I$(shell root-config --incdir) -I.
 
 WARN = -Wall -Wshadow
 
-SHARED_LIB = libSusyEvent.so libTreeObjects.so
-OBJ = treeWriter.o executable.o
-EXE = executable
+SHARED_LIB = libSusyEvent525.so libTreeObjects.so
+OBJ = treeWriter.o main.o
+EXE = treeWriter
 
-all: $(SHARED_LIB) $(EXE)
+all: $(SHARED_LIB) $(EXE) Makefile
 	@if [ -d /afs ]; then make -C pileUpReweighting --no-print-directory; fi
 
 %.o:%.cc

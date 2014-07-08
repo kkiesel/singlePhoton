@@ -1,35 +1,44 @@
 #!/bin/bash
 # This script submits all jobs to naf, which are defined in dataset
 
-version="23"
+version="27"
 datasets=(
 
 ## QCD
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/GJets_200_400_V03/
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/GJets_400_inf_V03/
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/QCD_250-500_V03/
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/QCD_500-1000_V03/
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/QCD_1000-inf_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/GJets_200_400_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/GJets_400_inf_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/QCD_250-500_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/QCD_500-1000_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/QCD_1000-inf_V03/
 
 ## EWK
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/TTJets_V03/
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WJets_250_300_V03/
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WJets_300_400_V03/
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WJets_400_inf_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/TTJets_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WJets_250_300_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WJets_300_400_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WJets_400_inf_V03/
 
 ## ISR
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/TTGamma_V03/
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WGamma_50_130_V03/
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WGamma_130_inf_V03/
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/ZGammaNuNu_V03/
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/ZGammaLL_V02/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/TTGamma_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WGamma_50_130_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WGamma_130_inf_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/ZGammaNuNu_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/ZGammaLL_V02/
 
 ## Data
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/PhotonHadA_V03/
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/PhotonHadB_V03/
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/PhotonHadC_V03/
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/PhotonHadD_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/PhotonHadA_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/PhotonHadB_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/PhotonHadC_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/PhotonHadD_V03/
 
+## Signal
+ /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5gg_800_V03/
+ /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5gg_1000_V03/
+ /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5gg_1350_V03/
+ /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5gg_1200_V03/
+ /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5wg_400_V03/
+ /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5wg_600_V03/
+ /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5wg_1000_V03/
+ /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5wg_1200_V03/
 
 ## QCD
 # /pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/GJets_200_400_V02/
@@ -124,9 +133,9 @@ for dataset in "${datasets[@]}"; do
         echo cd $HOME/treeWriter >> $script
         echo make >> $script
 
-        echo ./executable $outputFileName $files_to_submit >> $script
+        echo ./treeWriter $outputFileName $files_to_submit >> $script
         chmod +x $script
-        qsub -b y -j y -l os=sld5 -l h_vmem=1000M -l h_rt=7:00:00 -l site=hh `pwd`/$jobPrefix.sh
+        qsub -b y -j y -l os=sld5 -l h_vmem=1000M -l h_rt=15:00:00 -l site=hh `pwd`/$jobPrefix.sh
         # b: execute a binary or script that will not be transferred to the batch node thus the batch node needs to have access to the given path
         # j: merge stdout and stderr
         # o: log file
