@@ -56,7 +56,7 @@ class Multihisto:
 			if label:
 				legendOption = "l"
 				if "p" in draw:
-					legendOption = "pl"
+					legendOption = "pe"
 				elif "hist" in draw:
 					legendOption = "l"
 				elif draw == "e2":
