@@ -6,6 +6,11 @@ from treeFunctions import *
 from myRatio import Ratio
 from predictions import *
 
+ROOT.gStyle.SetTitleSize( 0.035, "xyz" )
+ROOT.gStyle.SetLabelSize( 0.035, "xyz" )
+
+
+
 def addRelativeUncertainty( hist, uncert ):
 	for bin in range( hist.GetNbinsX()+1 ):
 		hist.SetBinError( bin, hist.GetBinError(bin) |qPlus| (uncert * hist.GetBinContent(bin)) )
@@ -18,9 +23,9 @@ def addRelativeUncertainty( hist, uncert ):
 
 def closure( filenames, plot ):
 	commonCut = "!@muons.size() && !@electrons.size()"
-	commonCut ="1"
+	#commonCut ="1"
 
-	gHist = getHists( filenames, plot, cut="photons[0].isGen(1) && "+commonCut )
+	gHist = getHists( filenames, plot, cut="(photons[0].isGen(1)||photons[0].isStatus(1)) && "+commonCut )
 	eHist = multiDimFakeRate( filenames, plot, commonCut, isData=False )
 
 	eHistSys = eHist.Clone( randomName() )
@@ -33,21 +38,37 @@ def closure( filenames, plot ):
 	gDatasetAbbrs = mergeDatasetAbbr( gDatasetAbbrs )
 
 	multihisto = Multihisto()
-	multihisto.leg.SetHeader( "/".join([ datasetToLatex(x) for x in gDatasetAbbrs]) )
-	multihisto.addHisto( gHist, "Simulation", draw="e0 hist" )
+	multihisto.leg = myLegend(.6, .75, .95, .92 )
+	multihisto.leg.SetTextSize(0.035)
+	multihisto.leg.SetTextFont(42)
+
+	multihisto.leg.SetHeader( ",".join([ datasetToLatex(x) for x in gDatasetAbbrs]) )
+	multihisto.addHisto( gHist, "Direct Simulation", draw="p e x0" )
 	multihisto.addHisto( eHist, "Prediction", draw="hist" )
 	multihisto.addHisto( eHistSys, "", draw="e2" )
 
-	infoText = ROOT.TLatex(0.03,.96, "CMS Private Work - 8TeV #geq1#gamma,#geq2jets" )
+	infoText = ROOT.TLatex()
 	infoText.SetNDC()
+	infoText.SetTextFont( gHist.GetLabelFont() )
+	infoText.SetTextSize( gHist.GetLabelSize() )
+	infoText.SetText( .02, .96, "CMS Simulation                       #sqrt{s}=8TeV, #intLdt=19.7fb^{-1}, #geq1#gamma,#geq2jets" )
 
-	can = ROOT.TCanvas()
+	can = ROOT.TCanvas("", "", 600, 600 )
 	can.cd()
 	multihisto.Draw()
 	infoText.Draw()
-	r = Ratio( "Sim./Pred.", gHist, eHist, eHistSys )
+	r = Ratio( "Direct/Pred.", gHist, eHist, eHistSys )
 	r.draw(0,2)
 	SaveAs( can, "ewkClosure_%s_%s"%(getSaveNameFromDatasets(filenames), plot))
+
+	gHist.SetName( "Direct Simulation" )
+	eHist.SetName( "Prediction" )
+	eHistSys.SetName( "weight" )
+	ewkOut = ROOT.TFile("ewkOout.root", "recreate" )
+	ewkOut.cd()
+	for h in gHist, eHist, eHistSys:
+		h.Write()
+	ewkOut.Close()
 
 	ROOT.SetOwnership( can, False )
 	del can
