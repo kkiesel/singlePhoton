@@ -15,8 +15,17 @@
 #include "TH3I.h"
 #include "TPRegexp.h"
 
-#include "SusyEvent.h"
 #include "TreeObjects.h"
+
+#define CMSSW525
+#ifdef CMSSW525
+#include "SusyEvent525.h"
+namespace susy {
+	typedef std::vector<Particle> ParticleCollection;
+}
+#else
+#include "SusyEvent.h"
+#endif
 
 //#include "../../CMSSW/CMSSW_5_3_8_patch3/src/CondFormats/JetMETObjects/interface/FactorizedJetCorrector.h" // to access the JEC scales
 
@@ -30,6 +39,7 @@ enum runTypes {
 	kFullTree,
 	kTree, // without systematic shifting, 33% computing time
 	kGMSB,
+	kGMSB525,
 	kSimplifiedModel
 };
 
@@ -89,6 +99,9 @@ class TreeWriter {
 
 		TChain inputTree;
 		susy::Event event;
+#ifdef CMSSW525
+		susy::Event* eventp;
+#endif
 
 		// Objects which can be saved to the file
 		// photons: All tight photons (signal photons)

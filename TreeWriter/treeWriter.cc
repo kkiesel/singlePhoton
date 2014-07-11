@@ -91,16 +91,27 @@ tree::electronWorkingPoints getElectronWorkingPoint ( const susy::Electron& elec
 	float fabsdPhiIn = fabs(electron.deltaPhiSuperClusterTrackAtVtx);
 	// electron.sigmaIetaIeta
 	// electron.hcalOverEcalBc
+#ifdef CMSSW525
+	susy::Track track = event.tracks.at( electron.gsfTrackIndex );
+	float d0 = fabs( ( (electron.vertex.X()-track.vertex.X())*electron.momentum.Py()+(electron.vertex.Y()-track.vertex.Y())*electron.momentum.Px())/electron.momentum.Pt() );
+	float dZ = fabs( (electron.vertex.Z()-track.vertex.Z())-((electron.vertex.X()-track.vertex.X())*electron.momentum.Px()+(electron.vertex.Y()-track.vertex.Y())*electron.momentum.Py())/electron.momentum.Pt()*electron.momentum.Pz()/electron.momentum.Pt() );
+	float fabsInvDiff = fabs( 1./event.superClusters.at( electron.superClusterIndex ).energy - 1./electron.trackMomentums.at("AtVtx").Pt() );
+	float eta = fabs( event.superClusters.at( electron.superClusterIndex ).position.Eta() );
+	bool passConversionVeto = true;
+	int nMissingHits = 0;
+#else
 	float d0 = fabs( electron.gsfTrack->d0( electron.vertex ) );
 	float dZ = fabs( electron.gsfTrack->dz( electron.vertex ) );
 	float fabsInvDiff = fabs( 1./electron.ecalEnergy - 1./electron.trackMomentumAtVtx.Pt() );
+	float eta = std::abs(electron.superCluster->position.Eta());
+	bool passConversionVeto = electron.passConversionVeto;
+	int nMissingHits = electron.nMissingHits;
+
+#endif
 	float iso = ( electron.chargedHadronIso +
 		std::max(electron.neutralHadronIso+electron.photonIso -
 		effectiveAreaElectron(electron.momentum.Eta())*event.rho25, (float)0. ))
 		/ electron.momentum.Pt();
-	// electron.passConversionVeto
-	// electron.nMissingHits
-	float eta = std::abs(electron.superCluster->position.Eta());
 	bool isBarrel = eta <= 1.479;
 	bool isEndcap = eta > 1.479 && eta < 2.5;
 
@@ -113,8 +124,8 @@ tree::electronWorkingPoints getElectronWorkingPoint ( const susy::Electron& elec
 			&& dZ < 0.1
 			&& fabsInvDiff < 0.05
 			&& iso < 0.1
-			&& electron.passConversionVeto
-			&& electron.nMissingHits == 0
+			&& passConversionVeto
+			&& nMissingHits == 0
 		) || ( isEndcap
 			&& fabsdEtaIn < 0.005
 			&& fabsdPhiIn < 0.02
@@ -125,8 +136,8 @@ tree::electronWorkingPoints getElectronWorkingPoint ( const susy::Electron& elec
 			&& fabsInvDiff < 0.05
 			&& iso < 0.1
 			&& ( iso < 0.07 || electron.momentum.Pt() > 20 )
-			&& electron.passConversionVeto
-			&& electron.nMissingHits == 0
+			&& passConversionVeto
+			&& nMissingHits == 0
 		) )
 		return tree::kTightElectron;
 
@@ -139,8 +150,8 @@ tree::electronWorkingPoints getElectronWorkingPoint ( const susy::Electron& elec
 			&& dZ < 0.1
 			&& fabsInvDiff < 0.05
 			&& iso < 0.15
-			&& electron.passConversionVeto
-			&& electron.nMissingHits <= 1
+			&& passConversionVeto
+			&& nMissingHits <= 1
 		) || ( isEndcap
 			&& fabsdEtaIn < 0.007
 			&& fabsdPhiIn < 0.03
@@ -151,8 +162,8 @@ tree::electronWorkingPoints getElectronWorkingPoint ( const susy::Electron& elec
 			&& fabsInvDiff < 0.05
 			&& iso < 0.15
 			&& ( iso < 0.10 || electron.momentum.Pt() > 20 )
-			&& electron.passConversionVeto
-			&& electron.nMissingHits <= 1
+			&& passConversionVeto
+			&& nMissingHits <= 1
 		) )
 		return tree::kMediumElectron;
 
@@ -165,8 +176,8 @@ tree::electronWorkingPoints getElectronWorkingPoint ( const susy::Electron& elec
 			&& dZ < 0.2
 			&& fabsInvDiff < 0.05
 			&& iso < 0.15
-			&& electron.passConversionVeto
-			&& electron.nMissingHits <= 1
+			&& passConversionVeto
+			&& nMissingHits <= 1
 		) || ( isEndcap
 			&& fabsdEtaIn < 0.009
 			&& fabsdPhiIn < 0.1
@@ -177,8 +188,8 @@ tree::electronWorkingPoints getElectronWorkingPoint ( const susy::Electron& elec
 			&& fabsInvDiff < 0.05
 			&& iso < 0.15
 			&& ( iso < 0.10 || electron.momentum.Pt() > 20 )
-			&& electron.passConversionVeto
-			&& electron.nMissingHits <= 1
+			&& passConversionVeto
+			&& nMissingHits <= 1
 		) )
 		return tree::kLooseElectron;
 
@@ -347,7 +358,12 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 
 	for( int i = 0; i<nFiles; ++i )
 		inputTree.Add( fileList[i] );
+#ifdef CMSSW525
+	eventp = new susy::Event;
+	inputTree.SetBranchAddress("susyEvent", &eventp );
+#else
 	event.setInput( inputTree );
+#endif
 
 	// Here the number of proceeded events will be stored. For plotting, simply use L*sigma/eventNumber
 	eventNumbers.GetXaxis()->SetBinLabel(1,"Number of generated events");
@@ -379,10 +395,11 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 	hist2D["matchGenElectron"] = TH2F("", ";#DeltaR;p_{T}^{gen} / p_{T}", 1000, 0, .5, 200, 0, 2 );
 
 	std::string histoNameAppendix = "";
-	if( runType == kGMSB ) {
+	if( runType == kGMSB || runType == kGMSB525  or true ) { // runtype is not set, since this is the constructor
 		// If running over signal scans, the mass point information is appended to
 		// the histogram name.
 		TPRegexp expFilename( ".*/tree_([0-9]+_[0-9]+)_375.root" ); // eg. /path/to/mc/tree_1200_1220_375.root
+		inputTree.GetEntry(0); // needed to allocate file name
 		TObjArray *arr = expFilename.MatchS( inputTree.GetCurrentFile()->GetName() );
 
 		if( arr->GetLast() >0 )
@@ -408,7 +425,10 @@ TreeWriter::~TreeWriter() {
 	/** Deconstructor
 	 * Event has to be deleted before the deletion of the tree.
 	 */
+#ifdef CMSSW525
+#else
 	event.releaseTree(inputTree);
+#endif
 }
 
 void TreeWriter::SetJsonFile(TString const& filename) {
@@ -655,12 +675,19 @@ void TreeWriter::fillJets( int jecScale=0 ) {
 		jecDir + "FT_53_V21_AN5_L2RelativeL3AbsoluteResidual_AK5PFchs.txt" );
 	*/
 
+#ifdef CMSSW525
+	std::vector<susy::PFJet> jetVector = event.pfJets.find("ak5")->second;
+#else
 	std::vector<susy::PFJet> jetVector = event.pfJets.find("ak5chs")->second;
+#endif
 	for(std::vector<susy::PFJet>::const_iterator it = jetVector.begin();
 			it != jetVector.end(); ++it) {
 
 		TLorentzVector corrP4 = it->jecScaleFactors.at("L1FastL2L3") * it->momentum;
+#ifdef CMSSW525
+#else
 		corrP4 *= (1 + jecScale*it->jecUncertainty );
+#endif
 
 		if( std::abs(corrP4.Eta()) > 3 ) continue;
 		if( corrP4.Pt() < 30 ) continue;
@@ -896,7 +923,12 @@ void TreeWriter::Loop( int jetScale ) {
 	}
 
 	for (long jentry=0; jentry < processNEvents; ++jentry) {
+#ifdef CMSSW525
+		inputTree.GetEntry( jentry );
+		event = *eventp;
+#else
 		event.getEntry(jentry);
+#endif
 
 		// Just for testing purpose (leave this uncommented)
 		//if( event.eventNumber != 7302527 ) continue; loggingVerbosity = 5;
@@ -1102,7 +1134,11 @@ void TreeWriter::Loop( int jetScale ) {
 		mhtPhi = mhtVector.Phi();
 
 		fillMetFilterBitHistogram( hist1D.at("metFilters"), event.metFilterBit );
+#ifdef CMSSW525
+		if( !event.passMetFilters() ) continue;
+#else
 		if( !event.passMetFilters() || !event.passMetFilter( susy::kEcalLaserCorr) ) continue;
+#endif
 
 		eventType eType = TreeWriter::whichEventType( photons, photonElectrons, photonJets );
 		TVector3 recoilVector = getRecoilVector( eType );

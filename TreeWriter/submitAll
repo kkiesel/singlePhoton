@@ -133,7 +133,7 @@ for dataset in "${datasets[@]}"; do
         echo cd $HOME/treeWriter >> $script
         echo make >> $script
 
-        echo ./executable $outputFileName $files_to_submit >> $script
+        echo ./treeWriter $outputFileName $files_to_submit >> $script
         chmod +x $script
         qsub -b y -j y -l os=sld5 -l h_vmem=1000M -l h_rt=15:00:00 -l site=hh `pwd`/$jobPrefix.sh
         # b: execute a binary or script that will not be transferred to the batch node thus the batch node needs to have access to the given path
