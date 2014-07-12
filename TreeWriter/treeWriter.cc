@@ -395,18 +395,16 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 	hist2D["matchGenElectron"] = TH2F("", ";#DeltaR;p_{T}^{gen} / p_{T}", 1000, 0, .5, 200, 0, 2 );
 
 	std::string histoNameAppendix = "";
-	if( runType == kGMSB || runType == kGMSB525  or true ) { // runtype is not set, since this is the constructor
-		// If running over signal scans, the mass point information is appended to
-		// the histogram name.
-		TPRegexp expFilename( ".*/tree_([0-9]+_[0-9]+)_375.root" ); // eg. /path/to/mc/tree_1200_1220_375.root
-		inputTree.GetEntry(0); // needed to allocate file name
-		TObjArray *arr = expFilename.MatchS( inputTree.GetCurrentFile()->GetName() );
+	// If running over signal scans, the mass point information is appended to
+	// the histogram name.
+	TPRegexp expFilename( ".*/tree_([0-9]+_[0-9]+)_375.root" ); // eg. /path/to/mc/tree_1200_1220_375.root
+	inputTree.GetEntry(0); // needed to allocate file name
+	TObjArray *arr = expFilename.MatchS( inputTree.GetCurrentFile()->GetName() );
 
-		if( arr->GetLast() >0 )
-			histoNameAppendix = (std::string)(((TObjString *)arr->At(1))->GetString());
-		else if( loggingVerbosity > 0 )
-			std::cout << "Could not extract grid parameters from filename." << std::endl;
-	}
+	if( arr->GetLast() >0 )
+		histoNameAppendix = (std::string)(((TObjString *)arr->At(1))->GetString());
+	else if( loggingVerbosity > 0 )
+		std::cout << "Could not extract grid parameters from filename." << std::endl;
 
 	// Set the keyName as histogram name for one and two dimensional histograms
 	for( std::map<std::string, TH1F>::iterator it = hist1D.begin();
