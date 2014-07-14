@@ -35,10 +35,7 @@ def createSignalCard( filename, binningStr ):
 	# no physical information
 	counter = 0
 
-	fakeRate = 1.48/100
-	fakeRateStatError = 0.05/100
-	fakeRateSysError = 0.08/100
-	fakeRateSysErrorOwn = fakeRate * .5
+	fakeRateSysError = 11./100
 
 	import time
 	signalCardString = """
@@ -112,25 +109,27 @@ nMetBins = %s
 			gHisto = readHisto( filename, "gMet%s_%s"%(x,y) ).Rebin( len(metBinning)-1, randomName(), metBinning )
 			eHisto = readHisto( filename, "eMet%s_%s"%(x,y) ).Rebin( len(metBinning)-1, randomName(), metBinning )
 			fHisto = readHisto( filename, "fMet%s_%s"%(x,y) ).Rebin( len(metBinning)-1, randomName(), metBinning )
-			fUpHisto = readHisto( filename, "fMetUp%s_%s"%(x,y) ).Rebin( len(metBinning)-1, randomName(), metBinning )
-			fDownHisto = readHisto( filename, "fMetDown%s_%s"%(x,y) ).Rebin( len(metBinning)-1, randomName(), metBinning )
+			fMetError = readHisto( filename, "fMetError%s_%s"%(x,y) ).Rebin( len(metBinning)-1, randomName(), metBinning )
+			gMetPuUp = readHisto( filename, "gMetPuUp%s_%s"%(x,y) ).Rebin( len(metBinning)-1, randomName(), metBinning )
+			gMetPuDown = readHisto( filename, "gMetPuDown%s_%s"%(x,y) ).Rebin( len(metBinning)-1, randomName(), metBinning )
+			gMetPu = gMetPuUp - gMetPuDown
+			gMetPu.Scale(0.5)
 
 			# assume the same binning for all histograms
 			signalCardString += "Point %s number of signal events in bins = %s\n"%(counter, printBin( gHisto ))
 			signalCardString += "Point %s statistical error of signal events in bins = %s\n"%(counter, printBin( gHisto, True ))
-			signalCardString += "Point %s EWK prediction = %s\n"%(counter, printBin( eHisto, scale=fakeRate ))
-			signalCardString += "Point %s EWK statistical error from signal = %s\n"%(counter, printBin( eHisto, True, scale=fakeRate ))
-			signalCardString += "Point %s EWK statistical error from yutaro = %s\n"%(counter, printBin( eHisto, scale=fakeRate*fakeRateStatError ))
-			signalCardString += "Point %s EWK systematical error from yutaro = %s\n"%(counter, printBin( eHisto, scale=fakeRate*fakeRateSysError ))
-			signalCardString += "Point %s EWK systematical error from us = %s\n"%(counter, printBin( eHisto, scale=fakeRate*fakeRateSysErrorOwn ))
+			signalCardString += "Point %s pu uncert = %s\n"%(counter, printBin( gMetPu ))
+			signalCardString += "Point %s EWK prediction = %s\n"%(counter, printBin( eHisto ))
+			signalCardString += "Point %s EWK statistical error from signal = %s\n"%(counter, printBin( eHisto, True ))
+			signalCardString += "Point %s EWK statistical error from yutaro = %s\n"%(counter, printBin( eHisto, scale=fakeRateSysError ))
 			signalCardString += "Point %s QCD prediction = %s\n"%(counter, printBin( fHisto ) )
 			signalCardString += "Point %s QCD statistical error from signal = %s\n"%(counter, printBin( fHisto, True ))
-			signalCardString += "Point %s QCD systematical error from weight = %s\n"%(counter, printBin( fUpHisto ) )
+			signalCardString += "Point %s QCD systematical error from weight = %s\n"%(counter, printBin( fMetError ) )
 
 			counter += 1
 
 	#scanName += "" if len(binList) == 6 else "_%smetBins"%len(binList)
-	scanName += binningStr
+	#scanName += binningStr
 
 	outputFileName = "eventYield%s-%s.txt"%(scanName, time.strftime("%Y-%m-%d"))
 	signalCardFile = open( outputFileName, "w")
@@ -145,7 +144,8 @@ if __name__ == "__main__":
 	opts = arguments.parse_args()
 
 	for filename in opts.filenames:
-		for binningStr in 'optimized', 'old', 'new', 'fibo':
+		#for binningStr in 'optimized', 'old', 'new', 'fibo':
+		for binningStr in ['old']:
 			createSignalCard( filename, binningStr )
 
 
