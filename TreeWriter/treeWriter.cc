@@ -395,18 +395,16 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 	hist2D["matchGenElectron"] = TH2F("", ";#DeltaR;p_{T}^{gen} / p_{T}", 1000, 0, .5, 200, 0, 2 );
 
 	std::string histoNameAppendix = "";
-	if( runType == kGMSB || runType == kGMSB525  or true ) { // runtype is not set, since this is the constructor
-		// If running over signal scans, the mass point information is appended to
-		// the histogram name.
-		TPRegexp expFilename( ".*/tree_([0-9]+_[0-9]+)_375.root" ); // eg. /path/to/mc/tree_1200_1220_375.root
-		inputTree.GetEntry(0); // needed to allocate file name
-		TObjArray *arr = expFilename.MatchS( inputTree.GetCurrentFile()->GetName() );
+	// If running over signal scans, the mass point information is appended to
+	// the histogram name.
+	TPRegexp expFilename( ".*/tree_([0-9]+_[0-9]+)_375.root" ); // eg. /path/to/mc/tree_1200_1220_375.root
+	inputTree.GetEntry(0); // needed to allocate file name
+	TObjArray *arr = expFilename.MatchS( inputTree.GetCurrentFile()->GetName() );
 
-		if( arr->GetLast() >0 )
-			histoNameAppendix = (std::string)(((TObjString *)arr->At(1))->GetString());
-		else if( loggingVerbosity > 0 )
-			std::cout << "Could not extract grid parameters from filename." << std::endl;
-	}
+	if( arr->GetLast() >0 )
+		histoNameAppendix = (std::string)(((TObjString *)arr->At(1))->GetString());
+	else if( loggingVerbosity > 0 )
+		std::cout << "Could not extract grid parameters from filename." << std::endl;
 
 	// Set the keyName as histogram name for one and two dimensional histograms
 	for( std::map<std::string, TH1F>::iterator it = hist1D.begin();
@@ -1118,8 +1116,9 @@ void TreeWriter::Loop( int jetScale ) {
 		// this has to be done after the photon block, since leptons are cleared from photons
 		fillLeptons();
 
-		// do not allow leptons
-		if( runType == kSimplifiedModel && ( electrons.size() || muons.size() ) ) continue;
+		// do not allow leptons for signal scan
+		if( ( runType == kSimplifiedModel || runType == kGMSB || runType == kGMSB525 )
+			&& ( electrons.size() || muons.size() ) ) continue;
 
 		ht = getHt();
 		nGoodJets = countGoodJets();
@@ -1135,7 +1134,8 @@ void TreeWriter::Loop( int jetScale ) {
 
 		fillMetFilterBitHistogram( hist1D.at("metFilters"), event.metFilterBit );
 #ifdef CMSSW525
-		if( !event.passMetFilters() ) continue;
+		// TODO: met filters not working in 525???
+		// if( !event.passMetFilters() ) continue;
 #else
 		if( !event.passMetFilters() || !event.passMetFilter( susy::kEcalLaserCorr) ) continue;
 #endif
@@ -1146,8 +1146,8 @@ void TreeWriter::Loop( int jetScale ) {
 		recoilPhi = recoilVector.Phi();
 
 		if( eType == kPhotonEvent ) {
-		if ( runType == kTree || runType == kFullTree )
-			photonTree.Fill();
+			if ( runType == kTree || runType == kFullTree )
+				photonTree.Fill();
 			tryFill( hist1D, "gMet",signalPointString, met, weight );
 			tryFill( hist1D, "gMetJesUp",signalPointString, met, weight );
 			tryFill( hist1D, "gMetJesDown",signalPointString, met, weight );
@@ -1158,16 +1158,17 @@ void TreeWriter::Loop( int jetScale ) {
 			tryFill( hist1D, "gPt",signalPointString, photons.at(0).ptJet(), weight );
 		}
 		if( eType == kJetEvent ) {
-		if ( runType == kTree || runType == kFullTree )
-			photonJetTree.Fill();
+			if ( runType == kTree || runType == kFullTree )
+				photonJetTree.Fill();
 			float qcdWeight=0, qcdWeightError=0;
 			getQcdWeights( photonJets.at(0).ptJet(), recoil, qcdWeight, qcdWeightError );
+			std::cout << qcdWeight << std::endl;
 			tryFill( hist1D, "fMet",signalPointString, met, weight*qcdWeight );
 			tryFill( hist1D, "fMetError",signalPointString, met, weight*qcdWeightError );
 		}
 		if( eType == kElectronEvent ) {
-		if ( runType == kTree || runType == kFullTree )
-			photonElectronTree.Fill();
+			if ( runType == kTree || runType == kFullTree )
+				photonElectronTree.Fill();
 			float ewkFakeRate = event.isRealData ?
 				1. - 0.993 * (1. - std::pow(photonElectrons.at(0).pt / 2.9 + 1., -2.4)) * (1. - 0.23 * std::exp(-0.2777 * nTracksPV))* (1. - 5.66e-4 * nVertex)
 				: 1 - (1 - 0.00623) * (1 - std::pow(photonElectrons.at(0).pt / 4.2 + 1,-2.9)) * (1 - 0.29 * std::exp(-0.335 * nTracksPV)) * (1 - 0.000223 * nVertex);

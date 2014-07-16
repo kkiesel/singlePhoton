@@ -6,11 +6,9 @@ from treeFunctions import *
 
 st = ROOT.gROOT.GetStyle("tdrStyle")
 paperWidth = 14.65 #cm
-
+#st.SetPaperSize(paperWidth/2,50.)
 
 st.SetPaperSize(paperWidth/2,50.)
-
-
 
 def getHistoFromFiles( plot, treename, filenames, cut, color=1 ):
 	for filename in filenames:

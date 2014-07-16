@@ -275,6 +275,20 @@ def readSignalXSection( filename ):
 
 	return info
 
+def readSModelXsection( filename ):
+	import re
+	f = open( filename )
+
+	xSections = {}
+
+	for line in f.readlines():
+		if line.startswith("#"): continue
+		m, xsec, uncert = line.split(" ")
+		xSections[int(m)] = (float(xsec), float(uncert) )
+	f.close()
+
+	return xSections
+
 def getSaveNameFromDatasets( filenames ):
 	return "".join( mergeDatasetAbbr( [ getDatasetAbbr(x) for x in filenames ] ) )
 
@@ -339,6 +353,15 @@ def integralAndError( h, binx1=0, binx2=-1, option="" ):
 	err = ROOT.Double(0)
 	integral = h.IntegralAndError( binx1, binx2, err, option )
 	return integral, err
+
+def asimovSignificance( s, b, b_uncert=0 ):
+	if not b:
+		print "Background zero, can't calculate significance"
+		return 0
+	if b_uncert:
+		return sqrt( 2 * ( (s+b)*log( (s+b)*(b+b_uncert**2)/(b**2+(s+b)*b_uncert**2) ) - b**2/b_uncert**2 * log( 1+ b_uncert**2*s/b/(b+b_uncert**2) ) ) )
+	return sqrt( 2* ( (s+b)*log(1+s/b) - s ) )
+
 
 
 
