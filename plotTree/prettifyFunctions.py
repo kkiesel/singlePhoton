@@ -22,7 +22,8 @@ def getDatasetAbbr( fileName, slim=True ):
 	if match:
 		return match.groups()[0]
 	else:
-		return fileName
+		import os
+		return os.path.basename(fileName).replace(".root", "").replace("slim", "" )
 
 def replaceListElementsBy( list_, search, replacement ):
 	if len([x for x in list_ if x in search ]) == len(search):
