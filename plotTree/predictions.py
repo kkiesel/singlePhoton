@@ -81,7 +81,10 @@ def getMixedWeigthHisto( filenames, predFilenames, commonCut, control=True, fill
 
 	weight2D = divideHistos( numerator, denominator )
 
-	weightIntegral = numerator.Integral() / denominator.Integral() if denominator.Integral() else 0
+	numeratorIntegral = numerator.Integral()
+	denominatorIntegral = denominator.Integral()
+
+	weightIntegral = numeratorIntegral / denominatorIntegral if denominatorIntegral else 0
 
 	# Set the weight to the global weight
 	if fillEmptyBins:
