@@ -3,18 +3,11 @@
 
 from treeFunctions import *
 st = Styles.tdrStyle2D()
-st.SetNumberContours( 999 )
 st.SetOptLogz(0)
-paperWidth = 14.65 #cm
-paperWidth2 = 5.7
-st.SetPaperSize(paperWidth2,50.)
-
-bHistoLimit = readHisto("xsecBinoLimit.root", "histo__8")
-wHistoLimit = readHisto("xsecBinoLimit.root", "histo__20")
 
 class SignalPlane:
 	def __init__( self, fileName ):
-		self.histo = ROOT.TH2F( randomName(), ";m_{#tilde{q}} #text{ [GeV]};m_{#tilde{g}} #text{ [GeV]}", 17, 350, 2050, 17, 370, 2070 )
+		self.histo = ROOT.TH2F( randomName(), ";m_{#tilde{q}}  [GeV];m_{#tilde{g}}  [GeV]", 17, 350, 2050, 17, 370, 2070 )
 		self.histo.GetZaxis().SetTitleOffset( 0.85 )
 		self.xList = range( 400, 2001, 100 )
 		self.yList = range( 420, 2021, 100 )
@@ -25,7 +18,7 @@ class SignalPlane:
 		for x in self.xList:
 			for y in self.yList:
 				self.histo.SetBinContent( self.histo.FindBin(x,y), xsec[(x,y)][0] )
-		self.histo.GetZaxis().SetTitle( "#sigma #text{ [pb]}" )
+		self.histo.GetZaxis().SetTitle( "#sigma  [pb]" )
 		self.draw( "xsectionSignal" )
 
 	def pdfUncertainty( self, file_ ):
@@ -45,7 +38,7 @@ class SignalPlane:
 				uncertUp = xsec[(x,y)][1]
 				uncertDown = xsec[(x,y)][2]
 				self.histo.SetBinContent( self.histo.FindBin(x,y), (uncertUp+uncertDown)/2/xSec*100 )
-		self.histo.GetZaxis().SetTitle( "#text{rel. }#sigma#text{ uncert.}#text{ [%]}" )
+		self.histo.GetZaxis().SetTitle( "rel. #sigma uncert. [%]" )
 		self.draw( "xsectionSignalUncertaintyRel" )
 
 	def xsecLimit( self, abbr ):
@@ -54,7 +47,7 @@ class SignalPlane:
 			for y in self.yList:
 				bin = histo.FindBin(x,y)
 				self.histo.SetBinContent( self.histo.FindBin(x,y), histo.GetBinContent(bin) )
-		self.histo.GetZaxis().SetTitle( "#text{expected }#sigma#text{ limit [pb]}" )
+		self.histo.GetZaxis().SetTitle( "expected #sigma limit [pb]" )
 		self.draw( "excludedXsecLimit" )
 
 
@@ -72,13 +65,13 @@ class SignalPlane:
 						self.histo.SetBinContent( self.histo.FindBin(x,y), 0 )
 						continue
 
-				histoNames = ["gMet", "eMet", "fMet", "fMetUp", "fMetDown", "gHt", "gPt", "gNjets" ]
+				histoNames = ["gMet", "eMet", "fMet", "fMetError", "gHt", "gPt", "gNjets", "gMetPuUp", "gMetPuDown", "gMetJecUp", "gMetJecDown" ]
 
 				histos = {}
 				for histoName in histoNames:
 					histos[ histoName ] = readHisto( self.fileName, "%s%s_%s"%(
 							histoName, x, y ) )
-				histos["eMet"] = applyFakeRateEWK( histos["eMet"] )
+				#histos["eMet"] = applyFakeRateEWK( histos["eMet"] )
 
 				# Save the number of generated events. In fact this is not a histo,
 				# but it's easier to do so.
@@ -119,12 +112,6 @@ class SignalPlane:
 			can.SetLogz(1)
 		else:
 			can.SetLogz(0)
-		labelScale = 1.*0.49062
-		titleScale = 1.*0.588744
-		self.histo.SetTitleSize(0.06/titleScale, "XYZ")
-		self.histo.SetLabelSize(0.05/labelScale, "XYZ")
-		self.histo.SetLabelOffset(0.0001, "XYZ" )
-		self.histo.SetTitleOffset(0.5,"z" )
 		self.histo.GetXaxis().SetNdivisions(5,5,0,True)
 		# When the first Palette object is created (Draw("colz")), it will inherit
 		# it's title from the histogram. If the histogram is changing, the palette
@@ -162,30 +149,25 @@ class SignalPlane:
 		self.histo.Draw("colz")
 
 		#"#text{CMS Private Work  -  }#SI{19.8}{fb^{-1}}#, #sqrt{s}=#SI{8}{TeV}#, #geq1#ggamma,#geq2#text{jets}#,, #met<#SI{100}{GeV}" )
-		text = "#text{CMS Private Work - }"
+		text = "CMS Private Work - "
 		particleString = "Bino" if self.fileName[0] == "B" else "Wino"
 
-		text = "#text{%s-like }#tilde{#chi}^0_1"%particleString
+		text = "%s-like #tilde{#chi}^{0}_{1}"%particleString
 
 		if "xsectionSignal" in saveName:
-			text += "#,#,#, #SI{8}{TeV}"
+			text += " 8TeV"
 		elif "excludedXsecLimit" in saveName:
-			text += "#, #SI{19.8}{fb^{-1}}#, #geq1#ggamma,#geq2#text{jets}"
+			text += "19.7fb^{-1} #geq1#gamma,#geq2jets"
 		else:
-			text += "#,#,#, #SI{8}{TeV}#, #geq1#ggamma,#geq2#text{jets}"
+			text += " 8TeV #geq1#gamma,#geq2jets"
 
 		info = PlotCaption(treeName="")
-		info = ROOT.TLatex(-.12,.98, text )
+		info = ROOT.TLatex(.02,.97, text )
+		info.SetTextSize( info.GetTextSize()*0.9 )
 		info.SetNDC()
-		info.SetTextSize(1/9.81241)
 		info.Draw()
 
 		SaveAs( can, saveName+'_'+self.fileName[0] )
-
-		texFileName = "/home/knut/master/documents/thesis/plots/%s_%s.tex"%(saveName,self.fileName[0])
-		can.SaveAs( texFileName )
-		correctTiksPlot( texFileName )
-
 
 
 def signalContamination( h ):
@@ -212,22 +194,61 @@ def meanNjets( h ):
 def meanMet( h ):
 	return h["gMet"].GetMean()
 
-filePath = "%s_gsq_V02.45.root"
-xSecPath = "/home/knut/master/infos/Spectra_gsq_%s_8TeV.xsec"
-pdfPath = "/home/knut/master/infos/Spectra_gsq_%s_phad_pdfuncert.dat"
+def jetScale( h ):
+	minMetValue = 100
+	if isinstance( h["gMetJecDown"], ROOT.TH1 ):
+		minMetValueBin = h["gMetJecDown"].FindBin( minMetValue )
+		up = h["gMetJecUp"].Integral( minMetValueBin, -1 )
+		down = h["gMetJecDown"].Integral( minMetValueBin, -1 )
+		normal = h["gMet"].Integral( minMetValueBin, -1 )
+		return 100.*(up-down)/(2*normal) if normal else 0
+	else:
+		return 0
 
-for scanAbbr in [ "B", "W" ]:
-	sp = SignalPlane( filePath%scanAbbr )
-	sp.pdfUncertainty( pdfPath%scanAbbr )
-	sp.xsection( xSecPath%scanAbbr )
-	sp.xsectionUncertainty( xSecPath%scanAbbr )
-	sp.xsecLimit( scanAbbr )
+def puUncert( h ):
+	minMetValue = 100
+	if isinstance( h["gMetPuDown"], ROOT.TH1 ):
+		minMetValueBin = h["gMetPuDown"].FindBin( minMetValue )
+		up = h["gMetPuUp"].Integral( minMetValueBin, -1 )
+		down = h["gMetPuDown"].Integral( minMetValueBin, -1 )
+		normal = h["gMet"].Integral( minMetValueBin, -1 )
+		return 100.*abs(up-down)/(2*normal) if normal else 0
+	else:
+		return 0
 
-for scanAbbr in [ "B", "W" ]:
-	sp = SignalPlane( filePath%scanAbbr )
-	sp.fill( acceptanceLast, "Acceptance last Bin [%]", "acceptanceLastBin" )
+def statUncert( h ):
+	minMetValue = 350
+	if isinstance( h["gMet"], ROOT.TH1 ):
+		bin = h["gMet"].FindBin(350)
+		i, e = integralAndError( h["gMet"], bin, -1 )
+		return 100*e/i if i else 0
+	return 0
 
-exit
+sp = SignalPlane( "W_V03.02.root" )
+sp.fill( jetScale, "jet energy scale uncertainty [%]", "jesUncert" )
+sp = SignalPlane( "W_V03.02.root" )
+sp.fill( puUncert, "pile up uncertainty [%]", "puUncert" )
+sp = SignalPlane( "W_V03.02.root" )
+sp.fill( statUncert, "stat. uncert. [%] #slash{E}_{T}#geq350GeV", "statUncert" )
+
+import sys
+sys.exit()
+
+#filePath = "%s_gsq_V02.45.root"
+filePath = "%s_V03.01.root"
+xSecPath = "Spectra_gsq_%s_8TeV.xsec"
+pdfPath = "Spectra_gsq_%s_phad_pdfuncert.dat"
+
+#for scanAbbr in [ "B", "W" ]:
+#	sp = SignalPlane( filePath%scanAbbr )
+#	sp.pdfUncertainty( pdfPath%scanAbbr )
+#	sp.xsection( xSecPath%scanAbbr )
+#	sp.xsectionUncertainty( xSecPath%scanAbbr )
+#	sp.xsecLimit( scanAbbr )
+
+#for scanAbbr in [ "B", "W" ]:
+#	sp = SignalPlane( filePath%scanAbbr )
+#	sp.fill( acceptanceLast, "Acceptance last Bin [%]", "acceptanceLastBin" )
 
 for scanAbbr in [ "B", "W" ]:
 	sp = SignalPlane( filePath%scanAbbr )
@@ -239,19 +260,19 @@ for scanAbbr in [ "B", "W" ]:
 
 for scanAbbr in [ "B", "W" ]:
 	sp = SignalPlane( filePath%scanAbbr )
-	sp.fill( meanHt, "H_{T}#text{ [GeV]}", "signalPlaneHt" )
+	sp.fill( meanHt, "H_{T} [GeV]", "signalPlaneHt" )
 
 for scanAbbr in [ "B", "W" ]:
 	sp = SignalPlane( filePath%scanAbbr )
-	sp.fill( meanPt, "p_{T^{*}}#text{ [GeV]}", "signalPlanePt" )
+	sp.fill( meanPt, "p_{T^{*}} [GeV]", "signalPlanePt" )
 
 for scanAbbr in [ "B", "W" ]:
 	sp = SignalPlane( filePath%scanAbbr )
-	sp.fill( meanNjets, "n_{#text{jets}}", "signalPlaneNjets" )
+	sp.fill( meanNjets, "n_{jets}", "signalPlaneNjets" )
 
 for scanAbbr in [ "B", "W" ]:
 	sp = SignalPlane( filePath%scanAbbr )
-	sp.fill( meanMet, "#met#text{ [GeV]}", "signalPlaneMet" )
+	sp.fill( meanMet, "#met [GeV]", "signalPlaneMet" )
 
 	#sp.fill( signalContaminationError, "#sigma_{signal contermination}", "signalConmatinationError" )
 	#sp.fill( signalContaminationErrorRel, "#sigma_{signal cont.} / signal cont.", "signalConmatinationErrorRel" )
