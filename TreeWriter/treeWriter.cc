@@ -1,6 +1,21 @@
 #include "treeWriter.h"
 #include "printCascade.h"
 
+enum cutFlow {
+	cutUnderFlowBin,
+	cutBegin,
+	cutLumi,
+	cutNVertex,
+	cutPhoton,
+	cutNoElectron,
+	cutNoMuon,
+	cutNJets,
+	cutHt,
+	cutMet,
+	nCuts
+};
+
+
 float effectiveAreaElectron( float eta ) {
 	/** Returns the effective area for the isolation criteria for electrons.
 	 * See https://twiki.cern.ch/twiki/bin/view/CMS/EgammaEARhoCorrection
@@ -192,6 +207,26 @@ tree::electronWorkingPoints getElectronWorkingPoint ( const susy::Electron& elec
 			&& nMissingHits <= 1
 		) )
 		return tree::kLooseElectron;
+
+	if( false ) { // implement the bug fix
+		if( ( isBarrel
+			&&( fabsdEtaIn < 0.007
+			|| fabsdPhiIn < 0.8
+			|| electron.sigmaIetaIeta < 0.01
+			|| electron.hcalOverEcalBc < 0.15
+			|| d0 < 0.04
+			|| dZ < 0.2
+			|| iso < 0.15 )
+		) || ( isEndcap
+			&& ( fabsdEtaIn < 0.01
+			|| fabsdPhiIn < 0.7
+			|| electron.sigmaIetaIeta < 0.03
+			|| d0 < 0.04
+			|| dZ < 0.2
+			|| iso < 0.15 )
+		) )
+		return tree::kVetoElectron;
+	}
 
 	if( ( isBarrel
 			&& fabsdEtaIn < 0.007
@@ -385,6 +420,16 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 	hist1D["gHt"] = TH1F("", ";H_{T} [GeV];Entries", 200, 0, 2000 );
 	hist1D["gNJets"] = TH1F("", ";n_{Jets};Entries", 10, -.5, 9.5 );
 	hist1D["gPt"] = TH1F("", ";p_{T^{*}};Entries", 200, 0, 2000 );
+
+	hist1D["cutFlow"] = TH1F("", "", nCuts, 0, nCuts );
+	hist1D["cutFlow"].GetXaxis()->SetBinLabel( cutLumi, "lumiSection");
+	hist1D["cutFlow"].GetXaxis()->SetBinLabel( cutNVertex, "vertex");
+	hist1D["cutFlow"].GetXaxis()->SetBinLabel( cutPhoton, "photon");
+	hist1D["cutFlow"].GetXaxis()->SetBinLabel( cutNoElectron, "no e");
+	hist1D["cutFlow"].GetXaxis()->SetBinLabel( cutNoMuon, "no #mu");
+	hist1D["cutFlow"].GetXaxis()->SetBinLabel( cutNJets, "nJets");
+	hist1D["cutFlow"].GetXaxis()->SetBinLabel( cutHt, "H_{T}");
+	hist1D["cutFlow"].GetXaxis()->SetBinLabel( cutMet, "#slash{E}_{T}");
 
 	// Define two dimensional histograms
 	hist2D["matchPhotonToJet"]         = TH2F("", "photon-jet matching;#DeltaR;p_{T}^{jet}/p_{T}^{#gamma}", 100, 0, 1, 100, 0, 4 );
@@ -933,6 +978,11 @@ void TreeWriter::Loop( int jetScale ) {
 		if ( loggingVerbosity>1 || jentry%reportEvery==0 )
 			std::cout << jentry << " / " << processNEvents << std::endl;
 
+		// For data, the weight is 1. Else take the pileup weight.
+		weight = event.isRealData ? 1. : getPileUpWeight();
+
+			hist1D["cutFlow"].AddBinContent( cutBegin, weight );
+
 		// Uncomment this to just print the cascade on console
 		//printCascade( event.genParticles ); continue;
 
@@ -957,12 +1007,15 @@ void TreeWriter::Loop( int jetScale ) {
 		std::string signalPointString = signalPointStringStream.str();
 		tryFill( hist1D, "nGen", signalPointString, 0 );
 
-		if ( event.isRealData )
-			if ( !isGoodLumi() || !passTrigger()) continue;
+		if ( event.isRealData && !isGoodLumi() ) continue;
+		hist1D["cutFlow"].AddBinContent( cutLumi, weight );
+		if ( event.isRealData && !passTrigger() ) continue;
 
 		// vertices
 		nVertex = numberOfGoodVertexInCollection( event.vertices );
 		if( !nVertex ) continue;
+		hist1D["cutFlow"].AddBinContent( cutNVertex, weight );
+
 		nTracksPV = nTrackPrimaryVertex( event.vertices );
 		if( loggingVerbosity > 2 )
 			std::cout << " nTracksPV = " << nTracksPV << std::endl;
@@ -970,9 +1023,6 @@ void TreeWriter::Loop( int jetScale ) {
 		runNumber = event.runNumber;
 		eventNumber = event.eventNumber;
 		luminosityBlockNumber = event.luminosityBlockNumber;
-
-		// For data, the weight is 1. Else take the pileup weight.
-		weight = event.isRealData ? 1. : getPileUpWeight();
 
 		// The jets have to be filled before looping over the photons and searching
 		// for jet photon matches. The collections are not cross cleaned.
@@ -1113,21 +1163,30 @@ void TreeWriter::Loop( int jetScale ) {
 		// filter out events with no photons
 		if( !photons.size() && !photonJets.size() && !photonElectrons.size() ) continue;
 
+		eventType eType = TreeWriter::whichEventType( photons, photonElectrons, photonJets );
+		if( eType == kPhotonEvent ) hist1D["cutFlow"].AddBinContent( cutPhoton, weight );
+
 		// this has to be done after the photon block, since leptons are cleared from photons
 		fillLeptons();
 
 		// do not allow leptons for signal scan
-		if( ( runType == kSimplifiedModel || runType == kGMSB || runType == kGMSB525 )
-			&& ( electrons.size() || muons.size() ) ) continue;
-
-		ht = getHt();
-		nGoodJets = countGoodJets();
-		if( loggingVerbosity > 1 ) {
-			std::cout << "H_T = " << ht << std::endl;
-			std::cout << "Found " << nGoodJets << " jets" << std::endl;
+		if( ( runType == kSimplifiedModel || runType == kGMSB || runType == kGMSB525 ) ) {
+			if( electrons.size() ) continue;
+			if( eType == kPhotonEvent ) hist1D["cutFlow"].AddBinContent( cutNoElectron, weight );
+			if( muons.size() ) continue;
+			if( eType == kPhotonEvent ) hist1D["cutFlow"].AddBinContent( cutNoMuon, weight );
 		}
 
-		if( nGoodJets < 2 || ht < 500 ) continue;
+		nGoodJets = countGoodJets();
+		if( loggingVerbosity > 1 ) std::cout << "Found " << nGoodJets << " jets" << std::endl;
+		if( nGoodJets < 2 ) continue;
+			if( eType == kPhotonEvent ) hist1D["cutFlow"].AddBinContent( cutNJets, weight );
+
+		ht = getHt();
+		if( loggingVerbosity > 1 ) std::cout << "H_T = " << ht << std::endl;
+		if( ht < 500 ) continue;
+		if( eType == kPhotonEvent ) hist1D["cutFlow"].AddBinContent( cutHt, weight );
+
 		TVector3 mhtVector = getMhtVector();
 		mht = mhtVector.Pt();
 		mhtPhi = mhtVector.Phi();
@@ -1140,7 +1199,6 @@ void TreeWriter::Loop( int jetScale ) {
 		if( !event.passMetFilters() || !event.passMetFilter( susy::kEcalLaserCorr) ) continue;
 #endif
 
-		eventType eType = TreeWriter::whichEventType( photons, photonElectrons, photonJets );
 		TVector3 recoilVector = getRecoilVector( eType );
 		recoil = recoilVector.Pt();
 		recoilPhi = recoilVector.Phi();
@@ -1156,13 +1214,13 @@ void TreeWriter::Loop( int jetScale ) {
 			tryFill( hist1D, "gHt",signalPointString, ht, weight );
 			tryFill( hist1D, "gNJets",signalPointString, nGoodJets, weight );
 			tryFill( hist1D, "gPt",signalPointString, photons.at(0).ptJet(), weight );
+			if( met >= 100 ) hist1D["cutFlow"].AddBinContent( cutMet, weight );
 		}
 		if( eType == kJetEvent ) {
 			if ( runType == kTree || runType == kFullTree )
 				photonJetTree.Fill();
 			float qcdWeight=0, qcdWeightError=0;
 			getQcdWeights( photonJets.at(0).ptJet(), recoil, qcdWeight, qcdWeightError );
-			std::cout << qcdWeight << std::endl;
 			tryFill( hist1D, "fMet",signalPointString, met, weight*qcdWeight );
 			tryFill( hist1D, "fMetError",signalPointString, met, weight*qcdWeightError );
 		}
