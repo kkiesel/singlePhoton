@@ -41,7 +41,6 @@ version=$1
 for dataset in "${datasets[@]}"; do
 
 	abbr=$dataset.$version
-	echo
 	echo get out put for $abbr
 	if ls $outputPath/${abbr}__*.root &> /dev/null; then
 		hadd -f -k $outputPath/${abbr}_tree.root $outputPath/${abbr}__*.root
