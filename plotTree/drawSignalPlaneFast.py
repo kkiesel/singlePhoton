@@ -7,6 +7,11 @@ import re
 Styles.tdrStyle2D()
 ROOT.gStyle.SetOptLogz(0)
 
+def nGenHisto( nGen ):
+	h = ROOT.TH1F(randomName(), ";met;", 1, 0, 1 )
+	h.SetBinContent( 1, nGen )
+	return h
+
 def interpolateEmptyBins( histo ):
 	fillings = {}
 	for x in range( 1, histo.GetNbinsX()+1 ):
@@ -20,7 +25,7 @@ def interpolateEmptyBins( histo ):
 				#if 'B' in histo.fileName and x == 16 and y == 15:
 				#	values = [ histo.GetBinContent( x, y-1 ),
 				#		histo.GetBinContent( x+1, y )]
-				if len(values) == 4:
+				if len(values) >= 3:
 					fillings[(x,y)] = sum(values)/len(values)
 
 	for (x,y), value in fillings.iteritems():
@@ -36,6 +41,7 @@ class Scan:
 	def __init__( self ):
 		self.points = {}
 		self.functions = []
+		self.nGen = -1
 
 	def addHisto( self, x, y, name, histo ):
 		if (x,y) not in self.points:
@@ -73,6 +79,9 @@ class Scan:
 
 	def fillFunctions( self ):
 		for coordinate, histoDict in self.points.iteritems():
+			if "nGen" not in histoDict:
+				histoDict["nGen"] = nGenHisto( self.nGen )
+
 			bin = self.defaultHisto.FindBin( *coordinate )
 			for function, histo in self.functions:
 				histo.SetBinContent( bin, function( histoDict ) )
@@ -129,8 +138,8 @@ def meanPt( histoDict ):
 	return histoDict["gPt"].GetMean()
 
 def meanNjets( histoDict ):
-	if "gNJets" not in histoDict.keys(): return 0
-	return histoDict["gNJets"].GetMean()
+	if "gNjets" not in histoDict.keys(): return 0
+	return histoDict["gNjets"].GetMean()
 
 def meanMet( histoDict ):
 	if "gMet" not in histoDict.keys(): return 0
@@ -167,60 +176,33 @@ def statUncert( histoDict ):
 		return 100*e/i if i else 0
 	return 0
 
-############## functions used for creating histograms end ################################
+############## functions used for creating histograms end #####################
+############## begin of declaration of other functions ########################
 
+def gmsbPdfUncert( histogram, filename ):
+	histogram = histogram.Clone( "pdfUncert" )
+	histogram.SetZTitle( "pdf uncert. [%]" )
+	pdfUncert = readSignalPdfUncertainty( filename )
+	for multiBin, info in pdfUncert.iteritems():
+		bin = histogram.FindBin( multiBin[0], multiBin[1] )
+		histogram.SetBinContent( bin, sqrt(info[0]**2+info[1]**2) )
+	return [histogram]
 
+def gmsbXsection( histogram, filename ):
+	histogram = histogram.Clone( "xSection" )
+	histogram.SetZTitle( "cross section [pb]" )
+	uncert = histogram.Clone( "xSectionUncert" )
+	uncert.SetZTitle( "cross section uncertainty [%]" )
+	xSections = readSignalXSection( filename )
+	for multiBin, info in xSections.iteritems():
+		bin = histogram.FindBin( multiBin[0], multiBin[1] )
+		histogram.SetBinContent( bin, info[0] )
+		uncert.SetBinContent( bin, 100*abs(info[1]-info[2])/info[0] )
 
-
-
-xSecPath = "Spectra_gsq_%s_8TeV.xsec"
-pdfPath = "Spectra_gsq_%s_phad_pdfuncert.dat"
-
-
-def xsection( self, file_ ):
-	xsec = readSignalXSection( file_ )
-	for x in self.xList:
-		for y in self.yList:
-			self.histo.SetBinContent( self.histo.FindBin(x,y), xsec[(x,y)][0] )
-	self.histo.GetZaxis().SetTitle( "#sigma #text{ [pb]}" )
-	self.draw( "xsectionSignal" )
-
-def pdfUncertainty( self, file_ ):
-	pdf = readSignalPdfUncertainty( file_ )
-	for x in self.xList:
-		for y in self.yList:
-			xsec, acc = pdf[(x,y)]
-			self.histo.SetBinContent( self.histo.FindBin(x,y), sqrt(xsec**2+acc**2) )
-	self.histo.GetZaxis().SetTitle( "pdf uncert. [%]" )
-	self.draw( "pdfUncertainty" )
-
-def xsectionUncertainty( self, file_ ):
-	xsec = readSignalXSection( file_ )
-	for x in self.xList:
-		for y in self.yList:
-			xSec = xsec[(x,y)][0]
-			uncertUp = xsec[(x,y)][1]
-			uncertDown = xsec[(x,y)][2]
-			self.histo.SetBinContent( self.histo.FindBin(x,y), (uncertUp+uncertDown)/2/xSec*100 )
-	self.histo.GetZaxis().SetTitle( "#text{rel. }#sigma#text{ uncert.}#text{ [%]}" )
-	self.draw( "xsectionSignalUncertaintyRel" )
-
-def readSModelXsection( filename ):
-	import re
-	f = open( filename )
-
-	xSections = {}
-
-	for line in f.readlines():
-		if line.startswith("#"): continue
-		m, xsec, uncert = line.split(" ")
-		xSections[int(m)] = (float(xsec), float(uncert) )
-	f.close()
-
-	return xSections
-
+	return [histogram, uncert]
 
 def sModelXsection( histogram, filename ):
+	histogram = histogram.Clone( "xSection" )
 	histogram.SetZTitle( "cross section [pb]" )
 	uncert = histogram.Clone( "xSectionUncert" )
 	uncert.SetZTitle( "cross section uncertainty [%]" )
@@ -234,6 +216,7 @@ def sModelXsection( histogram, filename ):
 
 	return [histogram, uncert]
 
+############## end of declaration of other functions ##########################
 
 if __name__ == "__main__":
 	arguments = argparse.ArgumentParser()
@@ -247,10 +230,17 @@ if __name__ == "__main__":
 			scanname = "T5gg"
 		if "T5wg_" in filename:
 			scanname = "T5wg"
+
 		if "W_V03." in filename:
 			scanname = "Wino"
 		if "B_V03." in filename:
 			scanname = "Bino"
+
+		if "W_gsq_" in filename:
+			scanname = "Wino"
+		if "B_gsq_" in filename:
+			scanname = "Bino"
+
 		if not scanname: print "Cannot determine scan name"
 
 		histTuples = getSignalHistosFromFile( filename )
@@ -259,6 +249,9 @@ if __name__ == "__main__":
 		for name, x, y, hist in histTuples:
 			scan.addHisto( x, y, name, hist )
 		scan.getGrid()
+
+		if scanname == "Bino": scan.nGen = 10000
+		if scanname == "Wino": scan.nGen = 60000
 
 		scan.addFunction( nGen, "nGen", "Generated events [10^{4}]" )
 		scan.addFunction( acceptance, "acceptance", "Acceptance [%]" )
@@ -274,13 +267,18 @@ if __name__ == "__main__":
 		scan.fillFunctions()
 		histos = list(zip( *scan.functions )[1])
 
-		if scanname in ["T5gg", "T5wg" ]: histos.extend( sModelXsection( scan.defaultHisto.Clone( "xSection" ), "../../infos/simplifiedModel.xsec" ) )
+		if "T5" in scanname:
+			histos.extend( sModelXsection( scan.defaultHisto, "../../infos/simplifiedModel.xsec" ) )
+
+		if scanname[1:] == "ino" : # Bino or Wino
+			scanAbbr = scanname[0] # B or W
+			histos.extend( gmsbXsection( scan.defaultHisto, "../../infos/Spectra_gsq_%s_8TeV.xsec"%scanAbbr ) )
+			histos.extend( gmsbPdfUncert( scan.defaultHisto, "../../infos/Spectra_gsq_%s_phad_pdfuncert.dat"%scanAbbr) )
 
 		for histo in histos:
 			can = ROOT.TCanvas()
 			can.cd()
 
-			#histo = interpolateEmptyBins( histo )
 			name = histo.GetName()
 			if name == "ht":
 				histo.SetMinimum( 500 )
@@ -294,38 +292,52 @@ if __name__ == "__main__":
 			elif name == "xSection":
 				can.SetLogz()
 
-
 			gr2D = ROOT.TGraph2D( histo )
-			gr2D.SetMinimum( histo.GetMinimum() )
-			gr2D.SetMaximum( histo.GetMaximum() )
+			if histo.GetEffectiveEntries():
+				gr2D.SetMinimum( histo.GetMinimum() )
+				gr2D.SetMaximum( histo.GetMaximum() )
+
 			try:
 				gr2D.SetTitle( "%s;%s;%s;%s"%(histo.GetTitle(),histo.GetXaxis().GetTitle(),histo.GetYaxis().GetTitle(),histo.GetZaxis().GetTitle()) )
 				histo.GetZaxis().SetTitleOffset( 0.85 )
-				gr2D.GetZaxis().SetTitleOffset( 0.85 )
+				if histo.GetEffectiveEntries():
+					gr2D.GetZaxis().SetTitleOffset( 0.85 )
 			except:
 				pass
 			gr2D.SetNpx(100)
 			gr2D.SetNpy(100)
 			gr2D.Draw("colz")
-			#histo.Draw("colz")
+			if False:
+				histo = interpolateEmptyBins( histo )
+				histo.Draw("colz")
 
 			scanText = ""
 			if "T5gg_" in filename:
-				scanText = "- pp#rightarrow#tilde{g}#tilde{g}#rightarrow#tilde{#chi}#tilde{#chi}#gamma#gamma,"
+				scanText = "pp#rightarrow#tilde{g}#tilde{g}#rightarrow#tilde{#chi}#tilde{#chi}#gamma#gamma"
 			if "T5wg_" in filename:
-				scanText = "- pp#rightarrow#tilde{g}#tilde{g}#rightarrow#tilde{#chi}#tilde{#chi}W#gamma,"
+				scanText = "pp#rightarrow#tilde{g}#tilde{g}#rightarrow#tilde{#chi}#tilde{#chi}W#gamma"
 
+			if scanname == "Wino":
+				scanText = "Wino #tilde{#chi}_{1}"
+			if scanname == "Bino":
+				scanText = "Bino #tilde{#chi}_{1}^{0}"
 
-			text = "CMS Private Work %s 19.7fb^{-1} 8TeV #geq1#gamma#geq2jets"%scanText
-			if name in ["xSection", "xSectionUncert"]:
-				text = "CMS Private Work %s 19.7fb^{-1} 8TeV #geq1#gamma#geq2jets"%"pp#rightarrow#tilde{g}#tilde{g}"
+			cutText = "8TeV #geq1#gamma#geq2jets"
+			if name in  [ "xSection", "xSectionUncert", "pdfUncert" ]:
+				cutText = "8TeV"
 
-			info = ROOT.TLatex(.01,.96, text )
+			info = ROOT.TLatex(.01,.96, "CMS Simulation "+scanText )
 			info.SetNDC()
+			info.SetTextSize( histo.GetLabelSize() )
+			info.SetTextFont( histo.GetLabelFont() )
 			info.Draw()
+			info.DrawLatex( 0.5, 0.96, cutText )
+			shiftNDC = info.GetXsize() / ( ROOT.gPad.GetX2() - ROOT.gPad.GetX1() )
+			info.SetX( 0.5-shiftNDC )
+			info.Draw()
+
 
 			ROOT.gPad.SaveAs( "plots/%s_%s.pdf"%(scanname,histo.GetName()) )
 
-#todo xsectiond, pdfuncert, xsectionuncert
 #todo ngen correct
 

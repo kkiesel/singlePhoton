@@ -50,6 +50,7 @@ def getMixedWeigthHisto( filenames, predFilenames, commonCut, control=True, fill
 		commonCut += "&& recoilChr>0"
 
 	regionCut = "met<100" if control else "met>=100"
+	regionCut = "120 < met && met<160"
 
 	xlabel, xunit, xbinning = readAxisConf( xVar )
 	ylabel, yunit, ybinning = readAxisConf( yVar )
@@ -81,7 +82,10 @@ def getMixedWeigthHisto( filenames, predFilenames, commonCut, control=True, fill
 
 	weight2D = divideHistos( numerator, denominator )
 
-	weightIntegral = numerator.Integral() / denominator.Integral() if denominator.Integral() else 0
+	numeratorIntegral = numerator.Integral()
+	denominatorIntegral = denominator.Integral()
+
+	weightIntegral = numeratorIntegral / denominatorIntegral if denominatorIntegral else 0
 
 	# Set the weight to the global weight
 	if fillEmptyBins:
@@ -90,6 +94,41 @@ def getMixedWeigthHisto( filenames, predFilenames, commonCut, control=True, fill
 				if not weight2D.GetBinContent( i, j ):
 					weight2D.SetBinContent( i, j, weightIntegral )
 					weight2D.SetBinError( i, j, 0 )
+
+	info = ROOT.TLatex(0,.96, "CMS Private Work - 19.7fb^{-1} #sqrt{s}=8TeV #geq1#gamma,#geq2jets #slash{E}_{T}<100GeV" )
+	info.SetNDC()
+
+	# Draw histograms
+	Styles.tdrStyle2D()
+	ROOT.gStyle.SetPaintTextFormat("1.1f");
+
+	can2D = ROOT.TCanvas()
+	can2D.cd()
+	can2D.SetLogz(1)
+
+	numerator.SetName( "num" )
+	numErr = numerator.Clone( "numErr" )
+	denominator.SetName("den")
+	denErr = denominator.Clone( "denErr" )
+	for i in range( weight2D.GetXaxis().GetNbins()+1 ):
+		for j in range( weight2D.GetYaxis().GetNbins()+1 ):
+				numErr.SetBinContent( i,j, numerator.GetBinError(i,j)/numerator.GetBinContent(i,j) if numerator.GetBinContent(i,j) else 0 )
+				denErr.SetBinContent( i,j, denominator.GetBinError(i,j)/denominator.GetBinContent(i,j) if denominator.GetBinContent(i,j) else 0 )
+
+
+	for hist in numerator, denominator, numErr, denErr:
+
+		name = hist.GetName()
+		if name == "weight2D":
+			hist.GetZaxis().SetRangeUser(0.8,20)
+			hist.GetZaxis().SetTitle("\qcdRatio")
+
+		hist.Draw("colz")
+		info.Draw()
+		SaveAs(can2D, "qcd_preWeight_Combined_met_%s"%(name) )
+
+	Styles.tdrStyle()
+
 
 	return weight2D
 

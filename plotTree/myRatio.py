@@ -92,7 +92,7 @@ class Ratio:
 		self.totalUncert.Draw("e2")
 		if self.sysHisto:
 			self.ratioSys.Draw("e2 same")
-		self.ratio.Draw("e0 same")
+		self.ratio.Draw("e same x0")
 		if yMin < 1 and yMax > 1:
 			oneLine = ROOT.TLine()
 			oneLine.SetLineStyle(2)

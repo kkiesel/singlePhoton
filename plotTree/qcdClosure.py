@@ -51,7 +51,7 @@ def drawWeightHisto( weight2D, saveName, writeWeightFile=False, control=True ):
 		weightFile = ROOT.TFile( "qcdWeight.root", "recreate" )
 		weightFile.cd()
 		weight2D.SetName("qcdWeight")
-		weight2D.Write(ROOT.TObject.kOverwrite)
+		weight2D.Write("", ROOT.TObject.kOverwrite)
 		weightFile.Close()
 
 
