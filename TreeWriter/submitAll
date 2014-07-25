@@ -1,7 +1,7 @@
 #!/bin/bash
 # This script submits all jobs to naf, which are defined in dataset
 
-version="30"
+version="31"
 datasets=(
 
 ## QCD
@@ -23,6 +23,7 @@ datasets=(
  /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/WGamma_130_inf_V03/
  /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/ZGammaNuNu_V03/
  /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/ZGammaLL_V02/
+ /pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/ZGamma_V02/
 
 ## Data
  /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/PhotonHadA_V03/
@@ -33,13 +34,17 @@ datasets=(
 ## Signal
 # /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5gg_800_V03/
 # /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5gg_1000_V03/
-# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5gg_1350_V03/
 # /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5gg_1200_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5gg_1350_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5gg_1550_V03/
+#
 # /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5wg_400_V03/
 # /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5wg_600_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5wg_800_V03/
 # /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5wg_1000_V03/
 # /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5wg_1200_V03/
-
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5wg_1350_V03/
+#
 ## QCD
 # /pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/GJets_200_400_V02/
 # /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/GJets_400_inf_V02/
