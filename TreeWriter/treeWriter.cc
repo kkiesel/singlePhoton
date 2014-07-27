@@ -1079,6 +1079,7 @@ void TreeWriter::Loop( int jetScale ) {
 			photonToTree._ptJet = jetIndex>-1 ? jets.at(jetIndex).pt : 0;
 			photonToTree._etaJet = jetIndex>-1 ? jets.at(jetIndex).eta : 0;
 			photonToTree._phiJet = jetIndex>-1 ? jets.at(jetIndex).phi : 0;
+			photonToTree.matchedJetIndex = jetIndex;
 
 
 			//photon definition barrel

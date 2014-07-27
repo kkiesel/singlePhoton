@@ -17,7 +17,7 @@
 
 #include "TreeObjects.h"
 
-#define CMSSW525
+//#define CMSSW525
 
 #ifdef CMSSW525
 #include "SusyEvent525.h"
