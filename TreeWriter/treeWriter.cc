@@ -981,7 +981,7 @@ void TreeWriter::Loop( int jetScale ) {
 		// For data, the weight is 1. Else take the pileup weight.
 		weight = event.isRealData ? 1. : getPileUpWeight();
 
-			hist1D["cutFlow"].AddBinContent( cutBegin, weight );
+		hist1D["cutFlow"].AddBinContent( cutBegin, weight );
 
 		// Uncomment this to just print the cascade on console
 		//printCascade( event.genParticles ); continue;
