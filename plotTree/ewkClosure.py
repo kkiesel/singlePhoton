@@ -51,7 +51,7 @@ def closure( filenames, plot ):
 	infoText.SetNDC()
 	infoText.SetTextFont( gHist.GetLabelFont() )
 	infoText.SetTextSize( gHist.GetLabelSize() )
-	infoText.SetText( .02, .96, "CMS Simulation                       #sqrt{s}=8TeV, #intLdt=19.7fb^{-1}, #geq1#gamma,#geq2jets" )
+	infoText.SetText( .02, .96, "CMS Simulation                         19.7fb^{-1} (8 TeV)          #geq1#gamma,#geq2jets" )
 
 	can = ROOT.TCanvas("", "", 600, 600 )
 	can.cd()

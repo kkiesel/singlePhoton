@@ -144,7 +144,7 @@ nMetBins = %s
 def finalDistributionData( plot ):
 
 	# Sample names
-	treeVersion = "13"
+	treeVersion = "30"
 	wg = [ "slimWGamma_50_130_V03.%s_tree.root"%treeVersion, \
 			"slimWGamma_130_inf_V03.%s_tree.root"%treeVersion ]
 	tg = [ "slimTTGamma_V03.%s_tree.root"%treeVersion ]
@@ -169,7 +169,7 @@ def finalDistributionData( plot ):
 	# Compute the weights:
 	weight2D = getMixedWeigthHisto( data, data, commonCut )
 	attachWeightsToFiles( data, weight2D, "foWeights" )
-	drawWeightHisto( weight2D, "Data" )
+	drawWeightHisto( weight2D, "Data", writeWeightFile=True )
 
 	# Get Histograms
 	dataHist = getHists( data, plot, commonCut )

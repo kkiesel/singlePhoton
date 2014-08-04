@@ -218,6 +218,9 @@ def getHisto( tree, plot, cut="1", overflow=0, weight="weight", color=1, nBins=N
 	if overflow > 0:
 		histo = appendOverflowBin(histo, overflow)
 
+	# for syncronnization with christian
+	#fillEmptyBins = False
+
 	if fillEmptyBins:
 		# If a neigbour of a empty bin is filled, the error of the bin will be
 		# set to the poisson error for 0 times the weight.
@@ -227,8 +230,8 @@ def getHisto( tree, plot, cut="1", overflow=0, weight="weight", color=1, nBins=N
 
 		for bin in range(1, histo.GetNbinsX()+2):
 			# if the bin left or right is not empty but the bin itself, set the error
-			#if not histo.GetBinContent( bin ) and ( histo.GetBinContent( bin-1 ) or histo.GetBinContent( bin+1 ) ) and histo.GetBinWidth(bin):
-			#	histo.SetBinError( bin, poissonZeroError*weight / histo.GetBinWidth(bin) )
+			if not histo.GetBinContent( bin ) and ( histo.GetBinContent( bin-1 ) or histo.GetBinContent( bin+1 ) ) and histo.GetBinWidth(bin):
+				histo.SetBinError( bin, poissonZeroError*weight / histo.GetBinWidth(bin) )
 			pass
 
 	if appendOverflowBin:
@@ -347,14 +350,15 @@ def getHistoTitle( histo, plot, label, unit, binning ):
 	if not label:
 		label = getAxisTitle( plot )
 	if binning:
-		ytitle+= " / GeV"
 		if unit:
-			label+= " [%s]"%unit
+			ytitle+= " / GeV"
+		if unit:
+			label+= " (%s)"%unit
 	else:
 		if histo.GetBinWidth(1) != 1:
 			ytitle+= " / {}".format(roundToSignificantDigits(histo.GetBinWidth(1),2))
 		if unit:
-			label+= " [%s]"%unit
+			label+= " (%s)"%unit
 			ytitle+= " %s"%unit
 	return ";%s;%s"%( label, ytitle )
 

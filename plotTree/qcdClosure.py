@@ -144,8 +144,10 @@ def drawClosure( filenames, predFilenames, plot, commonCut, infoText, additional
 
 	gHist = getHists( filenames, plot, commonCut )
 	fHist, sysHist = predictionHistos( predFilenames, plot, commonCut, modifyEmptyBins )
+	fHist.SetMarkerSize(0)
 	sysHist.SetFillStyle(3254)
 	sysHist.SetFillColor( sysHist.GetLineColor() )
+	sysHist.SetLineColor(0)
 
 	for bin in range(gHist.FindBin(101), gHist.GetNbinsX()+1):
 		w = gHist.GetBinWidth(bin)
@@ -159,7 +161,7 @@ def drawClosure( filenames, predFilenames, plot, commonCut, infoText, additional
 	muhisto.leg.SetHeader( ",".join( [ datasetToLatex(x) for x in signalAbbrs ] ) )
 	muhisto.addHisto( gHist, "Simulation", draw="" )
 	muhisto.addHisto( fHist, "Prediction", draw="hist e")
-	muhisto.addHisto( sysHist, "#sigma_{w}", draw="e2")
+	muhisto.addHisto( sysHist, "syst. uncert", draw="e2")
 	muhisto.addHisto( gHist, "", draw="e0" ) ## add a second time to draw on top
 
 	can = ROOT.TCanvas("", "", 1000, 1200)
@@ -169,8 +171,10 @@ def drawClosure( filenames, predFilenames, plot, commonCut, infoText, additional
 
 	from myRatio import Ratio
 	r = Ratio( "Sim./Pred.", gHist, fHist, sysHist )
-	r.draw(0,2.4)
+	r.draw(0.5,1.5)
 	infoText.Draw()
+	muhisto.leg.AddEntry( r.totalUncert, "total uncert", "f" )
+	muhisto.leg.Draw()
 	SaveAs(can, "qcdClosure_%s_%s"%("".join(signalAbbrs)+additionalLabel, plot) )
 
 	# Since root is too stupid to clear the canvas before python is ending, clean
