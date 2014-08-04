@@ -48,7 +48,6 @@ def getMixedWeigthHisto( filenames, predFilenames, commonCut, control=True, fill
 		commonCut += "&& recoilChr>0"
 
 	regionCut = "met<100" if control else "met>=100"
-	regionCut = "120 < met && met<160"
 
 	xlabel, xunit, xbinning = readAxisConf( xVar )
 	ylabel, yunit, ybinning = readAxisConf( yVar )
