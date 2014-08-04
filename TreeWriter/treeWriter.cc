@@ -115,8 +115,8 @@ tree::electronWorkingPoints getElectronWorkingPoint ( const susy::Electron& elec
 	bool passConversionVeto = true;
 	int nMissingHits = 0;
 #else
-	float d0 = fabs( electron.gsfTrack->d0( electron.vertex ) );
-	float dZ = fabs( electron.gsfTrack->dz( electron.vertex ) );
+	float d0 = fabs( electron.gsfTrack->d0() );
+	float dZ = fabs( electron.gsfTrack->dz() );
 	float fabsInvDiff = fabs( 1./electron.ecalEnergy - 1./electron.trackMomentumAtVtx.Pt() );
 	float eta = std::abs(electron.superCluster->position.Eta());
 	bool passConversionVeto = electron.passConversionVeto;
