@@ -235,6 +235,15 @@ def e2Tagger( e ):
 		if e.electrons.at(1).isStatus( 1 ):
 			return 1
 
+def jetVeto( e ):
+	# vetos events where there is a jet close to the photon, which is not the photon itself
+	photon = e.photons.at(0)
+	for jet in e.jets:
+		dr = jet.DeltaR( photon )
+		if dr < 0.45 and dr > 0.1:
+			return 1
+	return 0
+
 def createNewVariableTree( filename, treename, treeAppendix="AddVariables" ):
 	import numpy
 
@@ -248,6 +257,7 @@ def createNewVariableTree( filename, treename, treeAppendix="AddVariables" ):
 	newVariables.append( variableToTree( newTree, "recoilChr", recoilChristian ) )
 	newVariables.append( variableToTree( newTree, "thisPt", leadingGPt ) )
 	#newVariables.append( variableToTree( newTree, "metCorr", isoMet ) )
+	newVariables.append( variableToTree( newTree, "jetVeto", jetVeto ) )
 
 	#invariant masses
 	"""newVariables.append( variableToTree( newTree, "mee", mee ) )
