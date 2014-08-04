@@ -6,6 +6,7 @@ import re
 
 Styles.tdrStyle2D()
 ROOT.gStyle.SetOptLogz(0)
+ROOT.gStyle.SetPalette(1)
 
 def nGenHisto( nGen ):
 	h = ROOT.TH1F(randomName(), ";met;", 1, 0, 1 )
@@ -37,11 +38,42 @@ def isSubset( l1, l2 ):
 	#Returns true if all elements of l1 are in l2
 	return len([ 1 for x in l1 if x in l2 ])==len(l1)
 
+def histoToList( histo, uncert=False ):
+	import array
+	binning = [ 100, 120, 160, 200, 270, 350 ]
+	metBinning = array.array( "d", binning )
+	h = histo.Rebin( len(metBinning)-1, randomName(), metBinning )
+	out = []
+	for bin in range( 1, h.GetNbinsX()+2 ):
+		if uncert:
+			out.append( h.GetBinError(bin) )
+		else:
+			out.append( h.GetBinContent(bin) )
+	return out
+
+def histoDiffToList( histo1, histo2 ):
+	import array
+	binning = [ 100, 120, 160, 200, 270, 350 ]
+	metBinning = array.array( "d", binning )
+	h1 = histo1.Rebin( len(metBinning)-1, randomName(), metBinning )
+	h2 = histo2.Rebin( len(metBinning)-1, randomName(), metBinning )
+	out = []
+	h1.Add( h2, -1 )
+	h1.Scale(0.5) # (h1 - h2)/2
+	for bin in range( 1, h1.GetNbinsX()+2 ):
+		out.append( abs(h1.GetBinContent(bin)) )
+	return out
+
+def listToString( list ):
+	return " ".join([str(i) for i in list ] )
+
 class Scan:
 	def __init__( self ):
 		self.points = {}
 		self.functions = []
 		self.nGen = -1
+		self.binning = [ 100, 120, 160, 200, 270, 350, -1 ]
+		self.results = []
 
 	def addHisto( self, x, y, name, histo ):
 		if (x,y) not in self.points:
@@ -72,19 +104,89 @@ class Scan:
 		self.defaultHisto = ROOT.TH2F( randomName(), defaultTitle, len(xList), xList[0]-0.5*stepSizeX, xList[-1]+0.5*stepSizeX, \
 			len(yList), yList[0]-0.5*stepSizeY, yList[-1]+0.5*stepSizeY )
 
-	def addFunction( self, function, name, histoTitle ):
+	def addFunction( self, function, name, histoTitle, splitBins=False ):
 		histo = self.defaultHisto.Clone( name )
 		histo.GetZaxis().SetTitle( histoTitle )
-		self.functions.append( (function, histo) )
+		self.functions.append( (function, histo, None) )
+		if splitBins:
+			for i, minMet in enumerate( self.binning[0:-1] ):
+				maxMet = self.binning[i+1]
+				histo = self.defaultHisto.Clone( name+str(i) )
+				histo.GetZaxis().SetTitle( histoTitle )
+				self.functions.append( (function, histo, (minMet,maxMet) ) )
+
 
 	def fillFunctions( self ):
 		for coordinate, histoDict in self.points.iteritems():
-			if "nGen" not in histoDict:
+			#if "nGen" not in histoDict:
+			if nGen != -1:
 				histoDict["nGen"] = nGenHisto( self.nGen )
 
 			bin = self.defaultHisto.FindBin( *coordinate )
-			for function, histo in self.functions:
-				histo.SetBinContent( bin, function( histoDict ) )
+			for function, histo, options in self.functions:
+				if options:
+					histo.SetBinContent( bin, function( histoDict, *options ) )
+				else:
+					histo.SetBinContent( bin, function( histoDict ) )
+
+	def fillResults( self, filename ):
+
+		infos = []
+		counter = 0
+		import time
+		signalCardString = """
+# This file contains event yield and uncertainties for signal points.
+# Produced by:
+#    Knut Kiesel
+# on:
+#    %s
+# with input file:
+#    %s
+# There will be a common section for all signal points, folllowed by the information
+# for each signal point. The numbering of the signal points is arbitrary.
+# For bin edges, the ROOT conversion is used (lower bin edge included, upper bin
+# edge excluded).
+"""%( time.strftime("%Y-%m-%d %H:%M:%S"), filename )
+
+		for coordinate, histoDict in self.points.iteritems():
+			info = {}
+			info["m1"] = coordinate[0]
+			info["m2"] = coordinate[1]
+			info["nGen"] = int(histoDict["nGen"].GetBinContent(1))
+			info["signal"] = histoToList( histoDict["gMet"] )
+			info["signalStat"] = histoToList( histoDict["gMet"], True )
+			info["signalSystJes"] = histoDiffToList( histoDict["gMetJesUp"], histoDict["gMetJesDown"] ) if "gMetJesUp" in histoDict else []
+			info["signalSystPu"] = histoDiffToList( histoDict["gMetPuUp"], histoDict["gMetPuDown"] ) if "gMetPuUp" in histoDict else []
+			info["signalEWK"] = histoToList( histoDict["eMet"] )
+			info["signalEWKStat"] = histoToList( histoDict["eMet"], True )
+			info["signalEWKSyst"] = [0.11*i for i in histoToList( histoDict["eMet"] ) ] # 11% uncertainy
+			info["signalQCD"] = histoToList( histoDict["fMet"] )
+			info["signalQCDStat"] = histoToList( histoDict["fMet"], True )
+			info["signalQCDSyst"] = histoToList( histoDict["fMetError"] )
+			infos.append(info)
+
+			signalsystUncert = [ sqrt(i**2+j**2) for i,j in zip( info["signalSystJes"], info["signalSystPu"] ) ]
+
+			signalCardString += "Point %s gluino mass = %s\n"%(counter, info["m1"])
+			signalCardString += "Point %s nlsp mass = %s\n"%(counter, info["m2"])
+			signalCardString += "Point %s generated events = %s\n"%(counter, info["nGen"])
+			signalCardString += "Point %s number of signal events in bins = %s 0\n"%(counter, listToString( info["signal"] ) )
+			signalCardString += "Point %s statistical error of signal events in bins = %s 0\n"%(counter, listToString( info["signalStat"] ) )
+			signalCardString += "Point %s systematical error of signal events in bins = %s 0\n"%(counter, listToString( signalsystUncert ) )
+			signalCardString += "Point %s EWK prediction = %s 0\n"%(counter, listToString( info["signalEWK"] ) )
+			signalCardString += "Point %s QCD prediction = %s 0\n"%(counter, listToString( info["signalQCD"] ) )
+			signalCardString += "\n"
+
+			counter += 1
+
+
+		outputFileName = "eventYield%s-%s.txt"%(filename, time.strftime("%Y-%m-%d"))
+		signalCardFile = open( outputFileName, "w")
+		signalCardFile.write( signalCardString )
+		signalCardFile.close()
+		print "Wrote to %s"%outputFileName
+
+
 
 
 def getSignalHistosFromFile( filename ):
@@ -124,10 +226,14 @@ def acceptance( histoDict, minMet=100, maxMet=-1 ):
 
 	return 100. * sel / nGen if nGen else 0
 
-def signalContamination( histoDict ):
+def signalContamination( histoDict, minMet=100, maxMet=-1 ):
 	if not isSubset( ["fMet", "eMet"], histoDict.keys() ): return 0
-	minBin = histoDict["gMet"].FindBin( 100 ) # corresponds to met cut
-	return 100.*addHistos([ histoDict["fMet"], histoDict["eMet"] ]).Integral(minBin, -1) / histoDict["gMet"].Integral(minBin, -1) if histoDict["gMet"].Integral(minBin, -1) else 0
+
+	minBin = histoDict["gMet"].FindBin( minMet )
+	if maxMet != -1: maxMet = histoDict["gMet"].FindBin( minMet )
+
+	minBin = histoDict["gMet"].FindBin( minBin, maxMet )
+	return 100.*addHistos([ histoDict["fMet"], histoDict["eMet"] ]).Integral(minBin, maxMet) / histoDict["gMet"].Integral(minBin, maxMet) if histoDict["gMet"].Integral(minBin, maxMet) else 0
 
 def meanHt( histoDict ):
 	if "gHt" not in histoDict.keys(): return 0
@@ -250,13 +356,15 @@ if __name__ == "__main__":
 			scan.addHisto( x, y, name, hist )
 		scan.getGrid()
 
+		scan.fillResults( scanname )
+
 		if scanname == "Bino": scan.nGen = 10000
 		if scanname == "Wino": scan.nGen = 60000
 
 		scan.addFunction( nGen, "nGen", "Generated events [10^{4}]" )
-		scan.addFunction( acceptance, "acceptance", "Acceptance [%]" )
+		scan.addFunction( acceptance, "acceptance", "Acceptance [%]", True )
 		scan.addFunction( jetScale, "jes", "jes uncert. [%]" )
-		scan.addFunction( signalContamination, "signalContamination", "bkg prediction from signal [%]" )
+		scan.addFunction( signalContamination, "signalContamination", "rel. bkg. pred. from signal [%]", True )
 		scan.addFunction( meanHt, "ht", "#LTH_{T}#GT [GeV]" )
 		scan.addFunction( meanPt, "pt", "#LTp_{T}#GT [GeV]" )
 		scan.addFunction( meanNjets, "nJet", "#LTn_{Jets}#GT" )
@@ -307,7 +415,7 @@ if __name__ == "__main__":
 			gr2D.SetNpx(100)
 			gr2D.SetNpy(100)
 			gr2D.Draw("colz")
-			if False:
+			if True:
 				histo = interpolateEmptyBins( histo )
 				histo.Draw("colz")
 
@@ -322,22 +430,44 @@ if __name__ == "__main__":
 			if scanname == "Bino":
 				scanText = "Bino #tilde{#chi}_{1}^{0}"
 
-			cutText = "8TeV #geq1#gamma#geq2jets"
-			if name in  [ "xSection", "xSectionUncert", "pdfUncert" ]:
-				cutText = "8TeV"
 
-			info = ROOT.TLatex(.01,.96, "CMS Simulation "+scanText )
+
+			minMet = 100
+			maxMet = -1
+
+			if name[-1].isdigit():
+				bin = int(name[-1])
+				minMet = scan.binning[bin]
+				maxMet = scan.binning[bin+1]
+
+			cutText = "#geq1#gamma#geq2jets"
+			if name in  [ "xSection", "xSectionUncert", "pdfUncert" ]:
+				cutText = ""
+				minMet = -1
+				maxMet = -1
+
+			if maxMet < 0 and minMet < 0:
+				pass
+			elif maxMet < 0:
+				cutText +=" #slash{E}_{T}#geq%sGeV"%minMet
+			else:
+				cutText += " %s#leq#slash{E}_{T}(GeV)<%s"%(minMet,maxMet)
+
+
+			info = ROOT.TLatex(.0,.96, "CMS Simulation - "+scanText+" - 8TeV" )
 			info.SetNDC()
 			info.SetTextSize( histo.GetLabelSize() )
 			info.SetTextFont( histo.GetLabelFont() )
 			info.Draw()
-			info.DrawLatex( 0.5, 0.96, cutText )
-			shiftNDC = info.GetXsize() / ( ROOT.gPad.GetX2() - ROOT.gPad.GetX1() )
-			info.SetX( 0.5-shiftNDC )
-			info.Draw()
-
+			info2 = info.Clone()
+			info2.SetTextAlign(31) # right align
+			info2.SetTextSize( info2.GetTextSize() * .9 )
+			info2.DrawLatex( 0.98, 0.96, cutText )
+			info2.Draw()
 
 			ROOT.gPad.SaveAs( "plots/%s_%s.pdf"%(scanname,histo.GetName()) )
+			#ROOT.gPad.SaveAs( "plots/%s_%s.png"%(scanname,histo.GetName()) )
+			#ROOT.gPad.SaveAs( "plots/%s_%s.C"%(scanname,histo.GetName()) )
 
 #todo ngen correct
 
