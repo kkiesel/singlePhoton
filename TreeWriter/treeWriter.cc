@@ -208,7 +208,11 @@ tree::electronWorkingPoints getElectronWorkingPoint ( const susy::Electron& elec
 		) )
 		return tree::kLooseElectron;
 
-	if( false ) { // implement the bug fix
+	if( true ) { // implement the bug fix
+		susy::Track track = event.tracks[electron.gsfTrackIndex];
+		d0 = track.d0();
+		dZ = track.vertex.Z();
+
 		if( ( isBarrel
 			&&( fabsdEtaIn < 0.007
 			|| fabsdPhiIn < 0.8
