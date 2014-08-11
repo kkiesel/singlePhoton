@@ -66,6 +66,7 @@ class Ratio:
 		self.totalUncert.SetFillStyle(3002)
 		self.totalUncert.SetMarkerSize(0)
 		self.totalUncert.SetFillColor(1)
+		self.totalUncert.SetLineColor(0)
 
 
 		# Delete label and title of all histograms in the current pad
@@ -92,7 +93,7 @@ class Ratio:
 		self.totalUncert.Draw("e2")
 		if self.sysHisto:
 			self.ratioSys.Draw("e2 same")
-		self.ratio.Draw("e same x0")
+		self.ratio.Draw("e0 same x0")
 		if yMin < 1 and yMax > 1:
 			oneLine = ROOT.TLine()
 			oneLine.SetLineStyle(2)

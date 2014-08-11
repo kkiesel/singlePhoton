@@ -14,8 +14,6 @@ def multiDimFakeRate( filenames, plot="met", cut="1", isData=True ):
 		weightString = "(1. - 0.993 * (1. - std::pow(photons[0].pt / 2.9 + 1., -2.4)) * (1. - 0.23 * std::exp(-0.2777 * nTracksPV))* (1. - 5.66e-4 * nVertex))"
 		# relative uncertainty: 11%
 	else:
-		# yutaro's email, 12.02.2014
-		weightString = "1. - 0.995003 * (1. - TMath::Power(1.968e-01 * photons[0].pt + 1., -3.120e+00)) * (1. - 4.392e-01 * TMath::Exp(-3.394e-01 * nTracksPV)) * (1. - 2.308e-04 * nVertex)"
 		# yutaro's email, 06.05.2014
 		weightString = "1 - (1 - 0.00623) * (1 - std::pow(photons[0].pt / 4.2 + 1,-2.9)) * (1 - 0.29 * std::exp(-0.335 * nTracksPV)) * (1 - 0.000223 * nVertex)"
 
@@ -50,7 +48,6 @@ def getMixedWeigthHisto( filenames, predFilenames, commonCut, control=True, fill
 		commonCut += "&& recoilChr>0"
 
 	regionCut = "met<100" if control else "met>=100"
-	regionCut = "120 < met && met<160"
 
 	xlabel, xunit, xbinning = readAxisConf( xVar )
 	ylabel, yunit, ybinning = readAxisConf( yVar )

@@ -13,119 +13,89 @@ def getHistosFromFiles( filenames, histname="trueNVtx" ):
 
 	return h
 
-
-def getS7PuHisto():
-	# Distribution used for S7 Summer2012 MC.
-
-	Summer2012_S7 = [
-		2.344E-05,
-		2.344E-05,
-		2.344E-05,
-		2.344E-05,
-		4.687E-04,
-		4.687E-04,
-		7.032E-04,
-		9.414E-04,
-		1.234E-03,
-		1.603E-03,
-		2.464E-03,
-		3.250E-03,
-		5.021E-03,
-		6.644E-03,
-		8.502E-03,
-		1.121E-02,
-		1.518E-02,
-		2.033E-02,
-		2.608E-02,
-		3.171E-02,
-		3.667E-02,
-		4.060E-02,
-		4.338E-02,
-		4.520E-02,
-		4.641E-02,
-		4.735E-02,
-		4.816E-02,
-		4.881E-02,
-		4.917E-02,
-		4.909E-02,
-		4.842E-02,
-		4.707E-02,
-		4.501E-02,
-		4.228E-02,
-		3.896E-02,
-		3.521E-02,
-		3.118E-02,
-		2.702E-02,
-		2.287E-02,
-		1.885E-02,
-		1.508E-02,
-		1.166E-02,
-		8.673E-03,
-		6.190E-03,
-		4.222E-03,
-		2.746E-03,
-		1.698E-03,
-		9.971E-04,
-		5.549E-04,
-		2.924E-04,
-		1.457E-04,
-		6.864E-05,
-		3.054E-05,
-		1.282E-05,
-		5.081E-06,
-		1.898E-06,
-		6.688E-07,
-		2.221E-07,
-		6.947E-08,
-		2.047E-08 ]
-
-	h = ROOT.TH1F(randomName(), "", 60, 0, 60 )
-	for bin, content in enumerate( Summer2012_S7 ):
-		h.SetBinContent( bin+1, content )
-
-	return h
-
-
 if __name__ == "__main__":
 	arguments = argparse.ArgumentParser()
-	#arguments.add_argument("filenames", nargs="+", type=isValidFile )
+	#arguments.add_argument("--filenames", nargs="+", type=isValidFile )
 	opts = arguments.parse_args()
 
-	#hSig = getHistosFromFiles( opts.filenames )
-	#hSig.SetName("pileup")
-	#hSig.SetLineColor(2)
+	s10 = readHisto( "../TreeWriter/pileUpReweighting/nTrueVertexMC.root", "pileupScenarioS10" )
+	s7 = readHisto( "../TreeWriter/pileUpReweighting/nTrueVertexMC.root", "pileupScenarioS7" )
+	data = readHisto( "../TreeWriter/pileUpReweighting/nTrueVertexData.root", "pileup" )
 
-	hMc = readHisto( "../TreeWriter/pileUpReweighting/nTrueVertexMC.root", "pileupScenarioS10" )
-	hSig = hMc.Clone()
+	data.SetLineColor(1)
+	data.SetMarkerStyle(20)
 
-	hData = readHisto( "../TreeWriter/pileUpReweighting/nTrueVertexData.root", "pileup" )
-	hData.SetLineColor(1)
-	hData.SetMarkerStyle(20)
-	hData.Sumw2()
+	s10.SetLineColor(2)
+	s7.SetLineColor( ROOT.kBlue )
 
-	hS7 = getS7PuHisto()
-	hS7.SetLineColor(3)
-
-	for h in hSig, hMc, hData, hS7:
-		h.SetTitle(";true number vertices;[a.u.]")
+	for h in data, s7, s10:
+		h.SetTitle(";true number of vertices;[a.u.]")
 		h.Scale( 1./h.Integral() )
+		h.GetXaxis().SetRangeUser( 5, 50 )
 
-	scaledTo = hS7.Clone( randomName() )
-	scaledTo.Divide( hMc )
-	scaledTo.Multiply( hData )
-	scaledTo.SetLineColor(7)
-	print scaledTo.Integral()
+	S10scaledUsingS10 = s10.Clone( randomName() )
+	S10scaledUsingS10.Divide( s10 )
+	S10scaledUsingS10.Multiply( data )
+	S10scaledUsingS10.SetLineStyle( 2 )
 
+	S7scaledUsingS7 = s7.Clone( randomName() )
+	S7scaledUsingS7.Divide( s7 )
+	S7scaledUsingS7.Multiply( data )
+	S7scaledUsingS7.SetLineStyle( 3 )
+
+	S7scaledUsingS10 = s7.Clone( randomName() )
+	S7scaledUsingS10.Divide( s10 )
+	S7scaledUsingS10.Multiply( data )
+	S7scaledUsingS10.SetLineStyle( 8 )
 
 	mh = Multihisto()
 	mh.setMaximum(0.07)
-	mh.addHisto( hData, "Data", draw="p" )
-	mh.addHisto( hMc, "S10 Scenario", draw="hist" )
-	mh.addHisto( hSig, "Signal", draw="hist ")
-	mh.addHisto( hS7, "S7 Scenario", draw="hist")
-	mh.addHisto( scaledTo, "S7 Scenario (wrong scaled)", draw="hist")
+	mh.addHisto( data, "Data", draw="p" )
+	mh.addHisto( s10, "S10 Scenario", draw="hist" )
+	mh.addHisto( S10scaledUsingS10, "S10 scaled by data/S10", draw="hist")
+	mh.addHisto( s7, "S7 Scenario", draw="hist")
+	mh.addHisto( S7scaledUsingS7, "S7 scaled by data/S7", draw="hist")
+	mh.addHisto( S7scaledUsingS10, "S7 scaled by data/S10", draw="hist")
 	mh.Draw()
+	mh.leg.SetX1( .65 )
+	mh.leg.SetY1( .7 )
+	mh.leg.SetX2( 1 )
+	mh.leg.SetY2( 1 )
 
 	ROOT.gPad.SetLogy(0)
 	ROOT.gPad.SaveAs("plots/pileupScenarios.pdf")
+
+	for name, h in [("data",data), ("s7", s7), ("s10", s10), ("s10scaleds10", S10scaledUsingS10), ("s7sceleds7", S7scaledUsingS7), ("s7sceleds10", S7scaledUsingS10)]:
+		print name, h.GetBinContent(h.FindBin(20))
+
+
+##################### New plot ###################################
+	# pu output distributions
+	signalS7 = readHisto( "puInputs/testS7.root", "nTrueVertex" )
+	signalS10 = readHisto( "puInputs/testS10.root", "nTrueVertex" )
+	signalS0 = readHisto( "puInputs/testNoWeight.root", "nTrueVertex" )
+
+	for name, hist in [ ("S7 ", signalS7), ("S10", signalS10), ("NPu", signalS0 ) ]:
+		print name, hist.Integral(0, hist.FindBin(20)-1 )/600, hist.Integral(hist.FindBin(20),hist.FindBin(30)-1)/600, hist.Integral(hist.FindBin(30), -1 )/600
+
+	signalS7.SetLineColor(1)
+	signalS10.SetLineColor(2)
+
+	for h in signalS7, signalS10, signalS0:
+		h.SetTitle(";true number of vertices;Events")
+		h.GetXaxis().SetRangeUser( 5, 50 )
+
+
+	mh2 = Multihisto()
+	mh2.leg.SetX1( .65 )
+	mh2.leg.SetY1( .7 )
+	mh2.leg.SetX2( 1 )
+	mh2.leg.SetY2( 1 )
+
+	mh2.addHisto( signalS7, "weighted by data/S7", draw="e" )
+	mh2.addHisto( signalS10, "weighted by data/S10", draw="e" )
+	mh2.addHisto( signalS0, "no pu weighting", draw="e" )
+	mh2.Draw()
+
+	ROOT.gPad.SaveAs("plots/pileupDifferentWeightingSignal.pdf")
 
