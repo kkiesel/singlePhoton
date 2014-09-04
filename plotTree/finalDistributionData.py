@@ -144,7 +144,7 @@ nMetBins = %s
 def finalDistributionData( plot ):
 
 	# Sample names
-	treeVersion = "30"
+	treeVersion = "31"
 	wg = [ "slimWGamma_50_130_V03.%s_tree.root"%treeVersion, \
 			"slimWGamma_130_inf_V03.%s_tree.root"%treeVersion ]
 	tg = [ "slimTTGamma_V03.%s_tree.root"%treeVersion ]
@@ -162,9 +162,7 @@ def finalDistributionData( plot ):
 
 	leptonPtCut = 25 # only larger than 15 make sense here, since this is the reprocessing cut
 	#commonCut = "(!@electrons.size() || Max$(electrons.pt)<{0}) && (!@muons.size() || Max$(muons.pt)<{0})".format(leptonPtCut)
-	commonCut = "!@electrons.size() && !@muons.size()"
-
-	#commonCut += " && nGoodJets>1"
+	commonCut = "!@electrons.size() && !@muons.size() && thisPt>0 && recoilChr > 0"
 
 	# Compute the weights:
 	weight2D = getMixedWeigthHisto( data, data, commonCut )
