@@ -38,14 +38,14 @@ def closure( filenames, plot ):
 	gDatasetAbbrs = mergeDatasetAbbr( gDatasetAbbrs )
 
 	multihisto = Multihisto()
-	multihisto.leg = myLegend(.6, .75, .95, .92 )
+	multihisto.leg = myLegend(.63, .75, .96, .94 )
 	multihisto.leg.SetTextSize(0.035)
 	multihisto.leg.SetTextFont(42)
 
 	multihisto.leg.SetHeader( ",".join([ datasetToLatex(x) for x in gDatasetAbbrs]) )
 	multihisto.addHisto( gHist, "Direct Simulation", draw="p e x0" )
-	multihisto.addHisto( eHist, "Prediction", draw="hist" )
-	multihisto.addHisto( eHistSys, "", draw="e2" )
+	multihisto.addHisto( eHist, "", draw="hist" )
+	multihisto.addHisto( eHistSys, "Prediction", draw="e2" )
 
 	infoText = ROOT.TLatex()
 	infoText.SetNDC()

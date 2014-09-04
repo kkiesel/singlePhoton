@@ -64,7 +64,7 @@ class Multihisto:
 				if label == "Simulation":
 					legendOption = "lep"
 				if label == "Prediction":
-					legendOption = "le"
+					legendOption = "lfe"
 				self.leg.AddEntry( hist, label, legendOption )
 		for hist, label, draw in reversed(self.histosToStack):
 			if label:

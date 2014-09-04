@@ -149,11 +149,6 @@ def drawClosure( filenames, predFilenames, plot, commonCut, infoText, additional
 	sysHist.SetFillColor( sysHist.GetLineColor() )
 	sysHist.SetLineColor(0)
 
-	for bin in range(gHist.FindBin(101), gHist.GetNbinsX()+1):
-		w = gHist.GetBinWidth(bin)
-		#print gHist.GetBinLowEdge(bin)
-		#print gHist.GetBinContent(bin)*w, "±", gHist.GetBinError(bin)*w
-		#print fHist.GetBinContent(bin)*w, "±", fHist.GetBinError(bin)*w, "±", sysHist.GetBinContent(bin)*w
 
 	signalAbbrs = mergeDatasetAbbr( [ getDatasetAbbr(x) for x in filenames ] )
 
@@ -171,7 +166,7 @@ def drawClosure( filenames, predFilenames, plot, commonCut, infoText, additional
 
 	from myRatio import Ratio
 	r = Ratio( "Sim./Pred.", gHist, fHist, sysHist )
-	r.draw(0.5,1.5)
+	r.draw(0.,2)
 	infoText.Draw()
 	muhisto.leg.AddEntry( r.totalUncert, "total uncert", "f" )
 	muhisto.leg.Draw()
@@ -199,9 +194,9 @@ def qcdClosure( filenames, plots ):
 
 	for plot in plots:
 		if plot != "met":
-			drawClosure( filenames, filenames, plot, commonCut+"&&"+signalCut, infoSignal, "_signal" )
-			drawClosure( filenames, filenames, plot, commonCut+"&&"+controlCut, infoControl, "_control" )
-		drawClosure( filenames, filenames, plot, commonCut, info, modifyEmptyBins=True )
+			drawClosure( filenames, filenames, plot, commonCut+"&&"+signalCut, infoSignal, "_signal", modifyEmptyBins=True )
+			drawClosure( filenames, filenames, plot, commonCut+"&&"+controlCut, infoControl, "_control", modifyEmptyBins=False )
+		drawClosure( filenames, filenames, plot, commonCut, info, modifyEmptyBins=False )
 		#drawSignleClosure( filenames, plot, commonCut, info )
 
 if __name__ == "__main__":
