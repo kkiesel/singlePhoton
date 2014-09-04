@@ -8,6 +8,7 @@ Styles.tdrStyle2D()
 ROOT.gStyle.SetOptLogz(0)
 ROOT.gStyle.SetPalette(1)
 
+
 def nGenHisto( nGen ):
 	h = ROOT.TH1F(randomName(), ";met;", 1, 0, 1 )
 	h.SetBinContent( 1, nGen )
@@ -119,9 +120,8 @@ class Scan:
 	def fillFunctions( self ):
 		for coordinate, histoDict in self.points.iteritems():
 			#if "nGen" not in histoDict:
-			if nGen != -1:
+			if self.nGen != -1:
 				histoDict["nGen"] = nGenHisto( self.nGen )
-
 			bin = self.defaultHisto.FindBin( *coordinate )
 			for function, histo, options in self.functions:
 				if options:
@@ -244,8 +244,9 @@ def meanPt( histoDict ):
 	return histoDict["gPt"].GetMean()
 
 def meanNjets( histoDict ):
-	if "gNjets" not in histoDict.keys(): return 0
-	return histoDict["gNjets"].GetMean()
+	if "gNJets" in histoDict.keys(): return histoDict["gNJets"].GetMean()
+	if "gNjets" in histoDict.keys(): return histoDict["gNjets"].GetMean()
+	return 0
 
 def meanMet( histoDict ):
 	if "gMet" not in histoDict.keys(): return 0
@@ -364,7 +365,7 @@ if __name__ == "__main__":
 		scan.addFunction( nGen, "nGen", "Generated events [10^{4}]" )
 		scan.addFunction( acceptance, "acceptance", "Acceptance [%]", True )
 		scan.addFunction( jetScale, "jes", "jes uncert. [%]" )
-		scan.addFunction( signalContamination, "signalContamination", "rel. bkg. pred. from signal [%]", True )
+		scan.addFunction( signalContamination, "signalContamination", "bkg. pred. from signal/signal yield [%]", True )
 		scan.addFunction( meanHt, "ht", "#LTH_{T}#GT [GeV]" )
 		scan.addFunction( meanPt, "pt", "#LTp_{T}#GT [GeV]" )
 		scan.addFunction( meanNjets, "nJet", "#LTn_{Jets}#GT" )
@@ -382,6 +383,9 @@ if __name__ == "__main__":
 			scanAbbr = scanname[0] # B or W
 			histos.extend( gmsbXsection( scan.defaultHisto, "../../infos/Spectra_gsq_%s_8TeV.xsec"%scanAbbr ) )
 			histos.extend( gmsbPdfUncert( scan.defaultHisto, "../../infos/Spectra_gsq_%s_phad_pdfuncert.dat"%scanAbbr) )
+
+		allAcceptancePlots = []
+		allSigContPlots = []
 
 		for histo in histos:
 			can = ROOT.TCanvas()
@@ -462,12 +466,40 @@ if __name__ == "__main__":
 			info2 = info.Clone()
 			info2.SetTextAlign(31) # right align
 			info2.SetTextSize( info2.GetTextSize() * .9 )
-			info2.DrawLatex( 0.98, 0.96, cutText )
+			info3 = info2.DrawLatex( 0.98, 0.96, cutText )
 			info2.Draw()
 
 			ROOT.gPad.SaveAs( "plots/%s_%s.pdf"%(scanname,histo.GetName()) )
 			#ROOT.gPad.SaveAs( "plots/%s_%s.png"%(scanname,histo.GetName()) )
 			#ROOT.gPad.SaveAs( "plots/%s_%s.C"%(scanname,histo.GetName()) )
 
-#todo ngen correct
+			if re.match( "acceptance\d", name ):
+				allAcceptancePlots.append( ( histo.Clone( randomName() ), (info,info3) ) )
+			if re.match( "signalContamination\d", name ):
+				allSigContPlots.append( ( histo.Clone( randomName() ), (info,info3) ) )
+
+
+
+		# draw acceptance and signal contaminaton at one single canvas
+
+		for saveName, histosAndInfo in [("acceptanceInBins",allAcceptancePlots), ("sigContInBins",allSigContPlots)]:
+
+			can = ROOT.TCanvas( randomName(), "", 1400, 800 )
+			can.Divide(3,2)
+			for i, (histo, infos) in enumerate( histosAndInfo ):
+				can.cd(i+1)
+				histo.Draw("colz")
+				infos[1].SetTitle( infos[1].GetTitle()[21:] )
+				infos[1].SetX( infos[1].GetX()*0.9 )
+				for info in infos:
+					info.Draw()
+			can.SaveAs( "plots/%s_%s.pdf"%(scanname,saveName) )
+			can.SaveAs( "plots/%s_%s.png"%(scanname,saveName) )
+			can.SaveAs( "plots/%s_%s.C"%(scanname,saveName) )
+			can.SaveAs( "plots/%s_%s.root"%(scanname,saveName) )
+
+
+
+
+
 
