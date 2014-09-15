@@ -208,7 +208,7 @@ tree::electronWorkingPoints getElectronWorkingPoint ( const susy::Electron& elec
 		) )
 		return tree::kLooseElectron;
 
-	if( true ) { // implement the bug fix
+	if( false ) { // implement the bug fix
 		susy::Track track = event.tracks[electron.gsfTrackIndex];
 		d0 = track.d0();
 		dZ = track.vertex.Z();
@@ -737,7 +737,7 @@ void TreeWriter::fillJets( int jecScale=0 ) {
 #endif
 
 		if( std::abs(corrP4.Eta()) > 3 ) continue;
-		if( corrP4.Pt() < 30 ) continue;
+		if( corrP4.Pt() < 40 ) continue;
 
 		/*std::cout << "\nNew Jet with " << it->momentum.Pt()<<"\n";
 		std::cout << "area = " << it->jetArea << " rho = " << event.rho << std::endl;
