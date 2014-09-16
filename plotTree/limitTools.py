@@ -81,7 +81,7 @@ def getHistoFromScan( pointList ):
 	return ROOT.TH2F( randomName(), "", len(xList), xList[0]-0.5*stepSizeX, xList[-1]+0.5*stepSizeX, \
 		len(yList), yList[0]-0.5*stepSizeY, yList[-1]+0.5*stepSizeY )
 
-def getPositionOfPoint( x, y, relWidth=.2 ):
+def getPositionOfPoint( x, y, relWidth=.15 ):
 	"""A 2d histogram can be divided into 1 middle rectangle and 4 trapezoids:
 	center, left, right, top, bottom.
 	"""
@@ -146,33 +146,44 @@ def smoothGraph( graph, n=3, sigmaCorrection=1 ):
 
 		newX = 0
 		newY = 0
+		weightSum = 0
 
-		if iPoint-n < 0 or iPoint+n > nGraph-1:
+		if iPoint-n >= 0 and iPoint+n <= nGraph-1:
 			# normal mode, use +- n points
 			for i, iTestPoint in enumerate(range( iPoint-n, iPoint+n+1 )):
 				graph.GetPoint( iTestPoint, x, y )
 				newX += x * gaus[i]
 				newY += y * gaus[i]
+				weightSum += gaus[i]
+			newX /= weightSum
+			newY /= weightSum
 		else:
 			pointPosition = getPositionOfPoint( x, y )
 			if pointPosition == "center":
 				# use up to n points, but the same number up and down
-				modN = min( n, iPoint, nGraph-iPoint )
-				for i, iTestPoint in enumerate(range( iPoint-n, iPoint+n+1 )):
+				modN = min( n, iPoint, nGraph-iPoint ) - 1
+				for i, iTestPoint in enumerate(range( iPoint-modN, iPoint+modN+1 )):
 					graph.GetPoint( iTestPoint, x, y )
 					newX += x * gaus[i]
 					newY += y * gaus[i]
+					weightSum += gaus[i]
+				newX /= weightSum
+				newY /= weightSum
 			else:
 				for i, iTestPoint in enumerate(range( iPoint-n, iPoint+n+1 )):
 					graph.GetPoint( iTestPoint, x, y )
 					newX += x * gaus[i]
 					newY += y * gaus[i]
-				if pointPosition in [ "left", "right" ]:
-					newY = y0
-				else:
-					newX = x0
+					weightSum += gaus[i]
+				newX /= weightSum
+				newY /= weightSum
 
-		newGraph.SetPoint( iPoint, x, y )
+				if pointPosition in [ "left", "right" ]:
+					newX = x0
+				else:
+					newY = y0
+
+		newGraph.SetPoint( iPoint, newX, newY )
 	return newGraph
 
 
@@ -211,6 +222,20 @@ def extrapolateToEdge( cont, hist ):
 		x0, y0 = float(x), float(y)
 		cont.GetPoint( next2lastPoint, x, y )
 		x1, y1 = float(x), float(y)
+
+		# if point 0 and 1 are too close use next point:
+		while sqrt( (x0-x1)**2 + (y0-y1)**2 ) < (hist.GetXaxis().GetXmax()-hist.GetXaxis().GetXmin()) *.02:
+			next2lastPoint = 2* next2lastPoint-lastPoint
+			cont.GetPoint( next2lastPoint, x, y )
+			x1, y1 = float(x), float(y)
+
+		if pointPosition == "center":
+			continue # do nothing
+			extractToDiagonal = True
+			if extractToDiagonal:
+				newX = ( y0*x1 - y1*x0 ) / ( y0+x1-y1-x0 )
+				newY = newX
+
 		if pointPosition == "bottom":
 			newY = hist.GetYaxis().GetXmin()
 			if y1 == y0:
@@ -239,7 +264,7 @@ def extrapolateToEdge( cont, hist ):
 		if lastPoint == 0:
 			cont = setPointAtBeginning( cont, newX, newY )
 		else:
-			cont.SetPoint( nGraph, newX, newY )
+			cont.SetPoint( nGraph+1, newX, newY )
 
 	return cont
 
@@ -251,14 +276,16 @@ def getGraph( scan, name ):
 	ROOT.gPad.Update()
 	cont = gr2D.GetContourList(1)[0]
 
-	#cont = smoothGraph( cont )
-	#cont = extrapolateToEdge( cont, h )
+	cont = smoothGraph( cont )
+	cont = extrapolateToEdge( cont, h )
 	return cont
 
 
 def extractHistos( path, regex="*.txt.result.txt" ):
 	name = path.split('/')[-1][17:]
 	scan = {}
+	if not getFilesFromFolder( path, regex ):
+		print path,regex," does not exist"
 	for filename in getFilesFromFolder( path, regex ):
 		thisDict = fileToDict( filename )
 		if "CLs observed" not in thisDict:
@@ -295,6 +322,11 @@ def extractHistos( path, regex="*.txt.result.txt" ):
 	expM = getGraph(scan, "CLs expected m1sigma")
 	expP = getGraph(scan, "CLs expected p1sigma")
 
+	# temporary fix, since limit is ad edge of plotting contour
+	if "T5wg" in name:
+		for gr in obs, obsM, obsP, exp, expP, expM:
+			gr.RemovePoint( gr.GetN()-1 )
+
 	obs.SetName( "graph_Obs" )
 	obsM.SetName( "graph_ObsM" )
 	obsP.SetName( "graph_ObsP" )
@@ -305,19 +337,24 @@ def extractHistos( path, regex="*.txt.result.txt" ):
 	draw = False
 	if draw:
 		xsec.Draw("colz")
-		for i in obs, obsM, obsP, exp, expP, expM:
-			i.Draw("same * l")
+		for i, gr in enumerate([obs, obsM, obsP, exp, expP, expM]):
+			gr.SetLineColor(i+1)
+			gr.SetMarkerColor(i+1)
+			gr.Draw("same * l")
 
 		ROOT.gPad.SetLogz(1)
 
 		ROOT.gPad.SaveAs("plots/raw_%s.pdf"%name)
 
 	out = ROOT.TFile( "%s.root"%name, "recreate" )
+	print "Write file %s.root"%name
 	for i in xsec, obs, obsM, obsP, exp, expP, expM:
 		i.Write()
 	out.Close()
 
-extractHistos( "2014-08-06-12-39-GMSB_SqGl_met-Wino" )
-extractHistos( "2014-08-06-12-34-GMSB_SqGl_met-Bino" )
-extractHistos( "2014-08-06-13-34-SMS_T5gg" )
-extractHistos( "2014-08-06-13-34-SMS_T5wg" )
+limitFolder = "../../limits/"
+
+extractHistos( limitFolder+"2014-08-06-12-39-GMSB_SqGl_met-Wino" )
+extractHistos( limitFolder+"2014-08-06-12-34-GMSB_SqGl_met-Bino" )
+extractHistos( limitFolder+"2014-08-06-13-34-SMS_T5gg" )
+extractHistos( limitFolder+"2014-08-06-13-34-SMS_T5wg" )
