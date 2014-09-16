@@ -23,6 +23,7 @@ def style_SUS_14_004():
 	s.SetOptStat(0)
 
 	#s.SetOptLogz(1)
+	s.SetCanvasColor(0)
 	s.SetPalette(1)
 	s.SetNumberContours(999)
 	s.cd()
@@ -161,7 +162,7 @@ for name, config in configDict.iteritems():
 
 	xsec.Draw("colz")
 
-	for gr in obs, obsP, obsM, exp, expM, expP:
+	for gr in exp, expM, expP, obs, obsP, obsM:
 		gr.Draw(" same l ")
 
 
@@ -172,8 +173,8 @@ for name, config in configDict.iteritems():
 		leg = ROOT.TLegend( .15, .84, .65, .93 )
 	leg.SetBorderSize(0)
 	leg.SetFillStyle(0)
-	leg.AddEntry( obs, "Observed #pm 1 #sigma_{theory}", "l" )
-	leg.AddEntry( exp, "Expected #pm 1 #sigma_{experiment}", "l" )
+	leg.AddEntry( obs, "Observed #pm #sigma_{theory}", "l" )
+	leg.AddEntry( exp, "Expected #pm #sigma_{experiment}", "l" )
 	leg.Draw()
 
 	legShift = .01
@@ -196,6 +197,7 @@ for name, config in configDict.iteritems():
 	infoText = ""
 	if config["analysis"] == "singlePhoton":
 		infoText = "CMS                          19.7 fb^{-1} (8 TeV)           #geq1#gamma#geq2jets"
+		#infoText = "CMS Preliminary       19.7 fb^{-1} (8 TeV)           #geq1#gamma#geq2jets"
 	elif config["analysis"] == "razor":
 		infoText = "CMS                          19.7 fb^{-1} (8 TeV)           #geq2#gamma#geq1jets"
 	else:
@@ -206,10 +208,10 @@ for name, config in configDict.iteritems():
 	info.Draw()
 
 	if "GGMWino" in config["scan"]:
-		model = ROOT.TLatex( 0, .89, "GGM Wino-like #tilde{#chi}^{0}_{1}, m_{#tilde{#chi}^{0}_{1}} = 375GeV" )
+		model = ROOT.TLatex( 0, .91, "GGM Wino-like #tilde{#chi}^{0}_{1}, m_{#tilde{#chi}^{0}_{1}} = 375GeV" )
 		model.SetTextSize( model.GetTextSize()*.8 )
 	if "GGMBino" in config["scan"]:
-		model = ROOT.TLatex( 0, .89, "GGM Bino-like #tilde{#chi}^{0}_{1}, m_{#tilde{#chi}^{0}_{1}} = 375GeV" )
+		model = ROOT.TLatex( 0, .91, "GGM Bino-like #tilde{#chi}^{0}_{1}, m_{#tilde{#chi}^{0}_{1}} = 375GeV" )
 		model.SetTextSize( model.GetTextSize()*.8 )
 	elif config["scan"] == "T5gg":
 		model = ROOT.TLatex( .16, .79, "pp#rightarrow#tilde{g}#tilde{g}, #tilde{g}#rightarrowqq#tilde{#chi}^{0}_{1}, #tilde{#chi}^{0}_{1}#rightarrow#gamma#tilde{G}" )
@@ -220,5 +222,15 @@ for name, config in configDict.iteritems():
 
 	model.SetNDC()
 	model.Draw()
+
+	if "GGM" in config["scan"]:
+		xsecLabel = ROOT.TLatex( 0, .87, "NLO exclusion" )
+		xsecLabel.SetTextSize( model.GetTextSize() )
+	elif "T5" in config["scan"]:
+		xsecLabel = ROOT.TLatex( .16, .74, "NLO+NLL exclusion" )
+		xsecLabel.SetTextSize( model.GetTextSize() )
+
+	xsecLabel.SetNDC()
+	xsecLabel.Draw()
 
 	ROOT.gPad.SaveAs( "plots/{}.pdf".format(name) )
