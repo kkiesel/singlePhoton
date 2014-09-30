@@ -6,13 +6,14 @@ ROOT.gStyle.SetErrorX(0)
 ROOT.gStyle.SetEndErrorSize(0)
 
 def doTriggerPlot( ht=True ):
-	filenamePart = "/home/knut/master/triggerPlots/4knut/mergedHistos_%sTrigger.root"
+	#filenamePart = "/home/knut/master/triggerPlots/4knut/mergedHistos_%sTrigger.root"
+	filenamePart = "/user/kiesel/root-files/mergedHistos_%s.root"
 	filenamePart2 = "HT" if ht else "Photon"
 	plotName = "photonTrigPt" if ht else "hthlt"
 
 	f = ROOT.TFile( filenamePart%filenamePart2 )
-	nom = f.Get( "select_All_%s_Nominator/%s"%(filenamePart2,plotName) )
-	den = f.Get( "select_All_%s_Denominator/%s"%(filenamePart2,plotName) )
+	nom = f.Get( "select_All_%s_Nominator/PreselCut_%s"%(filenamePart2,plotName) )
+	den = f.Get( "select_All_%s_Denominator/PreselCut_%s"%(filenamePart2,plotName) )
 
 	if not den or not nom:
 		print "histogram not found"
@@ -27,9 +28,11 @@ def doTriggerPlot( ht=True ):
 	eff.SetMarkerColor(1)
 	eff.SetLineWidth(1)
 	if not ht:
-		eff.GetXaxis().SetRangeUser( 300, 1000 )
+		#eff.GetXaxis().SetRangeUser( 300, 1000 )
+		eff.GetXaxis().SetLimits( 300, 1000 )
 	else:
-		eff.GetXaxis().SetRangeUser( 50, 500 )
+		#eff.GetXaxis().SetRangeUser( 50, 500 )
+		eff.GetXaxis().SetLimits( 50, 500 )
 
 
 
@@ -54,8 +57,13 @@ def doTriggerPlot( ht=True ):
 	l.SetLineWidth(2)
 	l.Draw()
 
+	oneLine = ROOT.TLine( eff.GetXaxis().GetXmin(), 1, eff.GetXaxis().GetXmax(), 1 )
+	oneLine.SetLineStyle(3)
+	oneLine.SetLineWidth(2)
+	oneLine.Draw()
 
-
-	ROOT.gPad.SaveAs("test.pdf")
+	outName = "plots/triggerEfficiency" + filenamePart2
+	ROOT.gPad.SaveAs( outName + ".pdf" )
 
 doTriggerPlot()
+doTriggerPlot( False )
