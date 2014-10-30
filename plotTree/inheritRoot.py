@@ -84,3 +84,9 @@ if __name__ == "__main__":
 	h.MergeOverflow()
 	for bin in range( h.GetNbinsX()+2):
 		print h.GetBinContent(bin), h.GetBinError(bin)
+
+# test different approach
+def GetKeyNames( self, dir = "" ):
+        self.cd(dir)
+        return [key.GetName() for key in gDirectory.GetListOfKeys()]
+TFile.GetKeyNames = GetKeyNames
