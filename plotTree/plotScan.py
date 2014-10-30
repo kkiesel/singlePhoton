@@ -233,4 +233,11 @@ for name, config in configDict.iteritems():
 	xsecLabel.SetNDC()
 	xsecLabel.Draw()
 
+	if "T5" in config["scan"]:
+
+		diagonal = ROOT.TLine( xsec.GetXaxis().GetXmin(), xsec.GetXaxis().GetXmin(), xsec.GetXaxis().GetXmax(), xsec.GetXaxis().GetXmax() )
+		diagonal.SetLineStyle( 2 )
+		diagonal.SetLineColor( ROOT.kGray )
+		diagonal.Draw()
+
 	ROOT.gPad.SaveAs( "plots/{}.pdf".format(name) )
