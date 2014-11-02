@@ -21,16 +21,11 @@ int main( int argc, char** argv ) {
 		return 1;
 	}
 
-	TreeWriter tw( argc-2, argv+2, argv[1] );
+    bool signal = true;
 
-	/* Run types:
-	 kFullTree
-	 kTree
-	 kGMSB
-	 kGMSB525
-	 kSimplifiedModel
-	*/
-	tw.SetRunType( kSimplifiedModel );
+	TreeWriter tw( argc-2, argv+2, argv[1] );
+    if( signal )
+        tw.SignalScan();
 
 	const std::string lumiJsonName = "/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions12/8TeV/Reprocessing/Cert_190456-208686_8TeV_22Jan2013ReReco_Collisions12_JSON.txt";
 	if( access( lumiJsonName.c_str(), F_OK ) != -1 ) {
@@ -42,14 +37,11 @@ int main( int argc, char** argv ) {
 
 	gSystem->Load("libHistPainter"); // to avoid waring and errors when reading th2 from file
 
-	std::string qcdWeightFile = tw.GetRunType() == kGMSB525
-		? "qcdWeight.root" : "../plotTree/qcdWeight.root";
+	std::string qcdWeightFile = "../plotTree/qcdWeight.root";
 
-	std::string pileupScenario = tw.GetRunType() == kGMSB || tw.GetRunType() == kGMSB525
-		? "S7" :"S10";
+	std::string pileupScenario = "S10";
 
-	std::string puWeightFile = tw.GetRunType() == kGMSB525
-		? "puWeights.root" : "pileUpReweighting/puWeights.root";
+	std::string puWeightFile = "pileUpReweighting/puWeights.root";
 
 	tw.SetQcdWeightHisto( getHisto<TH2F>( qcdWeightFile, "qcdWeight" ) );
 	tw.SetPileUpWeightHisto( getHisto<TH1F>( puWeightFile, "pileupWeight"+pileupScenario ) );
@@ -63,7 +55,7 @@ int main( int argc, char** argv ) {
 
 	double start_time = time(NULL);
 	tw.Loop();
-	if( tw.GetRunType() == kFullTree || tw.GetRunType() == kGMSB || tw.GetRunType() == kSimplifiedModel ) {
+	if( signal ) {
 		tw.Loop(1);
 		tw.Loop(-1);
 	}
