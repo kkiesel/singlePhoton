@@ -4,6 +4,7 @@
 #include <string>
 #include <iostream>
 #include <vector>
+#include <stdlib.h>
 
 
 std::string getModelFromGridParamStr( const std::vector<std::string>& gridParamStr ) {
@@ -15,21 +16,32 @@ std::string getModelFromGridParamStr( const std::vector<std::string>& gridParamS
     return line;
 }
 
+std::string random_string( const int len ) {
+    /* Creates a random string of length 'len'. */
+    static const char alphanum[] =
+        "0123456789"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "abcdefghijklmnopqrstuvwxyz";
+    std::string s( len, 'x' );
+    for (int i = 0; i < len; ++i) {
+        s[i] = alphanum[rand() % (sizeof(alphanum) - 1)];
+    }
+
+    return s;
+}
+
 int main( int argc, char** argv ) {
-    if( argc < 2 ) {
+    if( argc != 2 ) {
         std::cout << "Usage: " << argv[0] << " inputFilename.root" << std::endl;
         return 1;
     }
-
-    // creating input
-    char* infilename = argv[1];
-
-    // without .root
-    std::string basename = infilename;
-    basename = basename.substr( 0, basename.size()-5 );
+    std::cout << "Inputfilename: " << argv[1] << std::endl;
 
     TChain oldTree( "susyTree" );
-    oldTree.Add( infilename );
+    if( !oldTree.Add( argv[1] ) ) {
+        std::cout << "File could not be opened or tree could not be found" << std::endl;
+        return 0;
+    }
 
     // object to read
     std::vector<std::string>* gridParamStr = 0;
@@ -50,11 +62,18 @@ int main( int argc, char** argv ) {
         if( currentModel.empty() ) std::cout << "ERROR: Something went wrong with extracting grid point" << std::endl;
 
         if( currentModel != oldModel ) {
-            std::cout << "New model: " << currentModel << std::endl;
-            oldModel = currentModel;
-            if( i ) newFile->Write(); // Write oldModel to file, but not for first entry
-            newFile = new TFile( (basename+"_"+currentModel+".root").c_str(), "NEW" ); // or maybe substr from in put file
+
+            if ( i ) { // Write oldModel to file, but not for first entry
+                std::cout << "Writing " << newTree->GetEntries() << " events to file " << newFile->GetName() << std::endl;
+                newFile->Write();
+                std::cout << "New model: " << currentModel << std::endl;
+            } else {
+                std::cout << "Beginning with point: " << currentModel << std::endl;
+            }
+
+            newFile = new TFile( (currentModel+"_"+random_string(9)+".root").c_str(), "NEW" ); // or maybe substr from in put file
             newTree = oldTree.CloneTree(0);
+            oldModel = currentModel;
         }
         newTree->Fill();
     }
