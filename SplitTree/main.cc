@@ -6,7 +6,6 @@
 #include <vector>
 #include <stdlib.h>
 
-
 std::string getModelFromGridParamStr( const std::vector<std::string>& gridParamStr ) {
     if( gridParamStr.size() < 2 ) return "";
     std::string line = gridParamStr.at(1);
@@ -30,7 +29,13 @@ std::string random_string( const int len ) {
     return s;
 }
 
-int main( int argc, char** argv ) {
+int main( int argc, char**argv ) {
+
+    // set new random seed
+    srand(time(0));
+
+    //gErrorIgnoreLevel = kPrint, kInfo, kWarning, kError, kBreak, kSysError, kFatal;
+
     if( argc != 2 ) {
         std::cout << "Usage: " << argv[0] << " inputFilename.root" << std::endl;
         return 1;
