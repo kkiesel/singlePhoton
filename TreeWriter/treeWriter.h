@@ -16,17 +16,7 @@
 #include "TPRegexp.h"
 
 #include "TreeObjects.h"
-
-//#define CMSSW525
-
-#ifdef CMSSW525
-#include "SusyEvent525.h"
-namespace susy {
-	typedef std::vector<Particle> ParticleCollection;
-}
-#else
 #include "SusyEvent.h"
-#endif
 
 //#include "../../CMSSW/CMSSW_5_3_8_patch3/src/CondFormats/JetMETObjects/interface/FactorizedJetCorrector.h" // to access the JEC scales
 
@@ -36,21 +26,12 @@ enum eventType {
 	kJetEvent
 };
 
-enum runTypes {
-	kFullTree,
-	kTree, // without systematic shifting, 33% computing time
-	kGMSB,
-	kGMSB525,
-	kSimplifiedModel
-};
-
 class TreeWriter {
 	public :
 		TreeWriter( int nFiles, char** fileList, std::string const& );
 		virtual ~TreeWriter();
 		virtual void Loop( int jecScale=0 );
 
-		void SetRunType( runTypes t ) { runType = t; }
 
 		// Command line output settings
 		void SetProcessNEvents(int nEvents) { processNEvents = nEvents; }
@@ -64,10 +45,10 @@ class TreeWriter {
 		void SetPileUpWeightHisto( TH1F histo ) { pileupHisto = histo; }
 		void SetPileUpWeightHistoUp( TH1F histo ) { pileupHistoUp = histo; }
 		void SetPileUpWeightHistoDown( TH1F histo ) { pileupHistoDown = histo; }
-		runTypes GetRunType() { return runType; }
+        void SignalScan( bool sc=true ) { isSignalScan = sc; }
 
 	private:
-		runTypes runType;
+		bool isSignalScan;
 		void SetBranches( TTree& tree );
 		bool passTrigger();
 		bool isGoodLumi() const;
@@ -100,9 +81,6 @@ class TreeWriter {
 
 		TChain inputTree;
 		susy::Event event;
-#ifdef CMSSW525
-		susy::Event* eventp;
-#endif
 
 		// Objects which can be saved to the file
 		// photons: All tight photons (signal photons)
@@ -112,6 +90,7 @@ class TreeWriter {
 		TTree photonTree;
 		TTree photonElectronTree;
 		TTree photonJetTree;
+		TTree pdfTree;
 		TH1F eventNumbers;
 		TH3I nPhotons;
 		std::map< std::string, TH2F > hist2D;
@@ -158,4 +137,10 @@ class TreeWriter {
 		unsigned int runNumber;
 		unsigned int eventNumber;
 		unsigned int luminosityBlockNumber;
+
+        float pdf_x1;
+        float pdf_x2;
+        float pdf_scale;
+        float pdf_id1;
+        float pdf_id2;
 };

@@ -176,6 +176,14 @@ class Scan:
 			signalCardString += "Point %s EWK prediction = %s 0\n"%(counter, listToString( info["signalEWK"] ) )
 			signalCardString += "Point %s QCD prediction = %s 0\n"%(counter, listToString( info["signalQCD"] ) )
 			signalCardString += "\n"
+			xSections = readSignalXSection( "../../infos/Spectra_gsq_W_8TeV.xsec" )
+			xsec = xSections[(info["m1"],info["m2"])][0]
+			ngen = info["nGen"]
+			scale = 19712 * xsec/60000
+
+			signalCardString += listToString( [scale*i for i in info["signal"]] )
+
+			signalCardString += "\n"
 
 			counter += 1
 

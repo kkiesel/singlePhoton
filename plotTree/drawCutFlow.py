@@ -14,14 +14,14 @@ can.SetBottomMargin( 0.08 )
 h = readHisto( filename, "cutFlow" )
 
 # scale
-lumi = 19712
-xsec = 0.3164
+#lumi = 19712
+#xsec = 0.3164
 nGen = 60000
-h.Scale( lumi*xsec/nGen )
+#h.Scale( lumi*xsec/nGen )
 
-triggerEfficiency = 0.972
-triggerEfficiency = 1
-h.Scale( 1./triggerEfficiency )
+#triggerEfficiency = 0.972
+#triggerEfficiency = 1
+#h.Scale( 1./triggerEfficiency )
 
 #prettify labels
 labels = {
@@ -49,7 +49,6 @@ h.GetYaxis().SetTitleOffset(1.6)
 h.SetLineColor(1)
 h.SetLineWidth(2)
 h.Draw("hist")
-print h.GetBinContent(  9 )
 
 infoText = ROOT.TLatex()
 infoText.SetNDC()
@@ -69,8 +68,7 @@ for text1, text2 in [ ("#tilde{q} ", "1700"),("#tilde{g} "," 720"), ("#tilde{#ch
 	lineSpacing -= 0.04
 	infoText2.DrawLatex( infoText2.GetX(), infoText2.GetY()+lineSpacing, text1+"           "+text2 )
 
-h2 = readHisto( filename, "gMet" )
-h2.Scale( lumi*xsec/nGen/triggerEfficiency )
-print h2.Integral(h2.FindBin(100), -1 )
-
 ROOT.gPad.SaveAs("plots/cutFlow%s.pdf"%filename.replace(".root", "") )
+
+for bin in range(h.GetNbinsX()):
+	print h.GetXaxis().GetBinLabel(bin), "%.2f"%(h.GetBinContent(bin)/nGen*100), "%.2f"%(sqrt(h.GetBinContent(bin))/nGen*100)

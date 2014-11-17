@@ -211,6 +211,8 @@ def setPointAtBeginning( cont, x, y ):
 
 
 def extrapolateToEdge( cont, hist ):
+	"""Extrapolates the first and last point of a graph to the boundaries of a 2d histogram, if the points are near the edge
+	Points already on the edge are skipped."""
 
 	nGraph = cont.GetN()
 	x = ROOT.Double(0)
@@ -238,27 +240,19 @@ def extrapolateToEdge( cont, hist ):
 
 		if pointPosition == "bottom":
 			newY = hist.GetYaxis().GetXmin()
-			if y1 == y0:
-				print "y1 and y0 the same"
-				continue
+			if y0 in [ y1, newY ]: continue
 			newX = ( newY*(x1-x0)-y0*x1+y1*x0 ) / ( y1-y0 )
 		elif pointPosition == "top":
-			if y1 == y0:
-				print "y1 and y0 the same"
-				continue
 			newY = hist.GetYaxis().GetXmax()
+			if y0 in [ y1, newY ]: continue
 			newX = ( newY*(x1-x0)-y0*x1+y1*x0 ) / ( y1-y0 )
 		elif pointPosition == "left":
-			if y1 == y0:
-				print "y1 and y0 the same"
-				continue
 			newX = hist.GetXaxis().GetXmin()
+			if x0 in [ x1, newX ]: continue
 			newY = ( y1*(newX-x0) - y0*(newX-x1) ) / ( x1 - x0 )
 		elif pointPosition == "right":
-			if y1 == y0:
-				print "y1 and y0 the same"
-				continue
 			newX = hist.GetXaxis().GetXmax()
+			if x0 in [ x1, newX ]: continue
 			newY = ( y1*(newX-x0) - y0*(newX-x1) ) / ( x1 - x0 )
 
 		if lastPoint == 0:

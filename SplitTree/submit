@@ -1,0 +1,17 @@
+#!/bin/bash
+
+export LD_LIBRARY_PATH=/opt/d-cache/dcap/lib64:/afs/desy.de/products/root/amd64_rhel60/5.34.00/lib:/usr/lib64/perl5/5.10.0/x86_64-linux-thread-multi/CORE
+export PATH=$PATH:/afs/desy.de/products/root/amd64_rhel60/5.34.00/bin/
+#cd $TMPDIR
+
+# run command
+/afs/desy.de/user/k/kiesel/scratch/singlePhoton/SplitTree/splitTree dcap://dcache-cms-dcap.desy.de/$1
+
+dCache=srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=
+pathInDCache=/pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5wg_V04
+
+for rfile in *root; do
+    echo copying file $rfile
+    srmcp -2 file:///`pwd`/${rfile} ${dCache}${pathInDCache}/${rfile}
+    rm ${rfile}
+done

@@ -20,6 +20,8 @@ def style_SUS_14_004():
 	s.SetTextSize( textSize )
 	s.SetLabelSize( textSize )
 
+	s.SetOptStat(0)
+
 	#s.SetOptLogz(1)
 	s.SetCanvasColor(0)
 	s.SetPalette(1)
@@ -64,6 +66,26 @@ def readConfig( filename ):
 
 	return configDict
 
+def cut2dHisto( h, xMin=None, xMax=None, yMin=None, yMax=None ):
+	xMinBin = h.GetXaxis().FindBin( xMin ) if xMin else 1
+	xMaxBin = h.GetXaxis().FindBin( xMax ) if xMax else h.GetNbinsX()
+	yMinBin = h.GetYaxis().FindBin( yMin ) if yMin else 1
+	yMaxBin = h.GetYaxis().FindBin( yMax ) if yMax else h.GetNbinsY()
+
+	xMin = h.GetXaxis().GetBinLowEdge( xMinBin )
+	xMax = h.GetXaxis().GetBinUpEdge( xMaxBin )
+	yMin = h.GetYaxis().GetBinLowEdge( yMinBin )
+	yMax = h.GetYaxis().GetBinUpEdge( yMaxBin )
+
+	newH = ROOT.TH2D( h.GetName()+"Part", h.GetTitle(), int( (xMax-xMin)/h.GetXaxis().GetBinWidth(1) ), xMin, xMax, int( (yMax-yMin)/h.GetYaxis().GetBinWidth(1) ), yMin, yMax )
+	for xBin in range( h.GetNbinsX()+1 ):
+		for yBin in range( h.GetNbinsY()+1 ):
+			x = h.GetXaxis().GetBinCenter( xBin )
+			y = h.GetYaxis().GetBinCenter( yBin )
+			newH.SetBinContent( newH.FindBin(x,y), h.GetBinContent( xBin, yBin ) )
+
+	return newH
+
 style_SUS_14_004()
 transparentPalette()
 
@@ -85,13 +107,18 @@ for name, config in configDict.iteritems():
 	expP = f.Get( config["expp"] )
 	expM = f.Get( config["expm"] )
 
+	if "GGM" in config["scan"]:
+		xsec = cut2dHisto( xsec, xMin=500, yMin=500 )
+	if "T5wg" == config["scan"]:
+		xsec = cut2dHisto( xsec, xMin=800 )
 
 	# beautify histogram
 	scanObjects = ( "x", "y" )
 	if "GGM" in config["scan"]:
 		scanObjects = ( "#tilde{q}", "#tilde{g}" )
 	elif "T5" in config["scan"]:
-		scanObjects = ( "#tilde{g}", "#tilde{#chi}^{0}_{1}" )
+		charge = "0" if "gg" in config["scan"] else ""
+		scanObjects = ( "#tilde{g}", "#tilde{#chi}^{%s}_{1}"%charge )
 	else:
 		print "Please use 'T5' or 'GGM' as scan"
 
@@ -106,10 +133,6 @@ for name, config in configDict.iteritems():
 
 	xsec.GetXaxis().SetNdivisions( 504 )
 	xsec.GetYaxis().SetNdivisions( 504 )
-
-	if "GGM" in config["scan"]:
-		xsec.SetMinimum(0.01)
-	xsec.SetMinimum(xsec.GetMinimum(0))
 
 	# set exclusion contours
 	for gr in obs, obsP, obsM:
@@ -126,10 +149,16 @@ for name, config in configDict.iteritems():
 	can = ROOT.TCanvas( "can_"+name, "", 600, 600 )
 
 	if "T5" in config["scan"]:
+		xsec.SetMinimum(1)
 		can.SetTopMargin( .06 )
 		can.SetLogz()
 	if "GGM" in config["scan"]:
+		can.SetLogz()
 		can.SetTopMargin( .15 )
+	if "GGMBino" in config["scan"]:
+		xsec.SetMinimum(1)
+	if "GGMWino" in config["scan"]:
+		xsec.SetMinimum(9.9)
 
 	xsec.Draw("colz")
 
@@ -188,7 +217,7 @@ for name, config in configDict.iteritems():
 		model = ROOT.TLatex( .16, .79, "pp#rightarrow#tilde{g}#tilde{g}, #tilde{g}#rightarrowqq#tilde{#chi}^{0}_{1}, #tilde{#chi}^{0}_{1}#rightarrow#gamma#tilde{G}" )
 		model.SetTextSize( model.GetTextSize()*.8 )
 	elif config["scan"] == "T5wg":
-		model = ROOT.TLatex( .16, .79, "pp#rightarrow#tilde{g}#tilde{g}, #tilde{g}#rightarrowqq#tilde{#chi}^{0}_{1}, #tilde{#chi}^{0}_{1}#rightarrow#gamma/W#tilde{G}" )
+		model = ROOT.TLatex( .16, .79, "pp#rightarrow#tilde{g}#tilde{g}, #tilde{g}#rightarrowqq#tilde{#chi}_{1}, #tilde{#chi}_{1}#rightarrow#gamma/W#tilde{G}" )
 		model.SetTextSize( model.GetTextSize()*.8 )
 
 	model.SetNDC()
@@ -203,5 +232,12 @@ for name, config in configDict.iteritems():
 
 	xsecLabel.SetNDC()
 	xsecLabel.Draw()
+
+	if "T5" in config["scan"]:
+
+		diagonal = ROOT.TLine( xsec.GetXaxis().GetXmin(), xsec.GetXaxis().GetXmin(), xsec.GetXaxis().GetXmax(), xsec.GetXaxis().GetXmax() )
+		diagonal.SetLineStyle( 2 )
+		diagonal.SetLineColor( ROOT.kGray )
+		diagonal.Draw()
 
 	ROOT.gPad.SaveAs( "plots/{}.pdf".format(name) )

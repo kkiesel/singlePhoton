@@ -46,7 +46,7 @@ def drawPileUpHistos( saveTex=False ):
 
 	inputHistPath = "../TreeWriter/pileUpReweighting/"
 
-	data = readHisto( inputHistPath + "PU_dist.root", "pileup" )
+	data = readHisto( inputHistPath + "nTrueVertexData.root", "pileup" )
 	data.SetLineColor(1)
 	data.SetMarkerColor(1)
 	data.SetMarkerStyle(20)
@@ -56,7 +56,7 @@ def drawPileUpHistos( saveTex=False ):
 	else:
 		data.SetMarkerSize(1.2)
 
-	mc = readHisto( inputHistPath + "mc_PU_dist_S10.root", "pileup" )
+	mc = readHisto( inputHistPath + "nTrueVertexMC.root", "pileupS10" )
 	mc.SetLineColor(2)
 	mc.SetMarkerColor(2)
 
