@@ -1,6 +1,40 @@
 #include "treeWriter.h"
 #include "printCascade.h"
 
+std::vector< std::string > getAllSimplifiedModelNames( std::string scan = "wg" /* or gg */ ) {
+    /* Returns a vector containing all simplified model names, accourding whether it is the T5wg or T5gg model */
+    std::vector<std::string> outVector;
+    int mGluinoMin = 0;
+    int mGluinoMax = 5000;
+    if( scan == "wg" ) {
+        mGluinoMin = 400;
+        mGluinoMax = 1800;
+    } else if( scan == "gg" ) {
+        mGluinoMin = 800;
+        mGluinoMax = 1800;
+    }
+    // define triangular scan
+    for( int mGluino = mGluinoMin; mGluino <= mGluinoMax; mGluino += 50 ) {
+        for( int mNLSP = 25; mNLSP <= mGluino; mNLSP += 50 ) {
+            std::ostringstream oss;
+            oss << "T5" << scan << "_" << mGluino << "_" << mNLSP;
+//            std::cout << oss.str() << std::endl;
+            outVector.push_back( oss.str() );
+        }
+    }
+    return outVector;
+}
+
+std::string getModelFromGridParamStr( const std::vector<std::string>& gridParamStr ) {
+    if( gridParamStr.size() < 2 ) return "";
+    std::string line = gridParamStr.at(1);
+    line = line.substr( 8 ); //all from T5.. on
+    int pos = line.find( " " ); // find first space
+    line = line.substr( 0, pos );
+    return line;
+}
+
+
 float effectiveAreaElectron( float eta ) {
 	/** Returns the effective area for the isolation criteria for electrons.
 	 * See https://twiki.cern.ch/twiki/bin/view/CMS/EgammaEARhoCorrection
@@ -347,8 +381,7 @@ void fillMetFilterBitHistogram( TH1F& hist, int filterBit ) {
 // Here the class implementation begins ///////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputName) :
-    isSignalScan(false),
+TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputName, bool isSignalScan_ ) :
 	reportEvery(200000),
 	processNEvents(-1),
 	loggingVerbosity(0),
@@ -358,10 +391,10 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 	photonTree("photonTree","Tree for single photon analysis"),
 	photonElectronTree("photonElectronTree","Tree for single photon analysis"),
 	photonJetTree("photonJetTree","Tree for single photon analysis"),
-	pdfTree("pdfTree","Tree containing necessary information for pdf uncertainty estimation"),
 	eventNumbers("eventNumbers", "Histogram containing number of generated events", 1, 0, 1),
 	nPhotons("nPhotons", ";#gamma_{tight};#gamma_{loose};#gamma_{pixel}", 3, -.5, 2.5, 3, -.5, 2.5, 3, -.5, 2.5 )
 {
+    isSignalScan = isSignalScan_;
 
 	for( int i = 0; i<nFiles; ++i )
 		inputTree.Add( fileList[i] );
@@ -399,23 +432,61 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 
 	// If running over signal scans, the mass point information is appended to
 	// the histogram name.
-	std::string histoNameAppendix = "";
+	histoNameAppendix = "";
 	inputTree.GetEntry(0); // needed to allocate file name
-    // Assume GGM model
+
+    // Test if this is GGM model
 	TPRegexp expFilename( ".*/GGM_.ino_(Sq[0-9]+_Gl[0-9]+)_V04_susyEvents.root" );
 	TObjArray *arr = expFilename.MatchS( inputTree.GetCurrentFile()->GetName() );
 
 	if( arr->GetLast() > 0 )
 		histoNameAppendix = (std::string)(((TObjString *)arr->At(1))->GetString());
 
-    expFilename = TPRegexp( ".*/T5.g_(Gl[0-9]+_NLSP[0-9]+)_V04_susyEvents.root" );
-	arr = expFilename.MatchS( inputTree.GetCurrentFile()->GetName() );
+//	expFilename = TPRegexp( ".*/T5.g_(Gl[0-9]+_NLSP[0-9]+)_V04_susyEvents.root" );
+//	arr = expFilename.MatchS( inputTree.GetCurrentFile()->GetName() );
+//	if( arr->GetLast() > 0 )
+//		histoNameAppendix = (std::string)(((TObjString *)arr->At(1))->GetString());
 
-	if( arr->GetLast() > 0 )
-		histoNameAppendix = (std::string)(((TObjString *)arr->At(1))->GetString());
+    std::vector< std::string > allSignalPointStrings;
+    if( !histoNameAppendix.empty() ) {
+        allSignalPointStrings.push_back( histoNameAppendix );
+    } else if( isSignalScan ) { // then this must be the T5 model
+        // find out if gg or wg
+        TPRegexp regexT5ggOrwg( "T5(gg|wg).root" );
+        TObjArray *arr2 = regexT5ggOrwg.MatchS( outputName );
 
-    if( histoNameAppendix.empty() && isSignalScan )
-        std::cout << "ERROR: Could not match filename" << std::endl;
+        std::string ggOrwg = "";
+        if( arr2->GetLast() > 0 ) {
+            ggOrwg = (std::string)(((TObjString *)arr2->At(1))->GetString());
+        }
+
+        allSignalPointStrings = getAllSimplifiedModelNames( ggOrwg );
+    }
+    std::vector< std::string > keysOfHist1D;
+	for( std::map<std::string, TH1F>::iterator it = hist1D.begin();
+			it!= hist1D.end(); ++it ) {
+		keysOfHist1D.push_back( it->first );
+    }
+
+    for( std::vector<std::string>::iterator it = keysOfHist1D.begin();
+            it != keysOfHist1D.end(); ++it ) {
+        for( std::vector<std::string>::iterator jt = allSignalPointStrings.begin();
+                jt != allSignalPointStrings.end(); ++jt ) {
+            hist1D[ *it+*jt ] = *(TH1F*)hist1D[*it].Clone();
+        }
+    }
+    for( std::vector<std::string>::iterator it = allSignalPointStrings.begin();
+            it != allSignalPointStrings.end(); ++it ) {
+        pdfTrees[*it] = new TTree( ("pdfTree"+*it).c_str(),"Tree containing necessary information for pdf uncertainty estimation");
+        pdfTrees[*it]->Branch("x1", &pdf_x1, "x1/F");
+        pdfTrees[*it]->Branch("x2", &pdf_x2, "x2/F");
+        pdfTrees[*it]->Branch("id1", &pdf_id1, "id1/F");
+        pdfTrees[*it]->Branch("id2", &pdf_id2, "id2/F");
+        pdfTrees[*it]->Branch("scale", &pdf_scale, "scale/F");
+        pdfTrees[*it]->Branch("weight", &weight, "weight/F");
+        pdfTrees[*it]->Branch("met", &met, "met/F");
+    }
+
 
 	// Set the keyName as histogram name for one and two dimensional histograms
 	for( std::map<std::string, TH1F>::iterator it = hist1D.begin();
@@ -436,13 +507,6 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 	SetBranches( photonElectronTree );
 	SetBranches( photonJetTree );
 
-    pdfTree.Branch("x1", &pdf_x1, "x1/F");
-    pdfTree.Branch("x2", &pdf_x2, "x2/F");
-    pdfTree.Branch("id1", &pdf_id1, "id1/F");
-    pdfTree.Branch("id2", &pdf_id2, "id2/F");
-    pdfTree.Branch("scale", &pdf_scale, "scale/F");
-    pdfTree.Branch("weight", &weight, "weight/F");
-    pdfTree.Branch("met", &met, "met/F");
 }
 
 TreeWriter::~TreeWriter() {
@@ -558,13 +622,16 @@ eventType TreeWriter::whichEventType( std::vector<tree::Photon>& photons_,
 	float ePt = photonElectrons_.size() ? photonElectrons_.at(0).pt : 0;
 	float fPt = photonJets_.size()      ? photonJets_.at(0).pt      : 0;
 
-	if( gPt && gPt > fPt && gPt > ePt )
+	if( gPt && gPt > fPt && gPt > ePt ) {
+        if( loggingVerbosity > 1 ) std::cout << "Photon is highest em object" << std::endl;
 		return kPhotonEvent;
-	else if( ePt && ePt > fPt && ePt > gPt )
+	} else if( ePt && ePt > fPt && ePt > gPt ) {
+        if( loggingVerbosity > 1 ) std::cout << "Photon_pixel is highest em object" << std::endl;
 		return kElectronEvent;
-	else if( fPt && fPt > ePt && fPt > gPt )
+	} else if( fPt && fPt > ePt && fPt > gPt ) {
+        if( loggingVerbosity > 1 ) std::cout << "Photon_jet is highest em object" << std::endl;
 		return kJetEvent;
-	else{
+	} else {
 		std::cerr << "This should not happen" << std::endl;
 		return kPhotonEvent;
 	}
@@ -927,20 +994,24 @@ void TreeWriter::Loop( int jetScale ) {
 
 	for (long jentry=0; jentry < processNEvents; ++jentry) {
 
-        // fill pdf tree
-        if( lastEventAccepted ) {
-            pdfTree.Fill();
-        } else if( jentry != 0 ) {
-            met = 0;
-            pdfTree.Fill();
-        }
-        lastEventAccepted = false;
-		event.getEntry(jentry);
-
 		// Just for testing purpose (leave this uncommented)
 		//if( event.eventNumber != 7302527 ) continue; loggingVerbosity = 5;
 		if ( loggingVerbosity>1 || jentry%reportEvery==0 )
 			std::cout << jentry << " / " << processNEvents << std::endl;
+
+
+        // fill pdf tree
+        if( jetScale == 0 ) {
+            if( lastEventAccepted ) {
+                pdfTrees[histoNameAppendix]->Fill();
+            } else if( jentry != 0 ) {
+                met = 0;
+                pdfTrees[histoNameAppendix]->Fill();
+            }
+        }
+        lastEventAccepted = false;
+		event.getEntry(jentry);
+        histoNameAppendix = getModelFromGridParamStr( event.gridParamStr );
 
         pdf_x1 = event.gridParams["pdf_x1"];
         pdf_x2 = event.gridParams["pdf_x2"];
@@ -957,7 +1028,7 @@ void TreeWriter::Loop( int jetScale ) {
 		//printCascade( event.genParticles ); continue;
 
 
-		hist1D["nGen"].Fill( 0 );
+		hist1D["nGen"+histoNameAppendix].Fill( 0 );
 
 		if ( event.isRealData && !isGoodLumi() ) continue;
 		if ( event.isRealData && !passTrigger() ) continue;
@@ -1137,7 +1208,7 @@ void TreeWriter::Loop( int jetScale ) {
 		mht = mhtVector.Pt();
 		mhtPhi = mhtVector.Phi();
 
-		fillMetFilterBitHistogram( hist1D.at("metFilters"), event.metFilterBit );
+		fillMetFilterBitHistogram( hist1D.at("metFilters"+histoNameAppendix), event.metFilterBit );
 		if( !event.passMetFilters() || !event.passMetFilter( susy::kEcalLaserCorr) ) continue;
 
 		TVector3 recoilVector = getRecoilVector( eType );
@@ -1147,15 +1218,15 @@ void TreeWriter::Loop( int jetScale ) {
 		if( eType == kPhotonEvent ) {
 			if ( !isSignalScan )
 				photonTree.Fill();
-			hist1D["gMet"].Fill( met, weight );
-			hist1D["gMetJesUp"].Fill( met, weight );
-			hist1D["gMetJesDown"].Fill( met, weight );
-			hist1D["gMetPuUp"].Fill( met, weightPuUp );
-			hist1D["gMetPuDown"].Fill( met, weightPuDown );
+			hist1D["gMet"+histoNameAppendix].Fill( met, weight );
+			hist1D["gMetJesUp"+histoNameAppendix].Fill( met, weight );
+			hist1D["gMetJesDown"+histoNameAppendix].Fill( met, weight );
+			hist1D["gMetPuUp"+histoNameAppendix].Fill( met, weightPuUp );
+			hist1D["gMetPuDown"+histoNameAppendix].Fill( met, weightPuDown );
             if( met >=100 ) {
-				hist1D["gHt"].Fill( ht, weight );
-				hist1D["gNJets"].Fill( nGoodJets, weight );
-				hist1D["gPt"].Fill( photons.at(0).ptJet(), weight );
+				hist1D["gHt"+histoNameAppendix].Fill( ht, weight );
+				hist1D["gNJets"+histoNameAppendix].Fill( nGoodJets, weight );
+				hist1D["gPt"+histoNameAppendix].Fill( photons.at(0).ptJet(), weight );
             }
 		}
 		if( eType == kJetEvent ) {
@@ -1163,8 +1234,8 @@ void TreeWriter::Loop( int jetScale ) {
 				photonJetTree.Fill();
 			float qcdWeight=0, qcdWeightError=0;
 			getQcdWeights( photonJets.at(0).ptJet(), recoil, qcdWeight, qcdWeightError );
-			hist1D["fMet"].Fill( met, weight*qcdWeight );
-			hist1D["fMetError"].Fill( met, weight*qcdWeightError );
+			hist1D["fMet"+histoNameAppendix].Fill( met, weight*qcdWeight );
+			hist1D["fMetError"+histoNameAppendix].Fill( met, weight*qcdWeightError );
 		}
 		if( eType == kElectronEvent ) {
 			if ( !isSignalScan )
@@ -1172,7 +1243,7 @@ void TreeWriter::Loop( int jetScale ) {
 			float ewkFakeRate = event.isRealData ?
 				1. - 0.993 * (1. - std::pow(photonElectrons.at(0).pt / 2.9 + 1., -2.4)) * (1. - 0.23 * std::exp(-0.2777 * nTracksPV))* (1. - 5.66e-4 * nVertex)
 				: 1 - (1 - 0.00623) * (1 - std::pow(photonElectrons.at(0).pt / 4.2 + 1,-2.9)) * (1 - 0.29 * std::exp(-0.335 * nTracksPV)) * (1 - 0.000223 * nVertex);
-			hist1D["eMet"].Fill( met, weight*ewkFakeRate );
+			hist1D["eMet"+histoNameAppendix].Fill( met, weight*ewkFakeRate );
 		}
 
     // at the beginning of the loop, the pdf tree will filled
@@ -1182,11 +1253,13 @@ void TreeWriter::Loop( int jetScale ) {
 	} // for jentry
 
     // fill pdf tree
-    if( lastEventAccepted ) {
-        pdfTree.Fill();
-    } else {
-        met = 0;
-        pdfTree.Fill();
+    if( jetScale == 0 ) {
+        if( lastEventAccepted ) {
+            pdfTrees[histoNameAppendix]->Fill();
+        } else {
+            met = 0;
+            pdfTrees[histoNameAppendix]->Fill();
+        }
     }
 
 	outFile.cd();
@@ -1201,7 +1274,10 @@ void TreeWriter::Loop( int jetScale ) {
 					it!= hist2D.end(); ++it )
 				it->second.Write();
 		} else {
-            pdfTree.Write();
+            for( std::map<std::string,TTree* >::iterator it = pdfTrees.begin(); it != pdfTrees.end(); ++it ) {
+                (it->second)->Write();
+                delete it->second;
+            }
         }
 
 		// Write all histograms except for the Jec ones
@@ -1211,9 +1287,17 @@ void TreeWriter::Loop( int jetScale ) {
 				it->second.Write();
 		}
 	} else if (jetScale == -1) {
-		hist1D["JesDown"].Write();
+		for( std::map<std::string, TH1F>::iterator it = hist1D.begin();
+					it!= hist1D.end(); ++it ) {
+			if( ((std::string)(it->second.GetName())).find("JesDown") != std::string::npos )
+				it->second.Write();
+		}
 	} else if (jetScale == 1 ) {
-		hist1D["JesUp"].Write();
+		for( std::map<std::string, TH1F>::iterator it = hist1D.begin();
+					it!= hist1D.end(); ++it ) {
+			if( ((std::string)(it->second.GetName())).find("JesUp") != std::string::npos )
+				it->second.Write();
+		}
 	}
 
 }

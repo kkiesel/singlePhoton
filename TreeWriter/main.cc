@@ -22,10 +22,9 @@ int main( int argc, char** argv ) {
 	}
 
     bool signal = true;
+    signal = strstr( argv[1], "GGM" ) != NULL || strstr( argv[1], "T5" ) != NULL;
 
-	TreeWriter tw( argc-2, argv+2, argv[1] );
-    if( signal )
-        tw.SignalScan();
+	TreeWriter tw( argc-2, argv+2, argv[1], signal );
 
 	const std::string lumiJsonName = "/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions12/8TeV/Reprocessing/Cert_190456-208686_8TeV_22Jan2013ReReco_Collisions12_JSON.txt";
 	if( access( lumiJsonName.c_str(), F_OK ) != -1 ) {

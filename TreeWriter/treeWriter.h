@@ -28,7 +28,7 @@ enum eventType {
 
 class TreeWriter {
 	public :
-		TreeWriter( int nFiles, char** fileList, std::string const& );
+		TreeWriter( int nFiles, char** fileList, std::string const&, bool );
 		virtual ~TreeWriter();
 		virtual void Loop( int jecScale=0 );
 
@@ -82,6 +82,9 @@ class TreeWriter {
 		TChain inputTree;
 		susy::Event event;
 
+        // used for signal scans
+        std::string histoNameAppendix;
+
 		// Objects which can be saved to the file
 		// photons: All tight photons (signal photons)
 		// photonJets: All loose photons (qcd fake object)
@@ -90,7 +93,7 @@ class TreeWriter {
 		TTree photonTree;
 		TTree photonElectronTree;
 		TTree photonJetTree;
-		TTree pdfTree;
+		std::map<std::string, TTree* > pdfTrees;
 		TH1F eventNumbers;
 		TH3I nPhotons;
 		std::map< std::string, TH2F > hist2D;

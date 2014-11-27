@@ -982,6 +982,8 @@ namespace susy {
     void Init();
     void Print(std::ostream& = std::cout) const;
 
+    // Current implementation allows only one input with the outputs dependent on it
+    // setInput will release all output trees
     void setInput(TTree&);
     void addOutput(TTree&);
 
@@ -994,7 +996,10 @@ namespace susy {
     void fillRefs(); // Called in getEntry()
 
     Bool_t passMetFilter(UInt_t filterIndex) const { return (metFilterBit & (1 << filterIndex)) != 0; }
-    Bool_t passMetFilters() const { return (metFilterBit & metFilterMask) == metFilterMask; }
+    Bool_t passMetFilters(Int_t filterMask = 0) const {
+      if(filterMask == 0) return (metFilterBit & metFilterMask) == metFilterMask;
+      else return (metFilterBit & filterMask) == filterMask;
+    }
 
     UChar_t                                        isRealData;
     UChar_t                                        cosmicFlag;             // empty for now
@@ -1034,6 +1039,7 @@ namespace susy {
     PUSummaryInfoCollection                        pu;                     // PU summary info
     ParticleCollection                             genParticles;
     std::map<TString, Float_t>                     gridParams;             // pairs of parameter name and value
+    std::vector<std::string>                       gridParamStr;
 
   private:
     // Keep a pointer to each tree that is bound to this object. Only one input tree is supported.
