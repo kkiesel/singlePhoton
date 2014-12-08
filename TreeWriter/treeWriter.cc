@@ -432,7 +432,7 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 
 	// If running over signal scans, the mass point information is appended to
 	// the histogram name.
-	histoNameAppendix = "";
+	std::string histoNameAppendix = "";
 	inputTree.GetEntry(0); // needed to allocate file name
 
     // Test if this is GGM model
@@ -442,50 +442,20 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 	if( arr->GetLast() > 0 )
 		histoNameAppendix = (std::string)(((TObjString *)arr->At(1))->GetString());
 
-//	expFilename = TPRegexp( ".*/T5.g_(Gl[0-9]+_NLSP[0-9]+)_V04_susyEvents.root" );
-//	arr = expFilename.MatchS( inputTree.GetCurrentFile()->GetName() );
-//	if( arr->GetLast() > 0 )
-//		histoNameAppendix = (std::string)(((TObjString *)arr->At(1))->GetString());
+    // Test if this is one of the simplified models
+	expFilename = TPRegexp( ".*/T5.g_([0-9]+_[0-9]+).root" );
+	arr = expFilename.MatchS( inputTree.GetCurrentFile()->GetName() );
+	if( arr->GetLast() > 0 )
+		histoNameAppendix = (std::string)(((TObjString *)arr->At(1))->GetString());
 
-    std::vector< std::string > allSignalPointStrings;
-    if( !histoNameAppendix.empty() ) {
-        allSignalPointStrings.push_back( histoNameAppendix );
-    } else if( isSignalScan ) { // then this must be the T5 model
-        // find out if gg or wg
-        TPRegexp regexT5ggOrwg( "T5(gg|wg).root" );
-        TObjArray *arr2 = regexT5ggOrwg.MatchS( outputName );
-
-        std::string ggOrwg = "";
-        if( arr2->GetLast() > 0 ) {
-            ggOrwg = (std::string)(((TObjString *)arr2->At(1))->GetString());
-        }
-
-        allSignalPointStrings = getAllSimplifiedModelNames( ggOrwg );
-    }
-    std::vector< std::string > keysOfHist1D;
-	for( std::map<std::string, TH1F>::iterator it = hist1D.begin();
-			it!= hist1D.end(); ++it ) {
-		keysOfHist1D.push_back( it->first );
-    }
-
-    for( std::vector<std::string>::iterator it = keysOfHist1D.begin();
-            it != keysOfHist1D.end(); ++it ) {
-        for( std::vector<std::string>::iterator jt = allSignalPointStrings.begin();
-                jt != allSignalPointStrings.end(); ++jt ) {
-            hist1D[ *it+*jt ] = *(TH1F*)hist1D[*it].Clone();
-        }
-    }
-    for( std::vector<std::string>::iterator it = allSignalPointStrings.begin();
-            it != allSignalPointStrings.end(); ++it ) {
-        pdfTrees[*it] = new TTree( ("pdfTree"+*it).c_str(),"Tree containing necessary information for pdf uncertainty estimation");
-        pdfTrees[*it]->Branch("x1", &pdf_x1, "x1/F");
-        pdfTrees[*it]->Branch("x2", &pdf_x2, "x2/F");
-        pdfTrees[*it]->Branch("id1", &pdf_id1, "id1/F");
-        pdfTrees[*it]->Branch("id2", &pdf_id2, "id2/F");
-        pdfTrees[*it]->Branch("scale", &pdf_scale, "scale/F");
-        pdfTrees[*it]->Branch("weight", &weight, "weight/F");
-        pdfTrees[*it]->Branch("met", &met, "met/F");
-    }
+    pdfTree = new TTree( ("pdfTree"+histoNameAppendix).c_str(),"Tree containing necessary information for pdf uncertainty estimation");
+    pdfTree->Branch("x1", &pdf_x1, "x1/F");
+    pdfTree->Branch("x2", &pdf_x2, "x2/F");
+    pdfTree->Branch("id1", &pdf_id1, "id1/F");
+    pdfTree->Branch("id2", &pdf_id2, "id2/F");
+    pdfTree->Branch("scale", &pdf_scale, "scale/F");
+    pdfTree->Branch("weight", &weight, "weight/F");
+    pdfTree->Branch("met", &met, "met/F");
 
 
 	// Set the keyName as histogram name for one and two dimensional histograms
@@ -1003,15 +973,14 @@ void TreeWriter::Loop( int jetScale ) {
         // fill pdf tree
         if( jetScale == 0 ) {
             if( lastEventAccepted ) {
-                pdfTrees[histoNameAppendix]->Fill();
+                pdfTree->Fill();
             } else if( jentry != 0 ) {
                 met = 0;
-                pdfTrees[histoNameAppendix]->Fill();
+                pdfTree->Fill();
             }
         }
         lastEventAccepted = false;
 		event.getEntry(jentry);
-        histoNameAppendix = getModelFromGridParamStr( event.gridParamStr );
 
         pdf_x1 = event.gridParams["pdf_x1"];
         pdf_x2 = event.gridParams["pdf_x2"];
@@ -1028,7 +997,7 @@ void TreeWriter::Loop( int jetScale ) {
 		//printCascade( event.genParticles ); continue;
 
 
-		hist1D["nGen"+histoNameAppendix].Fill( 0 );
+		hist1D["nGen"].Fill( 0 );
 
 		if ( event.isRealData && !isGoodLumi() ) continue;
 		if ( event.isRealData && !passTrigger() ) continue;
@@ -1208,7 +1177,7 @@ void TreeWriter::Loop( int jetScale ) {
 		mht = mhtVector.Pt();
 		mhtPhi = mhtVector.Phi();
 
-		fillMetFilterBitHistogram( hist1D.at("metFilters"+histoNameAppendix), event.metFilterBit );
+		fillMetFilterBitHistogram( hist1D["metFilters"], event.metFilterBit );
 		if( !event.passMetFilters() || !event.passMetFilter( susy::kEcalLaserCorr) ) continue;
 
 		TVector3 recoilVector = getRecoilVector( eType );
@@ -1218,15 +1187,15 @@ void TreeWriter::Loop( int jetScale ) {
 		if( eType == kPhotonEvent ) {
 			if ( !isSignalScan )
 				photonTree.Fill();
-			hist1D["gMet"+histoNameAppendix].Fill( met, weight );
-			hist1D["gMetJesUp"+histoNameAppendix].Fill( met, weight );
-			hist1D["gMetJesDown"+histoNameAppendix].Fill( met, weight );
-			hist1D["gMetPuUp"+histoNameAppendix].Fill( met, weightPuUp );
-			hist1D["gMetPuDown"+histoNameAppendix].Fill( met, weightPuDown );
+			hist1D["gMet"].Fill( met, weight );
+			hist1D["gMetJesUp"].Fill( met, weight );
+			hist1D["gMetJesDown"].Fill( met, weight );
+			hist1D["gMetPuUp"].Fill( met, weightPuUp );
+			hist1D["gMetPuDown"].Fill( met, weightPuDown );
             if( met >=100 ) {
-				hist1D["gHt"+histoNameAppendix].Fill( ht, weight );
-				hist1D["gNJets"+histoNameAppendix].Fill( nGoodJets, weight );
-				hist1D["gPt"+histoNameAppendix].Fill( photons.at(0).ptJet(), weight );
+				hist1D["gHt"].Fill( ht, weight );
+				hist1D["gNJets"].Fill( nGoodJets, weight );
+				hist1D["gPt"].Fill( photons.at(0).ptJet(), weight );
             }
 		}
 		if( eType == kJetEvent ) {
@@ -1234,8 +1203,8 @@ void TreeWriter::Loop( int jetScale ) {
 				photonJetTree.Fill();
 			float qcdWeight=0, qcdWeightError=0;
 			getQcdWeights( photonJets.at(0).ptJet(), recoil, qcdWeight, qcdWeightError );
-			hist1D["fMet"+histoNameAppendix].Fill( met, weight*qcdWeight );
-			hist1D["fMetError"+histoNameAppendix].Fill( met, weight*qcdWeightError );
+			hist1D["fMet"].Fill( met, weight*qcdWeight );
+			hist1D["fMetError"].Fill( met, weight*qcdWeightError );
 		}
 		if( eType == kElectronEvent ) {
 			if ( !isSignalScan )
@@ -1243,7 +1212,7 @@ void TreeWriter::Loop( int jetScale ) {
 			float ewkFakeRate = event.isRealData ?
 				1. - 0.993 * (1. - std::pow(photonElectrons.at(0).pt / 2.9 + 1., -2.4)) * (1. - 0.23 * std::exp(-0.2777 * nTracksPV))* (1. - 5.66e-4 * nVertex)
 				: 1 - (1 - 0.00623) * (1 - std::pow(photonElectrons.at(0).pt / 4.2 + 1,-2.9)) * (1 - 0.29 * std::exp(-0.335 * nTracksPV)) * (1 - 0.000223 * nVertex);
-			hist1D["eMet"+histoNameAppendix].Fill( met, weight*ewkFakeRate );
+			hist1D["eMet"].Fill( met, weight*ewkFakeRate );
 		}
 
     // at the beginning of the loop, the pdf tree will filled
@@ -1255,10 +1224,10 @@ void TreeWriter::Loop( int jetScale ) {
     // fill pdf tree
     if( jetScale == 0 ) {
         if( lastEventAccepted ) {
-            pdfTrees[histoNameAppendix]->Fill();
+            pdfTree->Fill();
         } else {
             met = 0;
-            pdfTrees[histoNameAppendix]->Fill();
+            pdfTree->Fill();
         }
     }
 
@@ -1273,12 +1242,8 @@ void TreeWriter::Loop( int jetScale ) {
 			for( std::map<std::string, TH2F>::const_iterator it = hist2D.begin();
 					it!= hist2D.end(); ++it )
 				it->second.Write();
-		} else {
-            for( std::map<std::string,TTree* >::iterator it = pdfTrees.begin(); it != pdfTrees.end(); ++it ) {
-                (it->second)->Write();
-                delete it->second;
-            }
-        }
+		}
+        pdfTree->Write();
 
 		// Write all histograms except for the Jec ones
 		for( std::map<std::string, TH1F>::iterator it = hist1D.begin();

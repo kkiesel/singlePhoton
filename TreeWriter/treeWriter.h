@@ -82,9 +82,6 @@ class TreeWriter {
 		TChain inputTree;
 		susy::Event event;
 
-        // used for signal scans
-        std::string histoNameAppendix;
-
 		// Objects which can be saved to the file
 		// photons: All tight photons (signal photons)
 		// photonJets: All loose photons (qcd fake object)
@@ -93,7 +90,7 @@ class TreeWriter {
 		TTree photonTree;
 		TTree photonElectronTree;
 		TTree photonJetTree;
-		std::map<std::string, TTree* > pdfTrees;
+		TTree* pdfTree;
 		TH1F eventNumbers;
 		TH3I nPhotons;
 		std::map< std::string, TH2F > hist2D;
