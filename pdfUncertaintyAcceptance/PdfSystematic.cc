@@ -2,22 +2,37 @@
 
 #include<TTree.h>
 #include<TFile.h>
+#include<TF1.h>
 
 #include<iostream>
 #include<vector>
 
 using namespace std;
+
 typedef vector<string> strings;
 
 class PdfSystematicsAnalyzer {
+    // This class is a clone of CMSSW/ElectroWeakAnalysis/Utilities/src/PdfWeightProducer.cc
+    // For more information visit
+    // https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuideEWKUtilities#PDF_SYSTEMATICS_PDFWeightProduce
+
     public:
+        // Normally, one object of this class is initialized
         PdfSystematicsAnalyzer( const strings &pdfNames );
         ~PdfSystematicsAnalyzer();
+
+        // Pdf analysis for this tree. All internal variables from
+        // other trees are reset.
         void newTree( TTree &tree );
+
+        // These two functions have to be called for each tree.
         void fillWeights();
         void calculate();
+
     private:
+        // Input tree
         TTree* tree_;
+
         strings pdfNames_;
         vector< vector<LHAPDF::PDF*> > pdfSets_;
         unsigned int originalEvents_;
@@ -26,17 +41,35 @@ class PdfSystematicsAnalyzer {
         std::vector<double> weightedSelectedEvents_;
         std::vector<double> weighted2SelectedEvents_;
         std::vector<double> weightedEvents_;
+
+        // Needed for merging nnpdf uncertainties
+        float gausWeights_[4];
 };
 
 
 PdfSystematicsAnalyzer::PdfSystematicsAnalyzer( const strings &pdfNames ) :
     pdfNames_(pdfNames)
 {
+    // Fills the array gausWeights with 1, 0.61, 0.14, 0.01
+    TF1 gaus("gaus", "gaus", 0, 4);
+    gaus.SetParameters(1,0,1);
+    float sumW = 0;
+    for (unsigned int i=0; i<4; i++) {
+        gausWeights_[i] = gaus.Eval( i );
+        sumW += gausWeights_[i];
+        if(i>0) sumW += gausWeights_[i]; // all entries except the center one will be used on each side (2 times)
+    }
+
+    // Normalize the array
+    for (unsigned int i=0; i<4; i++) {
+        gausWeights_[i] /= sumW;
+    }
+
     for (unsigned int i=0; i<pdfNames_.size(); ++i) {
         LHAPDF::PDFSet set( pdfNames[i] );
         pdfSets_.push_back( set.mkPDFs() );
     }
-};
+}
 
 void PdfSystematicsAnalyzer::newTree( TTree &tree )
 {
@@ -56,7 +89,6 @@ void PdfSystematicsAnalyzer::newTree( TTree &tree )
 /////////////////////////////////////////////////////////////////////////////////////
 PdfSystematicsAnalyzer::~PdfSystematicsAnalyzer()
 {
-    delete tree_;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -78,7 +110,9 @@ void PdfSystematicsAnalyzer::fillWeights(){
     for( unsigned int entry=0; entry< originalEvents_; ++entry ) {
         tree_->GetEntry( entry );
 
+        // Here the cut is defined
         bool selectedEvent = met >= 100;
+
         if (selectedEvent) selectedEvents_++;
 
         for (int i=0; i<pdfNames_.size(); ++i ) {
@@ -94,6 +128,7 @@ void PdfSystematicsAnalyzer::fillWeights(){
                   }
             }
 
+            // Fill the weights
             for (unsigned int j=0; j<nmembers; ++j) {
                 float weight = pdfSets_[i][j]->xfxQ( (int)id1, x1, scale ) * pdfSets_[i][j]->xfxQ( (int)id2, x2, scale );
                 weightedEvents_[pdfStart_[i]+j] += weight;
@@ -190,8 +225,10 @@ void PdfSystematicsAnalyzer::calculate(){
         }
     }
 
-    float totalUp = 0;
-    float totalDown = 0;
+    // Variables needed for combining alpha_s uncertainties
+    float ctUp(0), ctDn(0), ctAccAlphaS_Up(0), ctAccAlphaS_Dn(0);
+    float mstwUp(0), mstwDn(0), mstwAccAlphaS_Up(0), mstwAccAlphaS_Dn(0);
+    float nnpdfUp(0), nnpdfDn(0), nnpdfAccAlphaS_116(0), nnpdfAccAlphaS_117(0), nnpdfAccAlphaS_118(0), nnpdfAccAlphaS_119(0), nnpdfAccAlphaS_120(0), nnpdfAccAlphaS_121(0), nnpdfAccAlphaS_122(0);
 
     if(log>4) cout << "\n>>>>> PDF UNCERTAINTIES ON ACCEPTANCE >>>>>>" << endl;
     for (unsigned int i=0; i<pdfNames_.size(); ++i) {
@@ -207,6 +244,32 @@ void PdfSystematicsAnalyzer::calculate(){
             acc_central = weightedSelectedEvents_[pdfStart_[i]]/weightedEvents_[pdfStart_[i]];
             acc2_central = weighted2SelectedEvents_[pdfStart_[i]]/weightedEvents_[pdfStart_[i]];
         }
+
+        // Fill acceptances
+        if (pdfNames_[i] == "CT10nnlo_as_0117" ) {
+            ctAccAlphaS_Up = acc_central;
+        } else if (pdfNames_[i] == "CT10nnlo_as_0119" ) {
+            ctAccAlphaS_Dn = acc_central;
+        } else if (pdfNames_[i] == "MSTW2008nnlo68cl_asmz+68cl" ) {
+            mstwAccAlphaS_Up = acc_central;
+        } else if (pdfNames_[i] == "MSTW2008nnlo68cl_asmz-68cl" ) {
+            mstwAccAlphaS_Dn = acc_central;
+        } else if (pdfNames_[i] == "NNPDF23_nnlo_as_0116" ) {
+            nnpdfAccAlphaS_116 = acc_central;
+        } else if (pdfNames_[i] == "NNPDF23_nnlo_as_0117" ) {
+            nnpdfAccAlphaS_117 = acc_central;
+        } else if (pdfNames_[i] == "NNPDF23_nnlo_as_0118" ) {
+            nnpdfAccAlphaS_118 = acc_central;
+        } else if (pdfNames_[i] == "NNPDF23_nnlo_as_0119" ) {
+            nnpdfAccAlphaS_119 = acc_central;
+        } else if (pdfNames_[i] == "NNPDF23_nnlo_as_0120" ) {
+            nnpdfAccAlphaS_120 = acc_central;
+        } else if (pdfNames_[i] == "NNPDF23_nnlo_as_0121" ) {
+            nnpdfAccAlphaS_121 = acc_central;
+        } else if (pdfNames_[i] == "NNPDF23_nnlo_as_0122" ) {
+            nnpdfAccAlphaS_122 = acc_central;
+        }
+
         double waverage = weightedEvents_[pdfStart_[i]]/originalEvents_;
         if(log>4) cout << "\tEstimate for central PDF member acceptance: [" << acc_central*100 << " +- " <<
         100*sqrt((acc2_central/waverage-acc_central*acc_central)/originalEvents_)
@@ -263,16 +326,48 @@ void PdfSystematicsAnalyzer::calculate(){
             if (nminus>0) wminus /= sqrt(nminus);
           }
           if(log>4) cout << "\tRelative uncertainty with respect to central member: +" << std::setprecision(4) << 100.*wplus << " / -" << std::setprecision(4) << 100.*wminus << " [%]" << endl;
-            if( totalUp < wplus ) totalUp = wplus;
-            if( totalDown < wminus ) totalDown = wminus;
+
+          // Fill variables (2)
+          if( pdfNames_[i] == "CT10" ) {
+              ctUp = wplus;
+              ctDn = wminus;
+          } else if( pdfNames_[i] == "MSTW2008nnlo68cl" ) {
+              mstwUp = wplus;
+              mstwDn = wminus;
+          } else if( pdfNames_[i] == "NNPDF23_nnlo_as_0119" ) {
+              nnpdfUp = wplus;
+              nnpdfDn = wminus;
+          }
+
         } else {
             if(log>4) cout << "\tNO eigenvectors for uncertainty estimation" << endl;
         }
     }
     if(log>4) cout << ">>>> End of PDF weight systematics summary >>>>" << endl;
 
+    // add quadratically uncertanity of pdf and alpha_S
+    // for CT10, the uncertainty is 90% cl, so it has to be reduced by a factor of 1.645
+    float ctTotalUp = (ctUp-ctDn)/2 + sqrt( pow((ctUp+ctDn)/2,2) + pow((ctAccAlphaS_Up-ctAccAlphaS_Dn)/2,2) )/1.645;
+    float ctTotalDn =-(ctUp-ctDn)/2 + sqrt( pow((ctUp+ctDn)/2,2) + pow((ctAccAlphaS_Up-ctAccAlphaS_Dn)/2,2) )/1.645;
 
-    cout << tree_->GetName() << "\t" << (totalUp+totalDown)*50 << endl;
+    float mstwTotalUp = (mstwUp-mstwDn)/2 + sqrt( pow((mstwUp+mstwDn)/2,2) + pow((mstwAccAlphaS_Up-mstwAccAlphaS_Dn)/2,2) );
+    float mstwTotalDn =-(mstwUp-mstwDn)/2 + sqrt( pow((mstwUp+mstwDn)/2,2) + pow((mstwAccAlphaS_Up-mstwAccAlphaS_Dn)/2,2) );
+
+    float nnpdfAlphaS_UncertSquare =
+        gausWeights_[3] * pow( nnpdfAccAlphaS_119 - nnpdfAccAlphaS_116, 2 ) +
+        gausWeights_[2] * pow( nnpdfAccAlphaS_119 - nnpdfAccAlphaS_117, 2 ) +
+        gausWeights_[1] * pow( nnpdfAccAlphaS_119 - nnpdfAccAlphaS_118, 2 ) +
+        gausWeights_[1] * pow( nnpdfAccAlphaS_119 - nnpdfAccAlphaS_120, 2 ) +
+        gausWeights_[2] * pow( nnpdfAccAlphaS_119 - nnpdfAccAlphaS_121, 2 ) +
+        gausWeights_[3] * pow( nnpdfAccAlphaS_119 - nnpdfAccAlphaS_122, 2 );
+    float nnpdfTotalUp = (nnpdfUp-nnpdfDn)/2 + sqrt( pow((nnpdfUp+nnpdfDn)/2,2) + nnpdfAlphaS_UncertSquare );
+    float nnpdfTotalDn =-(nnpdfUp-nnpdfDn)/2 + sqrt( pow((nnpdfUp+nnpdfDn)/2,2) + nnpdfAlphaS_UncertSquare );
+
+    float totalUp = max( max( ctTotalUp, mstwTotalUp ), nnpdfTotalUp );
+    float totalDn = max( max( ctTotalDn, mstwTotalDn ), nnpdfTotalDn );
+
+    cout << tree_->GetName() << " " << (totalUp+totalDn)/2 << endl;
+
 
 }
 
@@ -284,22 +379,21 @@ int main (int argc, char** argv) {
 
     strings pdfNames;
     pdfNames.push_back( "CT10" );
-//    pdfNames.push_back( "CT10nnlo_as_0117" );
-//    pdfNames.push_back( "CT10nnlo_as_0119" );
+    pdfNames.push_back( "CT10nnlo_as_0117" );
+    pdfNames.push_back( "CT10nnlo_as_0119" );
 
     pdfNames.push_back( "MSTW2008nnlo68cl" );
-//    pdfNames.push_back( "MSTW2008nnlo68cl_asmz+68cl" );
-//    pdfNames.push_back( "MSTW2008nnlo68cl_asmz-68cl" );
+    pdfNames.push_back( "MSTW2008nnlo68cl_asmz+68cl" );
+    pdfNames.push_back( "MSTW2008nnlo68cl_asmz-68cl" );
 
-    pdfNames.push_back( "NNPDF23_nnlo_as_0119" );
-/*    pdfNames.push_back( "NNPDF23_nnlo_as_0116" );
+    pdfNames.push_back( "NNPDF23_nnlo_as_0116" );
     pdfNames.push_back( "NNPDF23_nnlo_as_0117" );
     pdfNames.push_back( "NNPDF23_nnlo_as_0118" );
-    pdfNames.push_back( "NNPDF23_nnlo_as_0116" );
+    pdfNames.push_back( "NNPDF23_nnlo_as_0119" ); // main pdf
     pdfNames.push_back( "NNPDF23_nnlo_as_0120" );
     pdfNames.push_back( "NNPDF23_nnlo_as_0121" );
     pdfNames.push_back( "NNPDF23_nnlo_as_0122" );
-*/
+
    PdfSystematicsAnalyzer analyzer( pdfNames );
 
     for( int i=1; i<argc; i++ ) {
@@ -309,12 +403,12 @@ int main (int argc, char** argv) {
         while (( obj = next() ) ) {
             string objName = obj->GetName();
             if( objName.find("pdfTree") != std::string::npos ) {
-                TTree* tree = (TTree*)file.Get( objName.c_str() );
-                analyzer.newTree( *tree );
+                analyzer.newTree( *((TTree*)file.Get( objName.c_str() )));
                 analyzer.fillWeights();
                 analyzer.calculate();
             }
         }
+        file.Close();
     }
 }
 
