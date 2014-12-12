@@ -960,6 +960,12 @@ void TreeWriter::Loop( int jetScale ) {
 	// Declaration for objects saved in Tree
 	tree::Photon photonToTree;
 
+    // For the second and third loop (jec uncertainties), reset all h1 histos
+	for( std::map<std::string, TH1F>::iterator it = hist1D.begin();
+			it!= hist1D.end(); ++it ) {
+		it->second.Reset("ICESM");
+	}
+
     bool lastEventAccepted = false;
 
 	for (long jentry=0; jentry < processNEvents; ++jentry) {
@@ -1177,7 +1183,7 @@ void TreeWriter::Loop( int jetScale ) {
 		mht = mhtVector.Pt();
 		mhtPhi = mhtVector.Phi();
 
-		fillMetFilterBitHistogram( hist1D.at("metFilters"+histoNameAppendix), event.metFilterBit );
+		fillMetFilterBitHistogram( hist1D.at("metFilters"), event.metFilterBit );
 		if( !event.passMetFilters() || !event.passMetFilter( susy::kEcalLaserCorr) ){
             if( loggingVerbosity > 1 ) std::cout << "Failing MET filters" << std::endl;
             continue;
