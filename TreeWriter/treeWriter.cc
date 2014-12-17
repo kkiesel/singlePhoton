@@ -960,6 +960,12 @@ void TreeWriter::Loop( int jetScale ) {
 	// Declaration for objects saved in Tree
 	tree::Photon photonToTree;
 
+    // For the second and third loop (jec uncertainties), reset all h1 histos
+	for( std::map<std::string, TH1F>::iterator it = hist1D.begin();
+			it!= hist1D.end(); ++it ) {
+		it->second.Reset("ICESM");
+	}
+
     bool lastEventAccepted = false;
 
 	for (long jentry=0; jentry < processNEvents; ++jentry) {
@@ -1177,16 +1183,23 @@ void TreeWriter::Loop( int jetScale ) {
 		mht = mhtVector.Pt();
 		mhtPhi = mhtVector.Phi();
 
-		fillMetFilterBitHistogram( hist1D["metFilters"], event.metFilterBit );
-		if( !event.passMetFilters() || !event.passMetFilter( susy::kEcalLaserCorr) ) continue;
+		fillMetFilterBitHistogram( hist1D.at("metFilters"), event.metFilterBit );
+		if( !event.passMetFilters() || !event.passMetFilter( susy::kEcalLaserCorr) ){
+            if( loggingVerbosity > 1 ) std::cout << "Failing MET filters" << std::endl;
+            continue;
+        }
 
 		TVector3 recoilVector = getRecoilVector( eType );
 		recoil = recoilVector.Pt();
 		recoilPhi = recoilVector.Phi();
 
+		if( loggingVerbosity > 2 ) std::cout << "All variables calculated" << std::endl;
 		if( eType == kPhotonEvent ) {
-			if ( !isSignalScan )
+			if ( !isSignalScan ) {
+                if( loggingVerbosity > 2 ) std::cout << "Filling Tree" << std::endl;
 				photonTree.Fill();
+            }
+
 			hist1D["gMet"].Fill( met, weight );
 			hist1D["gMetJesUp"].Fill( met, weight );
 			hist1D["gMetJesDown"].Fill( met, weight );
@@ -1219,6 +1232,7 @@ void TreeWriter::Loop( int jetScale ) {
     if( eType == kPhotonEvent && met >= 100 )
         lastEventAccepted = true;
 
+        if( loggingVerbosity > 2 ) std::cout << "End of event" << std::endl;
 	} // for jentry
 
     // fill pdf tree
