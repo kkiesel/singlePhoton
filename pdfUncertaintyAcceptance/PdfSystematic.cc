@@ -3,6 +3,8 @@
 #include<TTree.h>
 #include<TFile.h>
 #include<TF1.h>
+#include<TPRegexp.h>
+#include <TError.h>
 
 #include<iostream>
 #include<vector>
@@ -10,6 +12,20 @@
 using namespace std;
 
 typedef vector<string> strings;
+
+string getPrintName( string treename ) {
+
+    string out = "";
+    TPRegexp regexp( "pdfTree[Sq]*(\\d+)_[Gl]*(\\d+)");
+    TObjArray *arr = regexp.MatchS( treename );
+    if( arr->GetLast() > 0 ) {
+        out += ((TObjString *)arr->At(1))->GetString();
+        out += " ";
+        out += ((TObjString *)arr->At(2))->GetString();
+    }
+    return out;
+}
+
 
 class PdfSystematicsAnalyzer {
     // This class is a clone of CMSSW/ElectroWeakAnalysis/Utilities/src/PdfWeightProducer.cc
@@ -106,6 +122,7 @@ void PdfSystematicsAnalyzer::fillWeights(){
     tree_->SetBranchAddress( "id2", &id2 );
 
     originalEvents_ = tree_->GetEntries();
+    originalEvents_ = 2000;
 
     for( unsigned int entry=0; entry< originalEvents_; ++entry ) {
         tree_->GetEntry( entry );
@@ -225,10 +242,11 @@ void PdfSystematicsAnalyzer::calculate(){
         }
     }
 
-    // Variables needed for combining alpha_s uncertainties
+    // Variables needed for combining alpha_s uncertainties, added manually
     float ctUp(0), ctDn(0), ctAccAlphaS_Up(0), ctAccAlphaS_Dn(0);
     float mstwUp(0), mstwDn(0), mstwAccAlphaS_Up(0), mstwAccAlphaS_Dn(0);
     float nnpdfUp(0), nnpdfDn(0), nnpdfAccAlphaS_116(0), nnpdfAccAlphaS_117(0), nnpdfAccAlphaS_118(0), nnpdfAccAlphaS_119(0), nnpdfAccAlphaS_120(0), nnpdfAccAlphaS_121(0), nnpdfAccAlphaS_122(0);
+    // end variable declaration
 
     if(log>4) cout << "\n>>>>> PDF UNCERTAINTIES ON ACCEPTANCE >>>>>>" << endl;
     for (unsigned int i=0; i<pdfNames_.size(); ++i) {
@@ -366,7 +384,7 @@ void PdfSystematicsAnalyzer::calculate(){
     float totalUp = max( max( ctTotalUp, mstwTotalUp ), nnpdfTotalUp );
     float totalDn = max( max( ctTotalDn, mstwTotalDn ), nnpdfTotalDn );
 
-    cout << tree_->GetName() << " " << (totalUp+totalDn)/2 << endl;
+    cout << getPrintName(tree_->GetName()) << " " << (totalUp+totalDn)/2 << endl;
 
 
 }
@@ -376,6 +394,9 @@ int main (int argc, char** argv) {
         cerr << "Usage: " <<argv[0] << " filename1.root [filename2.root]" << endl;
         return 1;
     }
+    LHAPDF::setVerbosity(0);
+    gErrorIgnoreLevel = kError;
+
 
     strings pdfNames;
     pdfNames.push_back( "CT10" );
@@ -400,6 +421,9 @@ int main (int argc, char** argv) {
         TFile file( argv[i] );
         TIter next( file.GetListOfKeys() );
         TObject* obj;
+        cout << "# Pdf uncertainties on acceptance for " << argv[i] << endl;
+        cout << "# Format GGM: m_squark/GeV  m_gluino/GeV  uncertainty/1" << endl;
+        cout << "# Format SMS: m_gluino/GeV  m_nlsp/GeV  uncertainty/1" << endl;
         while (( obj = next() ) ) {
             string objName = obj->GetName();
             if( objName.find("pdfTree") != std::string::npos ) {

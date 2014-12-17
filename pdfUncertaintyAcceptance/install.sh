@@ -14,8 +14,7 @@ cd LHAPDF-6.1.0
 
 # somehow the libpython2.7 is not found, a quick fix would be
 # mkdir src/.libs
-# ln -s /cvmfs/cms.cern.ch/slc6_amd64_gcc490/cms/cmssw/CMSSW_7_1_0_pre7/external/slc6_amd64_gcc490/lib/libpython2.7.so src/.libs/libpython2.7.so
-# ln -s /cvmfs/cms.cern.ch/slc6_amd64_gcc490/cms/cmssw/CMSSW_7_1_0_pre7/external/slc6_amd64_gcc490/lib/libpython2.7.so src/.libs/python2.7.so
+# ln -s /cvmfs/cms.cern.ch/slc6_amd64_gcc490/cms/cmssw/CMSSW_7_1_0_pre7/external/slc6_amd64_gcc490/lib/libpython2.7.so src/.libs/
 make -j8
 make install
 
@@ -62,9 +61,6 @@ for i in *.tar.gz
 do
     tar -xf $i
 done
-
-
-tar -xf cteq6l1.tar.gz
 
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PWD/local/lib/
 export LHAPDF_BASE=$PWD/local/
