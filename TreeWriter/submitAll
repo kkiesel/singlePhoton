@@ -1,7 +1,7 @@
 #!/bin/bash
 # This script submits all jobs to naf, which are defined in dataset
 
-version="32"
+version="01"
 datasets=(
 
 ## QCD
@@ -32,19 +32,21 @@ datasets=(
 # /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/PhotonHadD_V03/
 
 ## Signal
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5gg_800_V03/
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5gg_1000_V03/
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5gg_1200_V03/
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5gg_1350_V03/
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5gg_1550_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5gg_800_V04/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5gg_1000_V04/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5gg_1200_V04/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5gg_1350_V04/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5gg_1550_V04/
 
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5wg_400_V03/
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5wg_600_V03/
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5wg_800_V03/
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5wg_1000_V03/
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5wg_1200_V03/
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5wg_1350_V03/
- /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5wg_1550_V03/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5wg_400_V04/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5wg_600_V04/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5wg_800_V04/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5wg_1000_V04/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5wg_1200_V04/
+# /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5wg_1350_V04/
+
+ /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5gg_V04/
+ /pnfs/desy.de/cms/tier2/store/user/kiesel/nTuples/T5wg__V04/
 
 ## QCD
 # /pnfs/desy.de/cms/tier2/store/user/jschulz/nTuples/GJets_200_400_V02/
@@ -110,7 +112,7 @@ for dataset in "${datasets[@]}"; do
     # Since root can't handle -, it will be substituted to _
     job_name=$(echo $job_name|sed 's/-/_/g')
 
-    files=( $(dcls $dataset|grep root) )
+    files=( $(ls $dataset|grep root) )
 
     # Rounding up
     number_of_jobs=$(expr \( ${#files[@]} + $files_per_job \) / $files_per_job )
