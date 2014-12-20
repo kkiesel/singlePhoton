@@ -949,8 +949,8 @@ void TreeWriter::Loop( int jetScale ) {
 
 	// get number of events to be proceeded
 	Long64_t nentries = inputTree.GetEntries();
-	// store them in histo
-	eventNumbers.Fill( "Number of generated events", nentries );
+
+    unsigned int uniqueEntries = 0;
 
 	if(processNEvents <= 0 || processNEvents > nentries) processNEvents = nentries;
 	if( loggingVerbosity > 0 )
@@ -974,6 +974,17 @@ void TreeWriter::Loop( int jetScale ) {
 		//if( event.eventNumber != 7302527 ) continue; loggingVerbosity = 5;
 		if ( loggingVerbosity>1 || jentry%reportEvery==0 )
 			std::cout << jentry << " / " << processNEvents << std::endl;
+
+
+        // Remove double events
+        if( ! eventIds.insert( EventId( eventNumber, luminosityBlockNumber, runNumber ) ).second ) {
+            //std::cout << "Alredy in set: " << EventId( eventNumber, luminosityBlockNumber, runNumber ) << std::endl;
+            continue;
+        } else {
+            //std::cout << "New is net" << EventId( eventNumber, luminosityBlockNumber, runNumber ) << std::endl;
+        }
+
+        uniqueEntries ++;
 
 
         // fill pdf tree
@@ -1235,8 +1246,13 @@ void TreeWriter::Loop( int jetScale ) {
         if( loggingVerbosity > 2 ) std::cout << "End of event" << std::endl;
 	} // for jentry
 
+	// store them in histo
+
+
     // fill pdf tree
     if( jetScale == 0 ) {
+        std::cout << uniqueEntries << std::endl;
+        eventNumbers.Fill( "Number of generated events", uniqueEntries );
         if( lastEventAccepted ) {
             pdfTree->Fill();
         } else {
