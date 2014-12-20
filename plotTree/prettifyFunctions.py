@@ -362,6 +362,20 @@ def asimovSignificance( s, b, b_uncert=0 ):
 		return sqrt( 2 * ( (s+b)*log( (s+b)*(b+b_uncert**2)/(b**2+(s+b)*b_uncert**2) ) - b**2/b_uncert**2 * log( 1+ b_uncert**2*s/b/(b+b_uncert**2) ) ) )
 	return sqrt( 2* ( (s+b)*log(1+s/b) - s ) )
 
+def getPdfUncertaintiesAcceptance( inFilename ):
+    out = {}
+    with open( inFilename ) as f:
+        for line in f:
+            try:
+                m1, m2, uncert = line.split(" ")
+            except:
+                m1, m2, uncert = 0, 0,0
+            m1 = int(m1)
+            m2 = int(m2)
+            uncert = float(uncert)
+            out[(m1,m2)] = uncert
+    return out
+
 
 
 
