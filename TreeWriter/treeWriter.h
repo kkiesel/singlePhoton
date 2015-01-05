@@ -26,6 +26,28 @@ enum eventType {
 	kJetEvent
 };
 
+struct EventId {
+    /* Stores the information needed to distinguish events.
+     * The < operator is usd to sort events, the actual order is not of great importance.
+     */
+    EventId( unsigned int eventNumber_, unsigned int lumiBlockNumber_, unsigned int runNumber_ ) :
+        eventNumber(eventNumber_),
+        lumiBlockNumber(lumiBlockNumber_),
+        runNumber(runNumber_) {}
+    unsigned int eventNumber, lumiBlockNumber, runNumber;
+    bool operator < ( const EventId& rh ) const {
+        return ( eventNumber != rh.eventNumber ? eventNumber < rh.eventNumber :
+                (lumiBlockNumber != rh.lumiBlockNumber ? lumiBlockNumber < rh.lumiBlockNumber :
+                 runNumber < rh.runNumber ) );
+    }
+};
+
+std::ostream& operator << ( std::ostream& os, const EventId& id ) {
+    os << id.runNumber << " : " << id.lumiBlockNumber << " : " << id.eventNumber;
+    return os;
+}
+
+
 class TreeWriter {
 	public :
 		TreeWriter( int nFiles, char** fileList, std::string const&, bool );
@@ -78,6 +100,9 @@ class TreeWriter {
 		TH2F qcdWeightHisto;
 		std::map<unsigned, std::set<unsigned> > goodLumiList;
 		std::vector<const char*> triggerNames;
+
+        // Set in which the runNumber,etc will be stored to remove double events
+        std::set<EventId> eventIds;
 
 		TChain inputTree;
 		susy::Event event;
