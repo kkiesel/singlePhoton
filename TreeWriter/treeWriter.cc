@@ -1009,19 +1009,23 @@ void TreeWriter::Loop( int jetScale ) {
     bool lastEventAccepted = false;
 
 	for (long jentry=0; jentry < processNEvents; ++jentry) {
+		event.getEntry(jentry);
 
 		// Just for testing purpose (leave this uncommented)
 		//if( event.eventNumber != 7302527 ) continue; loggingVerbosity = 5;
 		if ( loggingVerbosity>1 || jentry%reportEvery==0 )
 			std::cout << jentry << " / " << processNEvents << std::endl;
 
+		runNumber = event.runNumber;
+		eventNumber = event.eventNumber;
+		luminosityBlockNumber = event.luminosityBlockNumber;
 
         // Remove double events
         if( ! eventIds.insert( EventId( eventNumber, luminosityBlockNumber, runNumber ) ).second ) {
             //std::cout << "Alredy in set: " << EventId( eventNumber, luminosityBlockNumber, runNumber ) << std::endl;
             continue;
         } else {
-            //std::cout << "New is net" << EventId( eventNumber, luminosityBlockNumber, runNumber ) << std::endl;
+            //std::cout << "New is set:    " << EventId( eventNumber, luminosityBlockNumber, runNumber ) << std::endl;
         }
 
         uniqueEntries ++;
@@ -1037,7 +1041,6 @@ void TreeWriter::Loop( int jetScale ) {
             }
         }
         lastEventAccepted = false;
-		event.getEntry(jentry);
 
         pdf_x1 = event.gridParams["pdf_x1"];
         pdf_x2 = event.gridParams["pdf_x2"];
@@ -1071,10 +1074,6 @@ void TreeWriter::Loop( int jetScale ) {
 		nTracksPV = nTrackPrimaryVertex( event.vertices );
 		if( loggingVerbosity > 2 )
 			std::cout << " nTracksPV = " << nTracksPV << std::endl;
-
-		runNumber = event.runNumber;
-		eventNumber = event.eventNumber;
-		luminosityBlockNumber = event.luminosityBlockNumber;
 
 		// The jets have to be filled before looping over the photons and searching
 		// for jet photon matches. The collections are not cross cleaned.
