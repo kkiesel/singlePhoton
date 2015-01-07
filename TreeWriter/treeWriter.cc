@@ -1,6 +1,11 @@
 #include "treeWriter.h"
 #include "printCascade.h"
 
+std::ostream& operator << ( std::ostream& os, const EventId& id ) {
+    os << id.runNumber << " : " << id.lumiBlockNumber << " : " << id.eventNumber;
+    return os;
+}
+
 std::pair<float,float> getISRWeight( const susy::ParticleCollection& particles ) {
     /* Calculates the ISR uncertainty according to
      * https://twiki.cern.ch/twiki/bin/viewauth/CMS/SUSYApprovalProcedures#Handling_the_ISR_region_along_th
@@ -1000,11 +1005,12 @@ void TreeWriter::Loop( int jetScale ) {
 	// Declaration for objects saved in Tree
 	tree::Photon photonToTree;
 
-    // For the second and third loop (jec uncertainties), reset all h1 histos
+    // For the second and third loop (jec uncertainties), reset all h1 histos and the double-event-filter-list
 	for( std::map<std::string, TH1F>::iterator it = hist1D.begin();
 			it!= hist1D.end(); ++it ) {
 		it->second.Reset("ICESM");
 	}
+    eventIds.clear();
 
     bool lastEventAccepted = false;
 
@@ -1297,7 +1303,6 @@ void TreeWriter::Loop( int jetScale ) {
 
     // fill pdf tree
     if( jetScale == 0 ) {
-        std::cout << uniqueEntries << std::endl;
         eventNumbers.Fill( "Number of generated events", uniqueEntries );
         if( lastEventAccepted ) {
             pdfTree->Fill();
@@ -1321,7 +1326,7 @@ void TreeWriter::Loop( int jetScale ) {
 		}
         pdfTree->Write();
 
-		// Write all histograms except for the Jec ones
+		// Write all histograms except for the Jes ones
 		for( std::map<std::string, TH1F>::iterator it = hist1D.begin();
 					it!= hist1D.end(); ++it ) {
 			if( ((std::string)(it->second.GetName())).find("Jes")==std::string::npos )
