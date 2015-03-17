@@ -97,8 +97,8 @@ class BeautyPlot:
         label = ROOT.TLatex()
         if self.isSimulation: self.labelTemplate += self.simulationStr
         #self.selection += self.selectionAppendix
-        label.DrawLatexNDC( ROOT.gPad.GetLeftMargin()+0.02, .89, self.labelTemplate )
-        label.DrawLatexNDC( .68, .95, self.lumiInfoText )
+        label.DrawLatexNDC( ROOT.gPad.GetLeftMargin()+0.02, .895, self.labelTemplate )
+        label.DrawLatexNDC( .68, .955, self.lumiInfoText )
         label.DrawLatexNDC( .68, .88, self.selection )
         if self.selectionAppendix:
             label.DrawLatexNDC( .68, .84, self.selectionAppendix )
@@ -380,6 +380,9 @@ class SingleClosure( BeautyPlot ):
                 ax = h.GetXaxis()
                 ax.SetNdivisions( 8, 5, 0 )
 
+        if isinstance( self, EwkClosureMet ):
+            self.total.SetMinimum(1.1e-2)
+
 
         # set plot options
         for h in self.data, self.ratio:
@@ -530,7 +533,7 @@ class QcdClosureMet( QcdClosure, MetPlot, SingleClosure ):
 class QcdClosureNjet( QcdClosure, NJetPlot, SingleClosure ):
     infile = "input/Final_Combined_n_jet7_log_edit.C"
     output = "output/SinglePhoton_QCDclosure_njet.pdf"
-    selectionAppendix = "%s#geq100GeV"%metStr
+    selectionAppendix = "%s #geq 100GeV"%metStr
 
     def getPlots( self ):
 
