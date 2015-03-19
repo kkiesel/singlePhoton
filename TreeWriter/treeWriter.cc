@@ -1,6 +1,49 @@
 #include "treeWriter.h"
 #include "printCascade.h"
 
+std::ostream& operator << ( std::ostream& os, const EventId& id ) {
+    os << id.runNumber << " : " << id.lumiBlockNumber << " : " << id.eventNumber;
+    return os;
+}
+
+std::pair<float,float> getISRWeight( const susy::ParticleCollection& particles ) {
+    /* Calculates the ISR uncertainty according to
+     * https://twiki.cern.ch/twiki/bin/viewauth/CMS/SUSYApprovalProcedures#Handling_the_ISR_region_along_th
+     */
+
+    // Seach the first sparticles in the cascade (the ones with sm particles as mother)
+    susy::ParticleCollection system;
+    for( susy::ParticleCollection::const_iterator particle = particles.begin();
+            particle != particles.end(); ++particle ) {
+        if( particle->status != 3 ) continue;
+        if( std::abs(particle->pdgId) < 1e6 ) continue;
+        if( std::abs( particles[particle->motherIndex].pdgId ) > 1e6 ) continue;
+        system.push_back( *particle );
+    }
+
+    if( system.size() != 2 ) {
+        std::cout << "ERROR: " << system.size() << " particles for ISR calculation found" << std::endl;
+        return std::make_pair(1,0);
+    }
+
+    // Calculate the pt of the system
+    float pt = (system[0].momentum+system[1].momentum).Pt();
+
+    // Look up the weight and uncertainty
+    float weight=1, uncert=0;
+    if( pt <= 120 ) {
+        weight = 1; uncert = 0;
+    } else if( pt <= 150 ) {
+        weight = 0.95; uncert = 0.05;
+    } else if( pt <= 250 ) {
+        weight = 0.90; uncert = 0.1;
+    } else {
+        weight = 0.80; uncert = 0.20;
+    }
+
+    return std::make_pair(weight,uncert);
+}
+
 std::vector< std::string > getAllSimplifiedModelNames( std::string scan = "wg" /* or gg */ ) {
     /* Returns a vector containing all simplified model names, accourding whether it is the T5wg or T5gg model */
     std::vector<std::string> outVector;
@@ -407,6 +450,8 @@ TreeWriter::TreeWriter( int nFiles, char** fileList, std::string const& outputNa
 	// Define one dimensional histograms
 	hist1D["gMet"] = TH1F("", ";met;", 60, 0, 600 );
 	hist1D["nGen"] = TH1F("", ";met;", 1, 0, 1 );
+	hist1D["gMetIsrUp"] = TH1F("", ";met;", 60, 0, 600 );
+	hist1D["gMetIsrDown"] = TH1F("", ";met;", 60, 0, 600 );
 	hist1D["gMetPuUp"] = TH1F("", ";met;", 60, 0, 600 );
 	hist1D["gMetPuDown"] = TH1F("", ";met;", 60, 0, 600 );
 	hist1D["gMetJesUp"] = TH1F("", ";met;", 60, 0, 600 );
@@ -960,28 +1005,33 @@ void TreeWriter::Loop( int jetScale ) {
 	// Declaration for objects saved in Tree
 	tree::Photon photonToTree;
 
-    // For the second and third loop (jec uncertainties), reset all h1 histos
+    // For the second and third loop (jec uncertainties), reset all h1 histos and the double-event-filter-list
 	for( std::map<std::string, TH1F>::iterator it = hist1D.begin();
 			it!= hist1D.end(); ++it ) {
 		it->second.Reset("ICESM");
 	}
+    eventIds.clear();
 
     bool lastEventAccepted = false;
 
 	for (long jentry=0; jentry < processNEvents; ++jentry) {
+		event.getEntry(jentry);
 
 		// Just for testing purpose (leave this uncommented)
 		//if( event.eventNumber != 7302527 ) continue; loggingVerbosity = 5;
 		if ( loggingVerbosity>1 || jentry%reportEvery==0 )
 			std::cout << jentry << " / " << processNEvents << std::endl;
 
+		runNumber = event.runNumber;
+		eventNumber = event.eventNumber;
+		luminosityBlockNumber = event.luminosityBlockNumber;
 
         // Remove double events
         if( ! eventIds.insert( EventId( eventNumber, luminosityBlockNumber, runNumber ) ).second ) {
             //std::cout << "Alredy in set: " << EventId( eventNumber, luminosityBlockNumber, runNumber ) << std::endl;
             continue;
         } else {
-            //std::cout << "New is net" << EventId( eventNumber, luminosityBlockNumber, runNumber ) << std::endl;
+            //std::cout << "New is set:    " << EventId( eventNumber, luminosityBlockNumber, runNumber ) << std::endl;
         }
 
         uniqueEntries ++;
@@ -997,7 +1047,6 @@ void TreeWriter::Loop( int jetScale ) {
             }
         }
         lastEventAccepted = false;
-		event.getEntry(jentry);
 
         pdf_x1 = event.gridParams["pdf_x1"];
         pdf_x2 = event.gridParams["pdf_x2"];
@@ -1009,6 +1058,11 @@ void TreeWriter::Loop( int jetScale ) {
 		// For data, the weight is 1. Else take the pileup weight.
 		weight = event.isRealData ? 1. : getPileUpWeight();
 
+        std::pair<float,float> isrStuff = getISRWeight( event.genParticles );
+        float isrWeight = isrStuff.first;
+        float isrUncert = isrStuff.second;
+
+        weight *= isrWeight;
 
 		// Uncomment this to just print the cascade on console
 		//printCascade( event.genParticles ); continue;
@@ -1026,10 +1080,6 @@ void TreeWriter::Loop( int jetScale ) {
 		nTracksPV = nTrackPrimaryVertex( event.vertices );
 		if( loggingVerbosity > 2 )
 			std::cout << " nTracksPV = " << nTracksPV << std::endl;
-
-		runNumber = event.runNumber;
-		eventNumber = event.eventNumber;
-		luminosityBlockNumber = event.luminosityBlockNumber;
 
 		// The jets have to be filled before looping over the photons and searching
 		// for jet photon matches. The collections are not cross cleaned.
@@ -1212,6 +1262,8 @@ void TreeWriter::Loop( int jetScale ) {
             }
 
 			hist1D["gMet"].Fill( met, weight );
+			hist1D["gMetIsrUp"].Fill( met, weight*(1+isrUncert) );
+			hist1D["gMetIsrDown"].Fill( met, weight*(1-isrUncert) );
 			hist1D["gMetJesUp"].Fill( met, weight );
 			hist1D["gMetJesDown"].Fill( met, weight );
 			hist1D["gMetPuUp"].Fill( met, weightPuUp );
@@ -1251,7 +1303,6 @@ void TreeWriter::Loop( int jetScale ) {
 
     // fill pdf tree
     if( jetScale == 0 ) {
-        std::cout << uniqueEntries << std::endl;
         eventNumbers.Fill( "Number of generated events", uniqueEntries );
         if( lastEventAccepted ) {
             pdfTree->Fill();
@@ -1275,7 +1326,7 @@ void TreeWriter::Loop( int jetScale ) {
 		}
         pdfTree->Write();
 
-		// Write all histograms except for the Jec ones
+		// Write all histograms except for the Jes ones
 		for( std::map<std::string, TH1F>::iterator it = hist1D.begin();
 					it!= hist1D.end(); ++it ) {
 			if( ((std::string)(it->second.GetName())).find("Jes")==std::string::npos )

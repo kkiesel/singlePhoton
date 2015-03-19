@@ -170,9 +170,9 @@ class Scan:
             info["nGen"] = int(histoDict["nGen"].GetBinContent(1))
             info["signal"] = histoToList( histoDict["gMet"] )
             info["signalStat"] = histoToList( histoDict["gMet"], True )
-            info["signalSystJes"] = histoDiffToList( histoDict["gMetJesUp"], histoDict["gMetJesDown"] ) if "gMetJesDown" in histoDict else []
-            info["signalSystPu"] = histoDiffToList( histoDict["gMetPuUp"], histoDict["gMetPuDown"] ) if "gMetPuUp" in histoDict else []
-            info["signalSystPu"] = histoDiffToList( histoDict["gMetPuUp"], histoDict["gMetPuDown"] ) if "gMetPuUp" in histoDict else []
+            info["signalSystJes"] = histoDiffToList( histoDict["gMetJesUp"], histoDict["gMetJesDown"] ) # if "gMetJesDown" in histoDict else []
+            info["signalSystIsr"] = histoDiffToList( histoDict["gMetIsrUp"], histoDict["gMetIsrDown"] ) # if "gMetIsrDown" in histoDict else []
+            info["signalSystPu"]  = histoDiffToList( histoDict["gMetPuUp"],  histoDict["gMetPuDown"]  ) # if "gMetPuDown"  in histoDict else []
             info["signalEWK"] = histoToList( histoDict["eMet"] )
             info["signalEWKStat"] = histoToList( histoDict["eMet"], True )
             info["signalEWKSyst"] = [0.11*i for i in histoToList( histoDict["eMet"] ) ] # 11% uncertainy
@@ -185,7 +185,7 @@ class Scan:
                 pdfUncert[coordinate]=0
             xsec,xsecUncert = xSections[(info["m1"])]
 
-            signalsystUncert = [ sqrt(i**2+j**2 + (pdfUncert[coordinate]*z)**2) for i,j,z in zip( info["signalSystJes"], info["signalSystPu"], info["signal"] ) ]
+            signalsystUncert = [ sqrt( i**2+j**2+k**2 + (pdfUncert[coordinate]*z)**2) for i,j,k,z in zip( info["signalSystJes"], info["signalSystIsr"], info["signalSystPu"], info["signal"] ) ]
 
             signalCardString += "Point %s gluino mass = %s\n"%(counter, info["m1"])
             signalCardString += "Point %s nlsp mass = %s\n"%(counter, info["m2"])
@@ -282,12 +282,20 @@ def meanMet( histoDict ):
     metClone.GetXaxis().SetRange( ax.FindBin(100), ax.FindBin(1e6) )
     return metClone.GetMean()
 
+def isrUncert( histoDict ):
+    if not isSubset( ["gMetIsrDown", "gMetIsrUp"], histoDict.keys()): return 0
+
+    up = histoDict["gMetIsrUp"].Integral()
+    down = histoDict["gMetIsrDown"].Integral()
+    normal = histoDict["gMet"].Integral()
+    return 100.*(up-down)/(2*normal) if normal else 0
+
+
 def jetScale( histoDict ):
     if not isSubset( ["gMetJesDown", "gMetJesUp"], histoDict.keys()): return 0
 
-    # temporary fix: histograms get filled several times: #TODO: correct
-    up = histoDict["gMetJesUp"].Integral() - histoDict["gMet"].Integral()
-    down = histoDict["gMetJesDown"].Integral() - histoDict["gMetJesUp"].Integral()
+    up = histoDict["gMetJesUp"].Integral()
+    down = histoDict["gMetJesDown"].Integral()
     normal = histoDict["gMet"].Integral()
     return 100.*(up-down)/(2*normal) if normal else 0
 
@@ -405,6 +413,7 @@ if __name__ == "__main__":
         scan.addFunction( nGen, "nGen", "Generated events [10^{4}]" )
         scan.addFunction( acceptance, "acceptance", "Acceptance [%]", True )
         scan.addFunction( jetScale, "jes", "jet energy scale uncert. [%]" )
+        scan.addFunction( isrUncert, "isr", "ISR uncert. [%]" )
         scan.addFunction( signalContamination, "signalContamination", "bkg. pred. from signal/signal yield [%]", True )
         scan.addFunction( meanHt, "ht", "#LTH_{T}#GT [GeV]" )
         scan.addFunction( meanPt, "pt", "#LTp_{T}#GT [GeV]" )
@@ -459,14 +468,15 @@ if __name__ == "__main__":
             elif name == "signalContamination":
                 histo.SetMaximum(40)
             elif name == "statUncert":
-                print "statUncertRange:", histo.GetMinimum(0), histo.GetMaximum()
-                histo.SetMaximum(5)
+                histo.SetMaximum(30)
             elif name == "jes":
                 histo.SetMaximum(4.5)
             elif name == "pu":
                 histo.SetMaximum(1.1)
             elif name == "pdfUncertAcc":
                 histo.SetMaximum(10)
+            elif name == "isr":
+                histo.SetMaximum(9)
 
 
             gr2D = ROOT.TGraph2D( histo )
