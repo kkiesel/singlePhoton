@@ -96,10 +96,9 @@ class BeautyPlot:
     def drawLabel( self ):
         label = ROOT.TLatex()
         if self.isSimulation: self.labelTemplate += self.simulationStr
-        #self.selection += self.selectionAppendix
         label.DrawLatexNDC( ROOT.gPad.GetLeftMargin()+0.02, .895, self.labelTemplate )
         label.DrawLatexNDC( .68, .955, self.lumiInfoText )
-        label.DrawLatexNDC( .68, .89, self.selection )
+        label.DrawLatexNDC( .67, .89, self.selection )
         if self.selectionAppendix:
             label.DrawLatexNDC( .68, .84, self.selectionAppendix )
 
@@ -129,7 +128,7 @@ class BeautyPlot:
 ############### Razor Ploting #################
 
 class RazorPlot( BeautyPlot ):
-    selection = "Razor #gamma#gamma #geq1 jet"
+    selection = "Razor #gamma#gamma, #geq 1 jet"
     bottomPlotRange = -2.2, 2.2
 
 class SignalComparison( RazorPlot ):
@@ -223,7 +222,7 @@ class RazorComparison( RazorPlot ):
         #self.pred.Draw("p same")
         self.data.Draw("e0 x0 p same")
 
-        self.leg = ROOT.TLegend(.35,.65,.9,.85)
+        self.leg = ROOT.TLegend(.30,.65,.85,.85)
         self.leg.SetFillColor(0)
         self.leg.AddEntry( self.data, self.legEntries[0], "ep" )
         self.leg.AddEntry( self.predUncert, self.legEntries[1], "fp" )
@@ -258,7 +257,7 @@ class RazorControlLowR( RazorComparison ):
 
     legEntries = [
         "Low R^{2} Control Sample",
-        "Fit Prediction"
+        "Fit Prediction #pm #sigma_{shape}"
     ]
 
     def getPlots( self ):
@@ -276,7 +275,7 @@ class RazorControlHighR( RazorComparison ):
 
     legEntries = [
         "High R^{2} Control Sample",
-        "Estimation in High R^{2}"
+        "Estimation in High R^{2} #pm #sigma_{shape}"
     ]
     def getPlots( self ):
         self.data = ROOT.hist_high_data
@@ -291,7 +290,7 @@ class RazorLowR( RazorComparison ):
 
     legEntries = [
         "Data (Low R^{2})",
-        "Fit Prediction"
+        "Fit Prediction #pm #sigma_{shape}"
     ]
 
     def getPlots( self ):
@@ -307,7 +306,7 @@ class RazorHighR( RazorComparison ):
 
     legEntries = [
         "Data (High R^{2})",
-        "Estimation in High R^{2}"
+        "Estimation in High R^{2} #pm #sigma_{shape}"
     ]
     def getPlots( self ):
         self.data = ROOT.hist_high_data
@@ -324,7 +323,7 @@ class RazorSignalInj( RazorComparison ):
 
     legEntries = [
         "Control + Signal (High R^{2})",
-        "Estimation in High R^{2}"
+        "Estimation in High R^{2} #pm #sigma_{shape}"
     ]
     def getPlots( self ):
         self.data = ROOT.hist_high_data
@@ -341,7 +340,7 @@ class RazorSignalInj( RazorComparison ):
 ############### Single photon
 
 class SingleClosure( BeautyPlot ):
-    selection = "#geq1#gamma #geq2 jets"
+    selection = "#geq 1 #gamma, #geq 2 jets"
     bottomPlotRange = 0, 2.2
     dataset = ""
 
