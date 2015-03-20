@@ -99,7 +99,7 @@ class BeautyPlot:
         #self.selection += self.selectionAppendix
         label.DrawLatexNDC( ROOT.gPad.GetLeftMargin()+0.02, .895, self.labelTemplate )
         label.DrawLatexNDC( .68, .955, self.lumiInfoText )
-        label.DrawLatexNDC( .68, .88, self.selection )
+        label.DrawLatexNDC( .68, .89, self.selection )
         if self.selectionAppendix:
             label.DrawLatexNDC( .68, .84, self.selectionAppendix )
 
@@ -121,13 +121,15 @@ class BeautyPlot:
         self.draw()
         self.drawLabel()
         self.save()
+
         if ROOT.gDirectory:
             ROOT.gDirectory.Clear()
+
 
 ############### Razor Ploting #################
 
 class RazorPlot( BeautyPlot ):
-    selection = "Razor #gamma#gamma #geq1jet"
+    selection = "Razor #gamma#gamma #geq1 jet"
     bottomPlotRange = -2.2, 2.2
 
 class SignalComparison( RazorPlot ):
@@ -339,7 +341,7 @@ class RazorSignalInj( RazorComparison ):
 ############### Single photon
 
 class SingleClosure( BeautyPlot ):
-    selection = "#geq1#gamma #geq2jet"
+    selection = "#geq1#gamma #geq2 jets"
     bottomPlotRange = 0, 2.2
     dataset = ""
 
@@ -632,7 +634,7 @@ class FinalPlotMet( MetPlot, SingleClosure ):
         self.hs.Draw()
 
     def drawLegend( self ):
-        self.leg = ROOT.TLegend(.47,.53,.95,.87)
+        self.leg = ROOT.TLegend(.47,.53,.95,.88)
         self.leg.SetFillStyle(0)
         if self.dataset:
             self.leg.SetHeader( self.dataset )
