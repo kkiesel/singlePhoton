@@ -225,9 +225,8 @@ class RazorComparison( RazorPlot ):
         self.leg.SetFillColor(0)
         self.leg.AddEntry( self.data, self.legEntries[0], "ep" )
         self.leg.AddEntry( self.predUncert, self.legEntries[1], "fp" )
-        #self.leg.AddEntry( self.pred, self.legEntries[1], "p" )
         if isinstance( self, RazorSignalInj ):
-            #self.leg.AddEntry( self.signal, "GGMbino m_{#tilde{q}}=1400 GeV, m_{#tilde{g}}=1820 GeV", "l" )
+            self.leg.SetY1(0.57)
             self.leg.AddEntry( self.signal, "GGMbino #scale[0.8]{#splitline{m_{#tilde{q}}=1400 GeV}{m_{#tilde{g}}=1820 GeV}}", "l" )
         self.leg.SetTextSize( ROOT.gStyle.GetTitleSize())
         self.leg.Draw()
