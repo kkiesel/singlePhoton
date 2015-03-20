@@ -107,7 +107,8 @@ class BeautyPlot:
         ROOT.gROOT.ProcessLine( " .x %s"% self.infile )
 
     def save( self ):
-        ROOT.gPad.GetCanvas().SaveAs( self.output )
+        for ending in [ "pdf", "C" ]:
+            ROOT.gPad.GetCanvas().SaveAs( "output/{}.{}".format( self.output, ending ) )
 
     def __init__( self ):
         self.readC()
@@ -162,7 +163,7 @@ class SignalComparison( RazorPlot ):
 
 class T5SignalPlot( SignalComparison ):
     infile = "input/t5gg_s_v_b.C"
-    output = "output/DiPhoton_SignalShape_T5gg.pdf"
+    output = "DiPhoton_SignalShape_T5gg"
     legEntries = [
         "T5gg signals:",
         "m_{#tilde{g}} = 1350 GeV, m_{#tilde{#chi}^{0}_{1}} =   225 GeV",
@@ -172,7 +173,7 @@ class T5SignalPlot( SignalComparison ):
 
 class BinoSignalPlot( SignalComparison ):
     infile = "input/ra3_s_v_b.C"
-    output = "output/DiPhoton_SignalShape_GGMbino.pdf"
+    output = "DiPhoton_SignalShape_GGMbino"
     legEntries = [
         "GGMbino signals:",
         "m_{#tilde{q}} = 1500 GeV, m_{#tilde{g}} = 1820 GeV",
@@ -254,7 +255,7 @@ class RazorComparison( RazorPlot ):
 
 class RazorControlLowR( RazorComparison ):
     infile = "input/fake_low_fit_edit.C"
-    output = "output/DiPhoton_Control_LowR.pdf"
+    output = "DiPhoton_Control_LowR"
 
     legEntries = [
         "Low R^{2} Control Sample",
@@ -272,7 +273,7 @@ class RazorControlLowR( RazorComparison ):
 
 class RazorControlHighR( RazorComparison ):
     infile = "input/fake_extrap_edit.C"
-    output = "output/DiPhoton_Control_HighR.pdf"
+    output = "DiPhoton_Control_HighR"
 
     legEntries = [
         "High R^{2} Control Sample",
@@ -287,7 +288,7 @@ class RazorControlHighR( RazorComparison ):
 
 class RazorLowR( RazorComparison ):
     infile = "input/low_fit_edit.C"
-    output = "output/DiPhoton_LowR.pdf"
+    output = "DiPhoton_LowR"
 
     legEntries = [
         "Data (Low R^{2})",
@@ -303,7 +304,7 @@ class RazorLowR( RazorComparison ):
 
 class RazorHighR( RazorComparison ):
     infile = "input/extrap_edit.C"
-    output = "output/DiPhoton_HighR.pdf"
+    output = "DiPhoton_HighR"
 
     legEntries = [
         "Data (High R^{2})",
@@ -318,7 +319,7 @@ class RazorHighR( RazorComparison ):
 
 class RazorSignalInj( RazorComparison ):
     infile = "input/signal_inj_edit.C"
-    output = "output/DiPhoton_SignalInjection.pdf"
+    output = "DiPhoton_SignalInjection"
 
     bottomPlotRange = -2.2, 9
 
@@ -492,17 +493,17 @@ class QcdClosure():
 
 class EwkClosureMet( EwkClosure, MetPlot, SingleClosure ):
     infile = "input/ewkClosure_TTJetsW_met.C"
-    output = "output/SinglePhoton_EWKclosure_met.pdf"
+    output = "SinglePhoton_EWKclosure_met"
 
 class EwkClosureNjet( EwkClosure, NJetPlot, SingleClosure ):
     infile = "input/ewkClosure_TTJetsW_nGoodJets.C"
-    output = "output/SinglePhoton_EWKclosure_nJet.pdf"
+    output = "SinglePhoton_EWKclosure_nJet"
 
 
 
 class QcdClosureMet( QcdClosure, MetPlot, SingleClosure ):
     infile = "input/Closure_Combined_met_log_edit.C"
-    output = "output/SinglePhoton_QCDclosure_met.pdf"
+    output = "SinglePhoton_QCDclosure_met"
 
     def getPlots( self ):
 
@@ -534,7 +535,7 @@ class QcdClosureMet( QcdClosure, MetPlot, SingleClosure ):
 
 class QcdClosureNjet( QcdClosure, NJetPlot, SingleClosure ):
     infile = "input/Final_Combined_n_jet7_log_edit.C"
-    output = "output/SinglePhoton_QCDclosure_njet.pdf"
+    output = "SinglePhoton_QCDclosure_njet"
     selectionAppendix = "%s #geq 100GeV"%metStr
 
     def getPlots( self ):
@@ -566,7 +567,7 @@ class QcdClosureNjet( QcdClosure, NJetPlot, SingleClosure ):
 
 class FinalPlotMet( MetPlot, SingleClosure ):
     infile = "input/Closure_Data_met_log_edit.C"
-    output = "output/SinglePhoton_Data_met.pdf"
+    output = "SinglePhoton_Data_met"
     isSimulation = False
 
     def getPlots( self ):
