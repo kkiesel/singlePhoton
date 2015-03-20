@@ -621,7 +621,7 @@ class FinalPlotMet( MetPlot, SingleClosure ):
         self.signal.SetLineColor( ROOT.kRed )
         self.signal.SetLineWidth(2)
 
-        self.hs = ROOT.THStack()
+        self.hs = ROOT.THStack("stackedBackgrounds", "")
         self.hs.UseCurrentStyle()
         self.hs.Add( self.ewk )
         self.hs.Add( self.isr )
