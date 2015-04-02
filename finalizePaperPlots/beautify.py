@@ -106,7 +106,8 @@ class BeautyPlot:
         ROOT.gROOT.ProcessLine( " .x %s"% self.infile )
 
     def save( self ):
-        for ending in [ "pdf", "C" ]:
+        #for ending in [ "pdf", "C" ]:
+        for ending in [ "pdf" ]:
             ROOT.gPad.GetCanvas().SaveAs( "output/{}.{}".format( self.output, ending ) )
 
     def __init__( self ):
@@ -225,9 +226,11 @@ class RazorComparison( RazorPlot ):
         self.leg = ROOT.TLegend(.30,.65,.85,.85)
         self.leg.SetFillColor(0)
         self.leg.AddEntry( self.data, self.legEntries[0], "ep" )
+        if isinstance( self, RazorSignalInj ):
+            self.leg.AddEntry( 0, "+ Signal simulation (high R^{2})", "" )
         self.leg.AddEntry( self.predUncert, self.legEntries[1], "fp" )
         if isinstance( self, RazorSignalInj ):
-            self.leg.SetY1(0.57)
+            self.leg.SetY1(0.54)
             self.leg.AddEntry( self.signal, "GGMbino #scale[0.8]{#splitline{m_{#tilde{q}}=1400 GeV}{m_{#tilde{g}}=1820 GeV}}", "l" )
         self.leg.SetTextSize( ROOT.gStyle.GetTitleSize())
         self.leg.Draw()
@@ -256,8 +259,8 @@ class RazorControlLowR( RazorComparison ):
     output = "DiPhoton_Control_LowR"
 
     legEntries = [
-        "Low R^{2} Control Sample",
-        "Fit Prediction #pm #sigma_{shape}"
+        "Control sample (low R^{2})",
+        "Fit prediction #pm #sigma_{shape}"
     ]
 
     def getPlots( self ):
@@ -274,8 +277,8 @@ class RazorControlHighR( RazorComparison ):
     output = "DiPhoton_Control_HighR"
 
     legEntries = [
-        "High R^{2} Control Sample",
-        "Estimation in High R^{2} #pm #sigma_{shape}"
+        "Control sample (high R^{2})",
+        "Estimation in high R^{2} #pm #sigma_{shape}"
     ]
     def getPlots( self ):
         self.data = ROOT.hist_high_data
@@ -289,8 +292,8 @@ class RazorLowR( RazorComparison ):
     output = "DiPhoton_LowR"
 
     legEntries = [
-        "Data (Low R^{2})",
-        "Fit Prediction #pm #sigma_{shape}"
+        "Data (low R^{2})",
+        "Fit prediction #pm #sigma_{shape}"
     ]
 
     def getPlots( self ):
@@ -305,8 +308,8 @@ class RazorHighR( RazorComparison ):
     output = "DiPhoton_HighR"
 
     legEntries = [
-        "Data (High R^{2})",
-        "Estimation in High R^{2} #pm #sigma_{shape}"
+        "Data (high R^{2})",
+        "Estimation in high R^{2} #pm #sigma_{shape}"
     ]
     def getPlots( self ):
         self.data = ROOT.hist_high_data
@@ -322,8 +325,8 @@ class RazorSignalInj( RazorComparison ):
     bottomPlotRange = -2.2, 9
 
     legEntries = [
-        "Control + Signal (High R^{2})",
-        "Estimation in High R^{2} #pm #sigma_{shape}"
+        "Control sample",
+        "Estimation in high R^{2} #pm #sigma_{shape}"
     ]
     def getPlots( self ):
         self.data = ROOT.hist_high_data
@@ -354,7 +357,7 @@ class SingleClosure( BeautyPlot ):
         self.leg.SetFillStyle(0)
         if self.dataset:
             self.leg.SetHeader( self.dataset )
-        self.leg.AddEntry( self.data, "Direct Simulation", "pe" )
+        self.leg.AddEntry( self.data, "Direct simulation", "pe" )
         self.leg.AddEntry( self.total, "Prediction #pm #sigma_{total}", "lf" )
         self.leg.AddEntry( self.syst, "#pm #sigma_{syst}", "f" )
         self.leg.Draw()
@@ -618,7 +621,7 @@ class FinalPlotMet( MetPlot, SingleClosure ):
             h.Sumw2(0)
 
         self.signal.Sumw2(0)
-        self.signal.SetLineColor( ROOT.kRed )
+        self.signal.SetLineColor( ROOT.kRed-2 )
         self.signal.SetLineWidth(2)
 
         self.hs = ROOT.THStack("stackedBackgrounds", "")
