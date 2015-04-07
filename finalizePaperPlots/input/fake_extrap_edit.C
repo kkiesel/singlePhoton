@@ -1,19 +1,19 @@
 {
-//=========Macro generated from canvas: c2/high canvas
+//=========Macro generated from canvas: c22/high canvas
 //=========  (Thu May 15 18:03:24 2014) by ROOT version5.34/03
-  TCanvas *c2 = new TCanvas("c2", "high canvas",820, 900);
+  TCanvas *c22 = new TCanvas("c22", "high canvas",820, 900);
    gStyle->SetOptStat(0);
    gStyle->SetOptTitle(0);
-   c2->Range(0,0,1,1);
-   c2->SetFillColor(0);
-   c2->SetBorderMode(0);
-   c2->SetBorderSize(2);
-   c2->SetTickx(1);
-   c2->SetTicky(1);
-   c2->SetLeftMargin(0.15);
-   c2->SetBottomMargin(0.2);
-   c2->SetFrameFillStyle(0);
-   c2->SetFrameBorderMode(0);
+   c22->Range(0,0,1,1);
+   c22->SetFillColor(0);
+   c22->SetBorderMode(0);
+   c22->SetBorderSize(2);
+   c22->SetTickx(1);
+   c22->SetTicky(1);
+   c22->SetLeftMargin(0.15);
+   c22->SetBottomMargin(0.2);
+   c22->SetFrameFillStyle(0);
+   c22->SetFrameBorderMode(0);
   
 // ------------>Primitives in pad: pad3
    TPad *pad3 = new TPad("pad3", "pad3",0,0.4,1,1);
@@ -236,7 +236,7 @@
    entry->SetMarkerSize(1.2);
    leg->Draw();
    pad3->Modified();
-   c2->cd();
+   c22->cd();
   
 // ------------>Primitives in pad: pad4
    pad4 = new TPad("pad4", "pad4",0,0,1,0.4);
@@ -363,8 +363,8 @@
    line->SetLineWidth(2);
    line->Draw();
    pad4->Modified();
-   c2->cd();
-   c2->Modified();
-   c2->cd();
-   c2->SetSelected(c2);
+   c22->cd();
+   c22->Modified();
+   c22->cd();
+   c22->SetSelected(c22);
 }

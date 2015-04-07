@@ -1,20 +1,20 @@
 {
-//=========Macro generated from canvas: c4/low_canvas
+//=========Macro generated from canvas: c42/low_canvas
 //=========  (Thu May 15 17:58:32 2014) by ROOT version5.34/03
-   TCanvas *c4 = new TCanvas("c4", "low_canvas",184,237,1024,768);
+   TCanvas *c42 = new TCanvas("c42", "low_canvas",184,237,1024,768);
    gStyle->SetOptStat(0);
    gStyle->SetOptTitle(0);
-   c4->Range(0,0,1,1);
-   c4->SetFillColor(0);
-   c4->SetBorderMode(0);
-   c4->SetBorderSize(2);
-   c4->SetLogy();
-   c4->SetTickx(1);
-   c4->SetTicky(1);
-   c4->SetLeftMargin(0.15);
-   c4->SetBottomMargin(0.2);
-   c4->SetFrameFillStyle(0);
-   c4->SetFrameBorderMode(0);
+   c42->Range(0,0,1,1);
+   c42->SetFillColor(0);
+   c42->SetBorderMode(0);
+   c42->SetBorderSize(2);
+   c42->SetLogy();
+   c42->SetTickx(1);
+   c42->SetTicky(1);
+   c42->SetLeftMargin(0.15);
+   c42->SetBottomMargin(0.2);
+   c42->SetFrameFillStyle(0);
+   c42->SetFrameBorderMode(0);
   
 // ------------>Primitives in pad: pad5
    TPad *pad5 = new TPad("pad5", "pad5",0,0.4,1,1);
@@ -236,7 +236,7 @@
    entry->SetMarkerSize(1.2);
    leg->Draw();
    pad5->Modified();
-   c4->cd();
+   c42->cd();
   
 // ------------>Primitives in pad: pad6
    pad6 = new TPad("pad6", "low68",0,0,1,0.4);
@@ -363,8 +363,8 @@
    line->SetLineWidth(2);
    line->Draw();
    pad6->Modified();
-   c4->cd();
-   c4->Modified();
-   c4->cd();
-   c4->SetSelected(c4);
+   c42->cd();
+   c42->Modified();
+   c42->cd();
+   c42->SetSelected(c42);
 }

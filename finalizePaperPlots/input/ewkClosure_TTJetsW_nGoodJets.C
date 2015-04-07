@@ -1,26 +1,26 @@
 {
-//=========Macro generated from canvas: c1/
+//=========Macro generated from canvas: c14/
 //=========  (Thu Mar  5 06:52:11 2015) by ROOT version5.34/23
-   TCanvas *c1 = new TCanvas("c1", "",0,0,600,600);
+   TCanvas *c14 = new TCanvas("c14", "",0,0,600,600);
    gStyle->SetOptFit(1);
    gStyle->SetOptStat(0);
    gStyle->SetOptTitle(0);
-   c1->SetHighLightColor(2);
-   c1->Range(0.1172841,-2.253412,8.759259,2.694987);
-   c1->SetFillColor(0);
-   c1->SetBorderMode(0);
-   c1->SetBorderSize(2);
-   c1->SetLogy();
-   c1->SetTickx(1);
-   c1->SetTicky(1);
-   c1->SetLeftMargin(0.16);
-   c1->SetRightMargin(0.03);
-   c1->SetTopMargin(0.05);
-   c1->SetBottomMargin(0.294);
-   c1->SetFrameFillStyle(0);
-   c1->SetFrameBorderMode(0);
-   c1->SetFrameFillStyle(0);
-   c1->SetFrameBorderMode(0);
+   c14->SetHighLightColor(2);
+   c14->Range(0.1172841,-2.253412,8.759259,2.694987);
+   c14->SetFillColor(0);
+   c14->SetBorderMode(0);
+   c14->SetBorderSize(2);
+   c14->SetLogy();
+   c14->SetTickx(1);
+   c14->SetTicky(1);
+   c14->SetLeftMargin(0.16);
+   c14->SetRightMargin(0.03);
+   c14->SetTopMargin(0.05);
+   c14->SetBottomMargin(0.294);
+   c14->SetFrameFillStyle(0);
+   c14->SetFrameBorderMode(0);
+   c14->SetFrameFillStyle(0);
+   c14->SetFrameBorderMode(0);
    Double_t xAxis1[8] = {1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5}; 
    
    TH1F *gHist = new TH1F("gHist","",7, xAxis1);
@@ -365,8 +365,8 @@ tex->SetNDC();
    line->SetLineStyle(2);
    line->Draw();
    rPad->Modified();
-   c1->cd();
-   c1->Modified();
-   c1->cd();
-   c1->SetSelected(c1);
+   c14->cd();
+   c14->Modified();
+   c14->cd();
+   c14->SetSelected(c14);
 }
