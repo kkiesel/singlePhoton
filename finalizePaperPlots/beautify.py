@@ -6,6 +6,7 @@ import math
 
 metStr = "#it{E}_{#kern[-0.1]{T}} #scale[0.7]{#kern[-.5]{#lower[-0.5]{miss}}}"
 #metStr = "#it{E}_{#kern[-0.1]{T}}^{miss}"
+evStr = "e#kern[-.05]{V}"
 
 def bottomPad( relativeSize=.2 ):
 
@@ -90,7 +91,7 @@ class BeautyPlot:
 
     labelTemplate = "#font[61]{CMS}"
     simulationStr = " #scale[0.76]{#font[52]{Simulation}}"
-    lumiInfoText = "19.7 fb^{-1} (8 TeV)"
+    lumiInfoText = "19.7 fb^{-1} (8 T%s)"%evStr
     cutLabex = ""
 
     def drawLabel( self ):
@@ -162,13 +163,13 @@ class SignalComparison( RazorPlot ):
         self.leg.Draw()
 
 class T5SignalPlot( SignalComparison ):
-    infile = "input/t5gg_s_v_b.C"
+    infile = "input/t5gg_s_v_b_edit.C"
     output = "DiPhoton_SignalShape_T5gg"
     legEntries = [
         "T5gg signals:",
-        "m_{#tilde{g}} = 1350 GeV, m_{#tilde{#chi}^{0}_{1}} =   225 GeV",
-        "m_{#tilde{g}} = 1350 GeV, m_{#tilde{#chi}^{0}_{1}} =   675 GeV",
-        "m_{#tilde{g}} = 1350 GeV, m_{#tilde{#chi}^{0}_{1}} = 1275 GeV"
+        "m_{#tilde{g}} = 1350 G%s, m_{#tilde{#chi}^{0}_{1}} =   225 G%s"%(evStr,evStr),
+        "m_{#tilde{g}} = 1350 G%s, m_{#tilde{#chi}^{0}_{1}} =   675 G%s"%(evStr,evStr),
+        "m_{#tilde{g}} = 1350 G%s, m_{#tilde{#chi}^{0}_{1}} = 1275 G%s"%(evStr,evStr)
     ]
 
 class BinoSignalPlot( SignalComparison ):
@@ -176,9 +177,9 @@ class BinoSignalPlot( SignalComparison ):
     output = "DiPhoton_SignalShape_GGMbino"
     legEntries = [
         "GGMbino signals:",
-        "m_{#tilde{q}} = 1500 GeV, m_{#tilde{g}} = 1820 GeV",
-        "m_{#tilde{q}} = 1700 GeV, m_{#tilde{g}} = 1520 GeV",
-        "m_{#tilde{q}} = 1900 GeV, m_{#tilde{g}} = 1320 GeV"
+        "m_{#tilde{q}} = 1500 G%s, m_{#tilde{g}} = 1820 G%s"%(evStr,evStr),
+        "m_{#tilde{q}} = 1700 G%s, m_{#tilde{g}} = 1520 G%s"%(evStr,evStr),
+        "m_{#tilde{q}} = 1900 G%s, m_{#tilde{g}} = 1320 G%s"%(evStr,evStr)
     ]
 
 class RazorComparison( RazorPlot ):
@@ -231,7 +232,7 @@ class RazorComparison( RazorPlot ):
         self.leg.AddEntry( self.predUncert, self.legEntries[1], "fp" )
         if isinstance( self, RazorSignalInj ):
             self.leg.SetY1(0.54)
-            self.leg.AddEntry( self.signal, "GGMbino #scale[0.8]{#splitline{m_{#tilde{q}}=1400 GeV}{m_{#tilde{g}}=1820 GeV}}", "l" )
+            self.leg.AddEntry( self.signal, "GGMbino #scale[0.8]{#splitline{m_{#tilde{q}}=1400 G%s}{m_{#tilde{g}}=1820 G%s}}"%(evStr,evStr), "l" )
         self.leg.SetTextSize( ROOT.gStyle.GetTitleSize())
         self.leg.Draw()
 
@@ -246,7 +247,7 @@ class RazorComparison( RazorPlot ):
             self.ratio.SetMinimum(-2)
             self.ratio.GetYaxis().SetNdivisions( 5, 0, 0, True )
 
-        self.ratio.SetTitle(";M_{R} (TeV);z-score")
+        self.ratio.SetTitle(";M_{R} (T%s);z-score"%evStr)
         self.ratio.SetLineColor( 0 )
         self.ratio.Draw()
         self.ratioSys.Draw("same e2")
@@ -466,7 +467,7 @@ class SingleClosure( BeautyPlot ):
         self.ratio.Draw("e0p same x0")
 
 class MetPlot():
-    title = ";%s (GeV);Events / GeV"%metStr
+    title = ";%s (G%s);Events / G%s"%(metStr,evStr,evStr)
 
 class NJetPlot():
     title = ";Jets;Events"
@@ -537,7 +538,7 @@ class QcdClosureMet( QcdClosure, MetPlot, SingleClosure ):
 class QcdClosureNjet( QcdClosure, NJetPlot, SingleClosure ):
     infile = "input/Final_Combined_n_jet7_log_edit.C"
     output = "SinglePhoton_QCDclosure_njet"
-    selectionAppendix = "%s #geq 100GeV"%metStr
+    selectionAppendix = "%s #geq 100G%s"%(metStr,evStr)
 
     def getPlots( self ):
 
@@ -646,7 +647,7 @@ class FinalPlotMet( MetPlot, SingleClosure ):
         self.leg.AddEntry( self.qcd, "Multijet (+#gamma)", "f" )
         self.leg.AddEntry( self.isr, "Z#gamma, W#gamma, t#bar{t}#gamma", "f" )
         self.leg.AddEntry( self.ewk, "e#rightarrow#gamma", "f" )
-        self.leg.AddEntry( self.signal, "GGMwino #scale[0.8]{#splitline{m_{#tilde{q}}=1700 GeV}{m_{#tilde{g}}= 720 GeV}}", "l" )
+        self.leg.AddEntry( self.signal, "GGMwino #scale[0.8]{#splitline{m_{#tilde{q}}=1700 G%s}{m_{#tilde{g}}= 720 G%s}}"%(evStr,evStr), "l" )
         self.leg.Draw()
 
 
