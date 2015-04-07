@@ -13,7 +13,7 @@ s.SetTickLength(0.02, "xyz")
 
 s.SetPadTopMargin(0.06)
 s.SetPadBottomMargin(0.10)
-s.SetPadRightMargin(0.03)
+s.SetPadRightMargin(0.035)
 s.SetPadLeftMargin(0.12)
 
 s.SetHistTopMargin(0.9)
