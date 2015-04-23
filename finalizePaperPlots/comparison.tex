@@ -1,0 +1,40 @@
+\documentclass{article}
+\usepackage{graphicx}
+
+\usepackage[paperwidth=20cm, paperheight=70cm,right=1cm,left=1cm,top=1cm,bottom=1cm]{geometry}
+
+\newcommand{\p}[1]{\fbox{\includegraphics[width=.48\textwidth]{#1}}}
+
+\newcommand{\original}{originalPlots}
+%\newcommand{\originalS}{../master/svnWriting/papers/SUS-14-004/trunk/plots}
+\newcommand{\originalS}{../../svnWriting/papers/SUS-14-004/trunk/plots}
+
+\begin{document}
+Single Photon:\\
+\p{\originalS/Final_Combined_n_jet7_log.pdf}
+    \p{output/SinglePhoton_QCDclosure_njet.pdf}\\
+\p{\originalS/Closure_Combined_met_log.pdf}
+    \p{output/SinglePhoton_QCDclosure_met.pdf}\\
+\p{\originalS/ewkClosure_TTJetsW_nGoodJets.pdf}
+    \p{output/SinglePhoton_EWKclosure_nJet.pdf}\\
+\p{\originalS/ewkClosure_TTJetsW_met.pdf}
+    \p{output/SinglePhoton_EWKclosure_met.pdf}\\
+\p{\originalS/Closure_Data_met_log.pdf}
+    \p{output/SinglePhoton_Data_met.pdf}\\
+\newpage
+Double Photon:\\
+\p{\original/ra3_s_v_b.pdf}
+    \p{output/DiPhoton_SignalShape_GGMbino.pdf}\\
+\p{\original/t5gg_s_v_b.pdf}
+    \p{output/DiPhoton_SignalShape_T5gg.pdf}\\
+\p{\original/fake_low_fit.pdf}
+    \p{output/DiPhoton_Control_LowR.pdf}\\
+\p{\original/fake_extrap.pdf}
+    \p{output/DiPhoton_Control_HighR.pdf}\\
+\p{\original/signal_inj.pdf}
+    \p{output/DiPhoton_SignalInjection.pdf}\\
+\p{\original/low_fit.pdf}
+    \p{output/DiPhoton_LowR.pdf}\\
+\p{\original/extrap.pdf}
+    \p{output/DiPhoton_HighR.pdf}\\
+\end{document}

@@ -1,7 +1,7 @@
 #! /usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-from multiplot import Multihisto
+from multihisto import Multihisto
 from treeFunctions import *
 from myRatio import Ratio
 from predictions import *
@@ -23,16 +23,19 @@ def addRelativeUncertainty( hist, uncert ):
 
 def closure( filenames, plot ):
 	commonCut = "!@muons.size() && !@electrons.size()"
-	#commonCut ="1"
+	#if plot != "met": commonCut += " && met>=100"
 
-	gHist = getHists( filenames, plot, cut="(photons[0].isGen(1)||photons[0].isStatus(1)) && "+commonCut )
+	gHist = getHists( filenames, plot, cut="(photons[0].isStatus(1)) && "+commonCut )
 	eHist = multiDimFakeRate( filenames, plot, commonCut, isData=False )
+	gHist.SetName("gHist")
+	eHist.SetName("eHist")
 
-	eHistSys = eHist.Clone( randomName() )
+	eHistSys = eHist.Clone( "eHistSys" )
 	eHistSys = setRelativeUncertainty( eHistSys, 0.11 )
 	eHistSys.SetFillColor( eHistSys.GetLineColor() )
 	eHistSys.SetFillStyle(3354)
 	eHistSys.SetMarkerSize(0)
+	eHistSys.SetName( "eHistSys" )
 
 	gDatasetAbbrs = [getDatasetAbbr(f) for f in filenames ]
 	gDatasetAbbrs = mergeDatasetAbbr( gDatasetAbbrs )
@@ -53,17 +56,15 @@ def closure( filenames, plot ):
 	infoText.SetTextSize( gHist.GetLabelSize() )
 	infoText.SetText( .02, .96, "CMS Simulation                         19.7fb^{-1} (8 TeV)          #geq1#gamma,#geq2jets" )
 
-	can = ROOT.TCanvas("", "", 600, 600 )
+	can = ROOT.TCanvas("c1", "", 600, 600 )
 	can.cd()
 	multihisto.Draw()
 	infoText.Draw()
 	r = Ratio( "Direct/Pred.", gHist, eHist, eHistSys )
 	r.draw(0,2)
 	SaveAs( can, "ewkClosure_%s_%s"%(getSaveNameFromDatasets(filenames), plot))
+	ROOT.gPad.SaveAs( "plots/ewkClosure_%s_%s.C"%(getSaveNameFromDatasets(filenames), plot))
 
-	gHist.SetName( "Direct Simulation" )
-	eHist.SetName( "Prediction" )
-	eHistSys.SetName( "weight" )
 	ewkOut = ROOT.TFile("ewkOout.root", "recreate" )
 	ewkOut.cd()
 	for h in gHist, eHist, eHistSys:

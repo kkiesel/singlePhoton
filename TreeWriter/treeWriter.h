@@ -42,6 +42,12 @@ struct EventId {
     }
 };
 
+/*std::ostream& operator << ( std::ostream& os, const EventId& id ) {
+    os << id.runNumber << " : " << id.lumiBlockNumber << " : " << id.eventNumber;
+    return os;
+}*/
+
+
 class TreeWriter {
 	public :
 		TreeWriter( int nFiles, char** fileList, std::string const&, bool );

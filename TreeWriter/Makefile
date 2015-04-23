@@ -11,10 +11,10 @@ all: $(SHARED_LIB) $(EXE) Makefile
 	@if [ -d /afs ]; then make -C pileUpReweighting --no-print-directory; fi
 
 %.o:%.cc
-	g++ -o $@ $+ -c -O2 $(INCS) $(WARN)
+	g++ -std=gnu++11 -o $@ $+ -c -O2 $(INCS) $(WARN)
 
 $(EXE): $(OBJ) $(SHARED_LIB)
-	g++ -O2 -o $@ $+ $(LIBS) $(WARN)
+	g++ -std=gnu++11 -O2 -o $@ $+ $(LIBS) $(WARN)
 
 
 # see http://root.cern.ch/drupal/content/interacting-shared-libraries-rootcint
@@ -22,7 +22,7 @@ $(EXE): $(OBJ) $(SHARED_LIB)
 # please execute 'LD_LIBRARY_PATH=$LD_LIBRARY_PATH:`pwd`'
 lib%.so: %.h %_LinkDef.h
 	rootcint -f $(subst so,cxx,$@) -c $+
-	g++ -O2 -Wall  -shared -fPIC `root-config --ldflags` $(INCS) -o $@ $(subst lib,,$(subst so,cc,$@)) $(subst so,cxx,$@)
+	g++ -std=gnu++11 -O2 -Wall  -shared -fPIC `root-config --ldflags` $(INCS) -o $@ $(subst lib,,$(subst so,cc,$@)) $(subst so,cxx,$@)
 	@if [ -d $(CMSSW_BASE)/lib/$(SCRAM_ARCH) -a "$(CMSSW_BASE)" != "" ]; then\
 		cp $@ $(CMSSW_BASE)/lib/$(SCRAM_ARCH);\
 	else\

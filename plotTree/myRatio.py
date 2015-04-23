@@ -8,9 +8,9 @@ class Ratio:
 		self.numerator = numerator
 		self.denominator = denominator
 		self.sysHisto = sysHisto
-		self.ratio = numerator.Clone( randomName() )
-		self.ratioSys = denominator.Clone( randomName() )
-		self.totalUncert = denominator.Clone( randomName() )
+		self.ratio = numerator.Clone( "ratio_"+numerator.GetName() )
+		self.ratioSys = denominator.Clone( "ratioSys_"+denominator.GetName() )
+		self.totalUncert = denominator.Clone( "ratioTot_"+denominator.GetName() )
 
 	def calculateRatio( self ):
 		for bin in range(self.numerator.GetNbinsX()+2):
